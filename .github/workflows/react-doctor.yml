@@ -2,7 +2,7 @@ name: react-doctor
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -22,7 +22,9 @@ jobs:
 
       - uses: millionco/react-doctor@main
         with:
-          diff: main
+          # Use the PR's actual base branch so the diff works whether the
+          # repo's default branch is `main` or `master`.
+          diff: ${{ github.base_ref }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on: none
           verbose: "true"

@@ -185,6 +185,8 @@ The known-stale-token table. Each row: regex pattern, why it's stale, allow-cont
 | `\.output/public` | dean-stack's static artifact lives at `apps/<app>/dist/client/`, not `.output/public/`. The latter is upstream Nitro's default; TanStack Start SPA mode overrides it. | OK in `nitro/SKILL.md` anti-pattern callout |
 | `upload-pages-artifact@v[12]` | Stale GH Pages action revs — must be `@v3`. | OK in `nitro/SKILL.md` anti-pattern callout |
 | `deploy-pages@v[123]` | Stale GH Pages action revs — must be `@v4`. | OK in `nitro/SKILL.md` anti-pattern callout |
+| `branches:\s*\[\s*main\s*\]` | Workflow triggers must include both `main` and `master` so CI/deploy fires regardless of which is the repo's default branch. dean-stack has been on `master` historically; pinning only `main` silently dropped every push and PR. | OK in deliberate "we used to" historical context; OK in upstream-doc citation blocks |
+| `diff:\s*main` *(in `react-doctor.yml`)* | Hardcoded base branch — use `${{ github.base_ref }}` so the diff matches the PR's actual target branch (works for either default-branch convention). | none — always stale |
 
 </sweep-tokens>
 

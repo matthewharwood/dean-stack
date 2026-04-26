@@ -75,7 +75,7 @@ The `cp` provides the SPA fallback GH Pages serves on any 404. The `touch .nojek
 ### `.github/workflows/deploy.yml` — selector + base path + upload
 ```yaml
 on:
-  push: { branches: [main] }
+  push: { branches: [main, master] }   # match either default-branch convention
   workflow_dispatch:
     inputs:
       app:
