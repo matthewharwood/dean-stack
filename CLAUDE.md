@@ -241,4 +241,5 @@ No milestone starts until the prior one ships green CI.
 - **No `any`, no `as` casts at module boundaries** — parse with Zod instead.
 - **Hand-written TS types for things that have a Zod schema are forbidden.** Use `z.infer`.
 - **Anything that violates a Pillar gets reverted, not patched.**
+- **TanStack DevTools (`@tanstack/react-devtools` + `@tanstack/react-router-devtools`) and the Vite plugin (`@tanstack/devtools-vite`)** are mounted dev-only in `apps/<name>/app/routes/__root.tsx` and the Vite config. The `devtools()` plugin wires browser-element → editor source linking — click a rendered element, jump to source. Production tree-shakes via `import.meta.env.DEV` + `lazy()`. See `tanstack-devtools` skill.
 - **Skill files** for the techs in this stack are added by the user over time. When a skill exists, follow it; when one is missing, ask before guessing.

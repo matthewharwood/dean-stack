@@ -8,6 +8,7 @@ dist/
 storybook-static/
 coverage/
 dev-dist/
+tmp/*
 
 # Tool caches — never commit
 .vite/

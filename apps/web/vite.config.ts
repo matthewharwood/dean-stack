@@ -1,3 +1,4 @@
+import { devtools as tanstackDevtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -24,6 +25,10 @@ export default defineConfig(async ({ mode }) => {
       dedupe: ["react", "react-dom", "@tanstack/react-router"],
     },
     plugins: [
+      // Browser → editor source linking via the TanStack DevTools client.
+      // Pure Vite plugin; injects a tiny dev-mode runtime that the @tanstack/react-devtools
+      // host picks up. Runs in dev only — no-op for `vite build`.
+      tanstackDevtools(),
       ...sharedPlugins(),
       tanstackStart({
         srcDirectory: "app",

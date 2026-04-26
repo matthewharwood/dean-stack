@@ -1,9 +1,29 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { Provider } from "jotai";
-import { type ReactNode, Suspense, use } from "react";
+import { lazy, type ReactNode, Suspense, use } from "react";
 
 import { env } from "~/env";
 import { idbHydrationPromise } from "~/state/hydration";
+
+// Dev-only TanStack DevTools host + Router plugin. The `import.meta.env.DEV`
+// ternary is statically known at build time, so Vite tree-shakes the lazy()
+// branch (and its dynamic imports) out of the production bundle.
+const TanStackDevtools = import.meta.env.DEV
+  ? lazy(async () => {
+      const [{ TanStackDevtools: Host }, { TanStackRouterDevtoolsPanel }] = await Promise.all([
+        import("@tanstack/react-devtools"),
+        import("@tanstack/react-router-devtools"),
+      ]);
+      return {
+        default: () => (
+          <Host
+            config={{ position: "bottom-right" }}
+            plugins={[{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+          />
+        ),
+      };
+    })
+  : null;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -47,13 +67,22 @@ function RootComponent(): ReactNode {
             </HydrateThenRender>
           </Suspense>
         </Provider>
+        {TanStackDevtools ? (
+          <Suspense fallback={null}>
+            <TanStackDevtools />
+          </Suspense>
+        ) : null}
         <Scripts />
       </body>
     </html>
   );
 }
 
-function NotFound(): ReactNode {
+// Exported so router.tsx can wire it as `defaultNotFoundComponent` —
+// the router-level fallback for notFound errors thrown outside the route
+// tree (prerender init, missed dev-time probes, etc). The route-level
+// `notFoundComponent` above handles in-tree misses.
+export function NotFound(): ReactNode {
   return (
     <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-display">
       <h1 className="text-3xl">404 — page not found</h1>

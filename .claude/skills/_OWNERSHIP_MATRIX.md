@@ -2,7 +2,7 @@
 
 Authoritative contract for the dean-stack skill collection. Every later prompt that builds a `SKILL.md` must read and obey this file. CLAUDE.md owns the Four Pillars and stack pins; skills do not restate Pillar text — they reference Pillars by name only.
 
-The 17 techs in `potential_skills/` map onto a mix of **narrow** skills (one `SKILL.md` covers the whole tech) and **broad** skills (a `<tech>` router skill plus several `<tech>-<topic>` sub-skills, mirroring the pixijs collection pattern). Final inventory is **34 skills** (33 tech-bound + 1 cross-cutting authoring policy: `micro-utilities`).
+The 17 techs in `potential_skills/` map onto a mix of **narrow** skills (one `SKILL.md` covers the whole tech) and **broad** skills (a `<tech>` router skill plus several `<tech>-<topic>` sub-skills, mirroring the pixijs collection pattern). Final inventory is **35 skills** (34 tech-bound + 1 cross-cutting authoring policy: `micro-utilities`).
 
 ---
 
@@ -35,6 +35,7 @@ The 17 techs in `potential_skills/` map onto a mix of **narrow** skills (one `SK
 | tanstack-router-routing | sub | tanstack | File-based routing in `app/routes/`, route trees, route params, search params, link/navigate APIs, and Zod-validated route params (deferring to the zod skill for schema authoring). | tanstack router, file-based routing, createRoute, route param, search params, useNavigate, Link, route tree |
 | tanstack-router-pwa-deep-links | sub | tanstack | TanStack Router's interaction with the Workbox NavigationRoute: navigation fallback points at the prerendered shell, deep-link offline resolution from cache, no server round-trip. | spa fallback, navigation fallback, deep link offline, NavigationRoute, router pwa, offline route resolution |
 | tanstack-router-preload | sub | tanstack | TanStack Router's `defaultPreload: "intent"` policy: modulepreload of route JS chunks + loader execution on `touchstart`/hover, additive to (and distinct from) the Workbox SW precache. | defaultPreload, modulepreload, intent preload, viewport preload, link preload, tanstack router preload, route preload |
+| tanstack-devtools | sub | tanstack | TanStack DevTools dev-only host (`@tanstack/react-devtools`) + Router plugin (`@tanstack/react-router-devtools`) + Vite plugin (`@tanstack/devtools-vite`) for browser-element → editor source linking. Lazy + `import.meta.env.DEV` gate keeps the production bundle free of devtool symbols. | TanStackDevtools, TanStackRouterDevtoolsPanel, devtools-vite, tanstack devtools, click to source, browser to editor, router devtools, dev panel |
 | storybook | router | — | Entry point that routes Storybook questions to the config sub-skill, the stories-authoring sub-skill, or the play-functions sub-skill; enforces the Storybook-first Pillar at the routing level. | storybook, storybook overview, which storybook skill, storybook-first |
 | storybook-config | sub | storybook | Storybook 10 with the Vite builder, **shared Vite + Tailwind + alias config from a single source** (never forked), `main.ts`/`preview.ts`, addons. | storybook config, storybook vite builder, storybook main.ts, storybook preview.ts, shared vite config, storybook addon |
 | storybook-stories | sub | storybook | Authoring `*.stories.tsx` co-located with the component, CSF 3 `Meta`/`StoryObj`, args/argTypes, and the rule "no component without a story". | story, stories.tsx, CSF 3, Meta, StoryObj, args, argTypes, story file, co-located story |
@@ -45,7 +46,7 @@ The 17 techs in `potential_skills/` map onto a mix of **narrow** skills (one `SK
 | playwright-pwa-offline | sub | playwright | The offline-deep-link contract: throttle network to offline, navigate to `/some/deep/route`, assert the router resolves it from cache without a server round-trip. | offline test, pwa offline test, deep link offline test, network offline, service worker test, navigation fallback test |
 | playwright-conventions | sub | playwright | Selectors (role-based first, then test-id, then text), fixtures, fresh-IDB-per-test, reduced-motion forcing, retry policy, and the load-bearing **ASK-FIRST** prompt rule for every test design decision. | playwright fixture, playwright selector, role selector, getByRole, test-id, fresh idb fixture, reduced motion playwright, ask first test |
 
-**Totals:** 17 techs + 1 cross-cutting authoring policy → 13 narrow skills + 5 router skills + 16 sub-skills = **34 skills**.
+**Totals:** 17 techs + 1 cross-cutting authoring policy → 13 narrow skills + 5 router skills + 17 sub-skills = **35 skills**.
 
 ---
 
@@ -446,9 +447,9 @@ Each wave is gated by green `bun run check` of every prior wave's output. No ski
 
 **Rationale:** Schemas are the source of truth for every later type; state is the second source of truth (IDB) plus its in-memory cache (Jotai). Both must exist before any UI can declare props or persist progress. Order within the wave: zod first (other three import `z`), then t3-env (consumes zod), then idb (depends on zod for record validation), then jotai (depends on idb for the hydration promise).
 
-### Wave 3 — UI core & framework (10 skills)
-**Skills:** react (router), react-compiler-rules, react-19-primitives, tailwind, animejs, tanstack (router), tanstack-start-spa-prerender, tanstack-router-routing, tanstack-router-pwa-deep-links, tanstack-router-preload
-**Count:** 10
+### Wave 3 — UI core & framework (11 skills)
+**Skills:** react (router), react-compiler-rules, react-19-primitives, tailwind, animejs, tanstack (router), tanstack-start-spa-prerender, tanstack-router-routing, tanstack-router-pwa-deep-links, tanstack-router-preload, tanstack-devtools
+**Count:** 11
 **Pillar mapping:**
 - All four Pillars now have first-class consumers; the Compiler purity rules (react-compiler-rules) and the side-channel rule (animejs) are the closest thing to Pillar enforcement at the React layer.
 - tanstack-start-spa-prerender + nitro (Wave 1) together realize the "no server, prerender everything" architecture decision.
@@ -465,7 +466,7 @@ Each wave is gated by green `bun run check` of every prior wave's output. No ski
 
 **Rationale:** Stories test the components built in Wave 3; Playwright tests both stories (Wave 4 storybook surface) and full app routes (Wave 3 tanstack surface). Lands last because every other wave must already be green for these tests to be writable. The **ASK-FIRST** rule for Playwright tests is owned by playwright (router) and detailed in playwright-conventions.
 
-**Wave totals:** 11 + 4 + 10 + 9 = **34 skills** (matches Section 1 inventory exactly; no skill orphaned, no skill double-assigned).
+**Wave totals:** 11 + 4 + 11 + 9 = **35 skills** (matches Section 1 inventory exactly; no skill orphaned, no skill double-assigned).
 
 **Pillar coverage check:**
 - Pillar 1 (Storybook-first) → storybook, storybook-stories, storybook-play-functions, storybook-config, playwright-story-tests
