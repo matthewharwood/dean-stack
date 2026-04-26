@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "globalDependencies": ["**/.env.*local", "tsconfig.json"],
+  "globalEnv": ["NODE_ENV", "CI"],
+  "tasks": {
+    "check": {
+      "dependsOn": ["typecheck", "test:unit", "test:e2e"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "outputs": ["playwright-report/**", "test-results/**"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".output/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "with": ["storybook", "biome:watch", "stylelint:watch"]
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "biome:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "stylelint:watch": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

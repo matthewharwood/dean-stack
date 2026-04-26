@@ -1,0 +1,8 @@
+{
+  "extends": "@dean-stack/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun", "vite/client"],
+    "paths": { "~/*": ["./app/*"] }
+  },
+  "include": ["app/**/*", "*.config.ts", "vite.shared.ts", ".storybook/**/*", "tests/**/*"]
+}

@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-500: oklch(62% 0.20 260deg);
+  --color-brand-900: oklch(30% 0.10 260deg);
+  --font-display: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --spacing: 0.25rem;
+  --radius-card: 1rem;
+  --breakpoint-3xl: 120rem;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));

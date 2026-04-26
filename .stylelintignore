@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.output/
+.turbo/
+storybook-static/
+coverage/
+playwright-report/
+test-results/
+.claude/
+.idea/
+potential_skills/
+prompts/

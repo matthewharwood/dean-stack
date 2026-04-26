@@ -1,0 +1,29 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+  "extends": ["@dean-stack/biome-config/biome.json"],
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.json",
+      "**/*.jsonc",
+      "!**/dist",
+      "!**/.output",
+      "!**/.turbo",
+      "!**/storybook-static",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/playwright-report",
+      "!**/test-results",
+      "!**/routeTree.gen.ts",
+      "!.claude",
+      "!.idea",
+      "!potential_skills",
+      "!prompts",
+      "!skills-lock.json"
+    ]
+  }
+}

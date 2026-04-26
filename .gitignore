@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.output/
+.turbo/
+storybook-static/
+coverage/
+dev-dist/
+
+# Tool caches — never commit
+.vite/
+.cache/
+*.tsbuildinfo
+.stylelintcache
+playwright/.cache/
+
+# Test outputs
+playwright-report/
+test-results/
+
+# Logs
+*.log
+bun-debug.log
+bun-pm-debug.log
+
+# Env
+# Committed: .env, .env.example, .env.development, .env.production.
+# Every value is a `VITE_*` and ships in the JS bundle — public by design.
+# NEVER put a real secret in ANY .env* file. If you need one, GitHub Pages is the wrong target.
+.env.local
+.env.*.local
+
+# Secrets / credentials — universal safeguard
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.netrc
+.pgpass
+.npmrc
+.yarnrc
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+service-account*.json
+firebase-adminsdk-*.json
+
+# Bun: text bun.lock is committed; the older binary form is not
+bun.lockb
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Personal scratchpad — local-only prompts authored by /prompt
+prompts/

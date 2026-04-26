@@ -1,0 +1,52 @@
+{
+  "name": "@dean-stack/test-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build && cp dist/client/index.html dist/client/404.html && touch dist/client/.nojekyll",
+    "preview": "vite preview --port 3000",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "build-storybook": "storybook build",
+    "biome:watch": "chokidar \"**/*.{ts,tsx,js,jsx,json}\" --ignore \"**/node_modules/**\" --ignore \"**/dist/**\" --ignore \"**/.turbo/**\" --ignore \"**/routeTree.gen.ts\" --initial --debounce 200 -c \"biome check --write .\"",
+    "stylelint:watch": "chokidar \"app/**/*.css\" --initial --debounce 200 -c \"stylelint 'app/**/*.css' --allow-empty-input\"",
+    "typecheck": "tsgo --noEmit",
+    "test:unit": "bun test app/",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@dean-stack/schemas": "workspace:*",
+    "@t3-oss/env-core": "^0.13.0",
+    "@tanstack/react-router": "^1.168.0",
+    "@tanstack/react-start": "^1.167.0",
+    "animejs": "^4.0.0",
+    "idb": "^8.0.0",
+    "jotai": "^2.19.0",
+    "pixi.js": "^8.18.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@dean-stack/tsconfig": "workspace:*",
+    "@playwright/test": "^1.59.0",
+    "@storybook/addon-a11y": "^10.0.0",
+    "@storybook/addon-docs": "^10.0.0",
+    "@storybook/react-vite": "^10.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/bun": "^1.3.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "nitro": "^3.0.0",
+    "react-scan": "^0.5.3",
+    "storybook": "^10.0.0",
+    "tailwindcss": "^4.0.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260426.1",
+    "vite": "^7.0.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "vite-tsconfig-paths": "^6.0.0",
+    "workbox-window": "^7.0.0"
+  }
+}
