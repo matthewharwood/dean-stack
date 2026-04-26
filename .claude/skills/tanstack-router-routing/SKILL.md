@@ -65,6 +65,8 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  errorComponent: RouteError,        // see "Error & notFound boundaries" below
+  notFoundComponent: NotFound,       // see "Error & notFound boundaries" below
 });
 
 function RootComponent() {
@@ -80,6 +82,71 @@ function RootComponent() {
 }
 ```
 The shell is what the prerender writes to disk; the client hydrates and reads from IDB to fill it in.
+
+### Error & notFound boundaries — load-bearing for Pillar 3
+Every dean-stack app MUST wire BOTH a per-route boundary on `__root__` AND a router-level fallback. A render throw from a deeper route bubbles up to the closest `errorComponent`; if a route doesn't declare one, it falls through to root; if root somehow doesn't render (route-resolution itself throws, loader rejects), the router's `defaultErrorComponent` catches. Same shape for `notFoundComponent` / `defaultNotFoundComponent` for `notFound()` calls.
+
+The contract is **gate-asserted** in `app/router.test.ts` — removing any of the four wirings turns `bun run check` red.
+
+```tsx
+// __root__.tsx — exports both fallbacks for router.tsx to wire as defaults
+export function NotFound() { /* 404 UI */ }
+export function RouteError({ error, reset }: { error: Error; reset: () => void }) {
+  // Re-throw on the server so prerender.failOnError aborts the build
+  // instead of baking a "Something broke" page into static HTML for a
+  // route that should have failed.
+  if (typeof window === "undefined") throw error;
+
+  if (import.meta.env.DEV) console.error("[Route error boundary caught]", error);
+  return (
+    <main>
+      <h1>Something broke</h1>
+      {import.meta.env.DEV ? <pre>{error.message}</pre> : null}
+      <button type="button" onClick={reset}>Try again</button>
+      <a href="/">Go home</a>
+    </main>
+  );
+}
+```
+
+```ts
+// router.tsx — wires both as router-level defaults
+import { NotFound, RouteError } from "./routes/__root";
+
+export function getRouter() {
+  return createTanStackRouter({
+    routeTree,
+    scrollRestoration: true,
+    defaultPreload: "intent",
+    defaultErrorComponent: RouteError,
+    defaultNotFoundComponent: NotFound,
+  });
+}
+```
+
+```ts
+// router.test.ts — Pillar-adjacent contract; failure turns the gate red
+test("__root__ wires per-route boundaries", () => {
+  expect(RootRoute.options.errorComponent).toBe(RouteError);
+  expect(RootRoute.options.notFoundComponent).toBe(NotFound);
+});
+test("router.tsx wires router-level fallbacks", () => {
+  const router = getRouter();
+  expect(router.options.defaultErrorComponent).toBe(RouteError);
+  expect(router.options.defaultNotFoundComponent).toBe(NotFound);
+});
+test("RouteError re-throws on the server (prerender failOnError gate)", () => {
+  expect(() => RouteError({ error: new Error("kaboom"), reset: () => {} })).toThrow("kaboom");
+});
+```
+
+What this catches in dean-stack specifically:
+- **Pillar 3 — IDB-corrupt-state recovery.** A schema-mismatch in IDB (manual DevTools edit, half-applied migration on a flaky iPad reload) throws inside `use(idbHydrationPromise)` or atom getters → the kid sees the recovery UI on the iPad, not a blank page.
+- **Pillar 2 — Zod parse-on-set throws.** An atom set with bad data throws synchronously; the boundary renders the error UI, React still logs to console (Pillar 2 stays loud in dev).
+- **Side-channel setup throws.** A bug inside `usePixiApp`'s `setup` callback or `useAnime`'s anime params throws → boundary renders, side channel disposes via the hook's cleanup.
+- **Per-route component throws** isolated to the route — a render bug in `/games/maze/$level` doesn't crash `/games` listings.
+
+Per-route games SHOULD declare their own `errorComponent` for tighter recovery UIs (e.g. "this level is broken — pick another"). The root-level boundary is the safety net.
 
 ### File route with Zod-parsed params
 ```tsx

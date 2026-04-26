@@ -20,7 +20,7 @@ Entry point that routes TanStack questions to the SPA-prerender sub-skill, the r
 - `tanstack-router-routing` — anything about file-based routes, `createFileRoute`, route params, search params, `Link`/`useNavigate`/`useRouter`.
 - `tanstack-router-preload` — anything about `defaultPreload`, per-`<Link preload="...">` overrides, modulepreload of route chunks, intent vs viewport vs render, the `quicklink`-considered-and-rejected position.
 - `tanstack-router-pwa-deep-links` — anything about the Workbox NavigationRoute, the navigation fallback resolving to the prerendered shell, deep-link offline behavior.
-- `nitro` — for the static `github_pages` preset, `nitro.config.ts`, `baseURL`, and the SPA-fallback `404.html`. TanStack Start *uses* Nitro under the hood; preset wiring lives in nitro.
+- `nitro` — for the GH-Pages-specific concerns: the `BASE_PATH` env contract (sourced from `actions/configure-pages@v5`'s `base_path` output), the post-build `cp index.html → 404.html` and `.nojekyll`, the deploy workflow's app selector, and the `dist/client/` upload path. TanStack Start *uses* Nitro internally — there is no standalone `nitro.config.ts`.
 - `zod` — for any route param / search param validation schema.
 - `react-19-primitives` — for `<Suspense>` boundaries inside route components.
 - `jotai` — for state read inside a route component.

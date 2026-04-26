@@ -43,6 +43,7 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  errorComponent: RouteError,
   notFoundComponent: NotFound,
 });
 
@@ -89,6 +90,44 @@ export function NotFound(): ReactNode {
       <a href="/" className="rounded-card bg-brand-500 px-4 py-2 text-white shadow-md">
         Go home
       </a>
+    </main>
+  );
+}
+
+// Exported so router.tsx can wire it as `defaultErrorComponent` — the
+// router-level fallback for render / loader errors not caught by a deeper
+// `errorComponent`. The route-level `errorComponent` on `__root__` above
+// handles in-tree throws (Pillar 3 IDB-corrupt-state recovery, Pillar 2
+// Zod parse failures from atom setters, side-channel setup throws). On the
+// SSR/prerender side this re-throws so `prerender.failOnError: true`
+// aborts the build instead of silently baking a "Something broke" page
+// into static HTML for a route that should have failed.
+export function RouteError({ error, reset }: { error: Error; reset: () => void }): ReactNode {
+  if (typeof window === "undefined") throw error;
+  if (import.meta.env.DEV) {
+    console.error("[Route error boundary caught]", error);
+  }
+  return (
+    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-display">
+      <h1 className="text-3xl">Something broke</h1>
+      {import.meta.env.DEV ? (
+        <pre className="text-sm text-red-700 max-w-2xl whitespace-pre-wrap">
+          {error.message}
+          {error.stack ? `\n\n${error.stack}` : null}
+        </pre>
+      ) : null}
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-card bg-brand-500 px-4 py-2 text-white shadow-md"
+        >
+          Try again
+        </button>
+        <a href="/" className="rounded-card bg-gray-200 px-4 py-2 shadow-md">
+          Go home
+        </a>
+      </div>
     </main>
   );
 }

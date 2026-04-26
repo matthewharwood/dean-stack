@@ -1,10 +1,20 @@
+import { devtools as tanstackDevtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 import { sharedPlugins } from "./vite.shared";
 
-const isProjectPages = process.env.GITHUB_PAGES === "true";
+// Base URL is driven by the BASE_PATH env var supplied by the deploy workflow
+// (sourced from `actions/configure-pages@v5`'s `base_path` output, which is
+// the canonical source for project pages / user-org pages / custom domains).
+// Local dev: unset → "/". Project pages: "/<repo>/". User-org or custom
+// domain: "/". Vite needs a trailing slash for non-root bases.
+function resolveBase(): string {
+  const raw = process.env.BASE_PATH;
+  if (!raw || raw === "/") return "/";
+  return raw.endsWith("/") ? raw : `${raw}/`;
+}
 
 export default defineConfig(async ({ mode }) => {
   // Vite's config bundler runs in a Node subprocess that does NOT inherit
@@ -15,7 +25,7 @@ export default defineConfig(async ({ mode }) => {
   await import("./app/env");
 
   return {
-    base: isProjectPages ? "/test-project/" : "/",
+    base: resolveBase(),
     // Force a single copy of React + React DOM + TanStack Router. Bun's
     // hashed `.bun/...@<hash>` deduping leaves multiple resolution paths to
     // the same package; without this, HeadContent and StartClient can each
@@ -24,6 +34,10 @@ export default defineConfig(async ({ mode }) => {
       dedupe: ["react", "react-dom", "@tanstack/react-router"],
     },
     plugins: [
+      // Browser → editor source linking via the TanStack DevTools client.
+      // Pure Vite plugin; injects a tiny dev-mode runtime that the @tanstack/react-devtools
+      // host picks up. Runs in dev only — no-op for `vite build`.
+      tanstackDevtools(),
       ...sharedPlugins(),
       tanstackStart({
         srcDirectory: "app",

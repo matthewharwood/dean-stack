@@ -1,6 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
-import { NotFound } from "./routes/__root";
+import { NotFound, RouteError } from "./routes/__root";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -8,9 +8,13 @@ export function getRouter() {
     routeTree,
     scrollRestoration: true,
     defaultPreload: "intent",
-    // Router-level fallback for notFound errors thrown outside the route tree
-    // (prerender init, dev-time probes, etc). The route-level
-    // `notFoundComponent` on `__root__` handles in-tree misses.
+    // Router-level fallbacks for errors that escape route-level boundaries:
+    // route-resolution throws, loader rejects, errors during route preload,
+    // and notFound() calls fired outside the route tree. The route-level
+    // `errorComponent` / `notFoundComponent` on `__root__` handle in-tree
+    // throws (the common case). Both wirings are gate-asserted in
+    // `router.test.ts` so a future refactor can't silently drop them.
+    defaultErrorComponent: RouteError,
     defaultNotFoundComponent: NotFound,
   });
 }

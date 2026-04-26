@@ -72,7 +72,9 @@ import "./app/env"; // throws on invalid env, before bundling — keeps the brok
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig({
-  base: "/dean-stack/",
+  // Base path is env-driven via `BASE_PATH` (set by the deploy workflow from
+  // `actions/configure-pages@v5`'s `base_path` output). See the `nitro` skill.
+  base: process.env.BASE_PATH ?? "/",
   plugins: [tanstackStart({ /* ... */ })],
 });
 ```

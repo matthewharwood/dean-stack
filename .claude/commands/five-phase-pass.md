@@ -70,8 +70,12 @@ const errs = []; const failed = [];
 page.on("pageerror", (e) => errs.push(`PAGE: ${e.message}`));
 page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errs.push(`[${m.type()}] ${m.text()}`); });
 page.on("response", (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`); });
-await page.goto("http://localhost:5173/", { waitUntil: "networkidle", timeout: 30000 });
-await page.waitForTimeout(3000);
+// Don't use `networkidle` — TanStack DevTools (dev-only) keeps a
+// websocket open and the wait would never resolve. DOM + an explicit
+// h1-wait is the contract: every dean-stack route renders an h1.
+await page.goto("http://localhost:5173/", { waitUntil: "domcontentloaded", timeout: 30000 });
+await page.waitForSelector("h1", { timeout: 15000 });
+await page.waitForTimeout(1500);
 const innerText = await page.evaluate(() => document.body.innerText);
 const innerHtmlLen = await page.evaluate(() => document.body.innerHTML.length);
 const title = await page.title();
@@ -174,6 +178,13 @@ The known-stale-token table. Each row: regex pattern, why it's stale, allow-cont
 | `"with":\s*\["dev"\]` | Inverted `with` direction — Turbo's `with` is directional from the task you invoke. Putting `with: ["dev"]` on a watcher means the watcher only co-runs `dev` if you invoke the watcher directly, which is backwards for `bun run dev`. The correct shape is `with: ["storybook", "biome:watch", "stylelint:watch"]` on the `dev` task. | OK in `turborepo/SKILL.md` "would only co-run dev when you explicitly invoke a watcher" anti-pattern explanation |
 | `utils\.set\s*\(\s*engine` | Misuse of animejs's animation API as an engine-config setter. `utils.set` pipes values through animejs's value parser (`decomposeRawValue`), which throws `str.includes is not a function` on a non-string `defaults` object. The documented v4 path is direct property assignment: `engine.defaults.duration = 400; engine.defaults.ease = "out(2)"`. | OK in `animejs/SKILL.md` anti-pattern callout; OK in this command's docs/history |
 | `import\s*\{[^}]*\bdefaults\b[^}]*\}\s*from\s*['"]animejs['"]` | `defaults` is **not** a top-level animejs export — only `engine` is, and `defaults` is a property on the `engine` instance. Use `engine.defaults.<key> = value` instead. | OK in `animejs/SKILL.md` "not a separate named export" callout |
+| `GITHUB_PAGES\s*===?\s*["']true["']` | Deploy workflow no longer uses a `GITHUB_PAGES=true` toggle. Base path is now driven by the `BASE_PATH` env var (sourced from `actions/configure-pages@v5`'s `base_path` output). | OK in `nitro/SKILL.md` migration callout; OK in `README.md` "we used to" historical context |
+| `isProjectPages` | Old vite.config helper — deleted with the `BASE_PATH` migration. Use the `resolveBase()` helper that reads `process.env.BASE_PATH`. | none — always stale |
+| `base:\s*["']/(dean-stack\|test-project\|web)/?["']` | Hardcoded base path — deploy must derive `BASE_PATH` from `actions/configure-pages@v5` so the workflow is portable across forks, renames, and custom domains. | OK in `nitro/SKILL.md` example output ("emits `/dean-stack/...` when `BASE_PATH=/dean-stack`"); OK in CI fixtures |
+| `nitro\.config\.ts` | dean-stack does not ship a standalone `nitro.config.ts`. TanStack Start drives Nitro internally via `tanstackStart({ spa, prerender })`. | OK in `nitro/SKILL.md` "there is no nitro.config.ts" callout; OK in `tanstack-start-spa-prerender/SKILL.md` "no" callout |
+| `\.output/public` | dean-stack's static artifact lives at `apps/<app>/dist/client/`, not `.output/public/`. The latter is upstream Nitro's default; TanStack Start SPA mode overrides it. | OK in `nitro/SKILL.md` anti-pattern callout |
+| `upload-pages-artifact@v[12]` | Stale GH Pages action revs — must be `@v3`. | OK in `nitro/SKILL.md` anti-pattern callout |
+| `deploy-pages@v[123]` | Stale GH Pages action revs — must be `@v4`. | OK in `nitro/SKILL.md` anti-pattern callout |
 
 </sweep-tokens>
 

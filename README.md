@@ -309,27 +309,42 @@ Two GitHub Actions workflows:
 ### What the deploy workflow does
 
 ```yaml
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App to publish (folder name under apps/)"
+        default: web
+        type: string
+
 env:
-  GITHUB_PAGES: "true"                         # toggles base/baseURL → "/dean-stack/"
-  VITE_GAME_TITLE: ${{ vars.VITE_GAME_TITLE }} # injected before bun run build
+  APP: ${{ github.event.inputs.app || vars.PAGES_APP || 'web' }}
 
 steps:
   - actions/checkout@v4
   - actions/setup-node@v4   (with .nvmrc)
   - oven-sh/setup-bun@v2    (reads packageManager pin)
+  - id: pages
+    uses: actions/configure-pages@v5            # emits the canonical base_path
   - run: bun install --frozen-lockfile
-  - run: bun run build
+  - name: Build ${{ env.APP }}
+    env:
+      BASE_PATH: ${{ steps.pages.outputs.base_path }}
+      VITE_GAME_TITLE: ${{ vars.VITE_GAME_TITLE }}
+    run: bun run build --filter=@dean-stack/${{ env.APP }}
   # build script handles cp index.html→404.html and touch .nojekyll
-  - actions/configure-pages@v5
-  - actions/upload-pages-artifact@v3 (path: apps/web/dist/client)
+  - actions/upload-pages-artifact@v3 (path: apps/${{ env.APP }}/dist/client)
   - actions/deploy-pages@v4
 ```
 
-The `GITHUB_PAGES=true` env makes `vite.config.ts` set `base: "/dean-stack/"` (or `"/<app-name>/"` for generator-scaffolded apps). Locally, the base defaults to `/`.
+**Which app gets published.** `inputs.app` (workflow_dispatch) → `vars.PAGES_APP` (repo variable) → `'web'` (default). Push triggers always pick up `vars.PAGES_APP` or fall back to `web`; `workflow_dispatch` lets you override per-run from the Actions UI.
 
-### Custom domain
+**Base path is env-driven, not hardcoded.** `actions/configure-pages@v5` outputs `base_path` — `/<repo>` for project pages (`<owner>.github.io/<repo>/`), `/` for user/org pages (`<owner>.github.io`), and `/` for custom domains. The workflow exports that as `BASE_PATH`, and `vite.config.ts`'s `resolveBase()` normalizes it (adds the trailing slash Vite needs). Local dev: `BASE_PATH` is unset → `/`.
 
-If you serve from `<owner>.github.io` (user/org pages) or a custom domain, drop `GITHUB_PAGES=true` from the workflow's `env:` block. The base path falls back to `/`.
+### Custom domain or user/org pages
+
+Configure the custom domain in **Settings → Pages**. `actions/configure-pages@v5` will then emit an empty `base_path`, `BASE_PATH` is unset in the build env, and `resolveBase()` returns `/`. No code change required.
 
 ### Verifying the live deploy
 
@@ -514,6 +529,14 @@ Every PR is reviewed against the Four Pillars. Anything that violates one is rev
 - [ ] No anime.js or PixiJS call inside render — both are side channels; all `animate()`, `new Application()`, `Ticker.add(...)`, sprite mutation, and DOM/canvas reads live inside `useEffect` / `useLayoutEffect` / event handlers?
 - [ ] No `ref.current = ...` during render?
 - [ ] Every animation site uses `useAnime` (anime.js) or `usePixiApp` (PixiJS) — both short-circuit on `prefers-reduced-motion`?
+
+### TanStack Router boundaries
+
+- [ ] `__root__.tsx` declares `errorComponent` and `notFoundComponent`?
+- [ ] `router.tsx` wires `defaultErrorComponent` and `defaultNotFoundComponent`?
+- [ ] `RouteError` re-throws when `typeof window === "undefined"` so prerender's `failOnError` aborts on real bugs?
+- [ ] `app/router.test.ts` still passes — the four wirings are gate-asserted, not a convention?
+- [ ] A new game route declares its OWN `errorComponent` for level-tight recovery (root is the safety net, not the first line)?
 
 ### PWA contract
 

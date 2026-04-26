@@ -91,6 +91,18 @@ GitHub Pages is static-only. Configure TanStack Start's Vite plugin in SPA mode 
 
 There are no server functions, no server loaders, no runtime server code. All "dynamic" content comes from IDB after hydration. If a use case appears that needs a server, that use case does not belong on GitHub Pages — surface the constraint, do not silently introduce a server dependency.
 
+### Error & notFound boundaries — exact rules
+
+Every dean-stack app wires **four** TanStack Router boundary slots, and the wiring is gate-asserted in `apps/<name>/app/router.test.ts` so a future refactor can't silently drop them. Read the patterns + rationale in `.claude/skills/tanstack-router-routing/SKILL.md` ("Error & notFound boundaries"); the rules below are the load-bearing summary.
+
+- **`__root__.tsx` `errorComponent`** — per-route boundary catches throws from anywhere inside the route tree (the common case: an atom getter that hits a Zod-mismatched IDB record, a side-channel setup throw, a render bug deep in a game route).
+- **`__root__.tsx` `notFoundComponent`** — handles `notFound()` calls that bubble up through the route tree.
+- **`router.tsx` `defaultErrorComponent`** — router-level fallback for what escapes the per-route boundary: route-resolution throws, loader rejects, errors during route preload.
+- **`router.tsx` `defaultNotFoundComponent`** — same fall-through for `notFound()` outside the route tree.
+- **The error component re-throws when `typeof window === "undefined"`** — that path runs during prerender; without the re-throw, `prerender.failOnError: true` would let a baked-in "Something broke" page silently ship as static HTML for a route that should have failed the build.
+- **Per-route games SHOULD declare their own `errorComponent`** for tighter recovery UIs (e.g. "this level is broken — pick another"). The root-level boundary is the safety net, not the first line.
+- **The boundary does NOT swallow Pillar 2 visibility.** React still logs caught errors to console, and our `RouteError` adds an explicit `console.error` in DEV. Zod runtime errors in dev stay loud.
+
 ### PWA / service worker — exact rules
 
 Workbox's NavigationRoute will swallow the SPA fallback unless configured carefully. Follow these rules every time:

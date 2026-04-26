@@ -8,6 +8,13 @@ import "./styles/index.css";
 
 applyEngineDefaults();
 
+// react-scan is intentionally NOT loaded here — v0.5.x patches React 19 in a
+// way that crashes TanStack Router's HeadContent (useContext returns null).
+// Component-level re-render diagnostics happen in Storybook (.storybook/preview.tsx)
+// where there's no TanStack Router. Route-level work in the app uses the TanStack
+// DevTools panel below + `react-scan` in Storybook until upstream resolves the
+// React 19 / TanStack Router clash.
+
 if ("serviceWorker" in navigator) {
   void import("virtual:pwa-register").then(({ registerSW }) => {
     registerSW({ immediate: true });

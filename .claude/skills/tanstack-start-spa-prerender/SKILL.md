@@ -4,7 +4,7 @@ description: TanStack Start configured for SPA mode + full prerender on GitHub P
 license: MIT
 ---
 
-Sub-skill of `tanstack`. Owns the framework-level decision: TanStack Start runs in SPA mode and full-prerenders every route at build time. There is no runtime server in production. The Nitro preset wiring (`github_pages`, `baseURL`, output dir) lives in the `nitro` skill — this skill defers there.
+Sub-skill of `tanstack`. Owns the framework-level decision: TanStack Start runs in SPA mode and full-prerenders every route at build time. There is no runtime server in production. **Nitro is driven internally by the `tanstackStart` Vite plugin** — there is no `apps/<app>/nitro.config.ts`. The GH-Pages-specific concerns (`BASE_PATH` env contract, `cp index.html → 404.html`, `.nojekyll`, the deploy workflow's app selector) live in the `nitro` skill — this skill defers there.
 
 ## When to invoke
 - Authoring `apps/web/vite.config.ts` for the TanStack Start plugin.
@@ -18,7 +18,7 @@ TanStack Start in **SPA mode with full prerender**, integration with Nitro's `gi
 
 ## Defers to
 - `tanstack` (parent) — version pin and routing.
-- `nitro` — for the static `github_pages` preset, `nitro.config.ts`, `baseURL`, and `404.html`. TanStack Start uses Nitro under the hood; preset wiring is nitro's surface.
+- `nitro` — for the GH-Pages-specific concerns: the `BASE_PATH` env contract that drives `vite.config.ts`'s `base`, the post-build `cp index.html → 404.html` and `.nojekyll`, the deploy workflow's app selector, and the `actions/configure-pages@v5` integration. There is **no** `apps/<app>/nitro.config.ts` — TanStack Start drives Nitro internally.
 - `tanstack-router-routing` — for the route files this skill prerenders.
 - `tanstack-router-pwa-deep-links` — for what the prerendered shell does at runtime when a deep link is hit offline.
 - `react-19-primitives` — for `<Suspense>` boundaries inside prerendered route components.
@@ -62,7 +62,7 @@ export default defineConfig({
   ],
 });
 ```
-The `tanstackStart` plugin invokes Nitro under the hood; the `github_pages` preset and `baseURL` live in `nitro.config.ts` (see `nitro`). No `app.config.ts`. No `vinxi`.
+The `tanstackStart` plugin invokes Nitro under the hood — there is **no** `apps/<app>/nitro.config.ts`. GH-Pages-specific concerns (the `BASE_PATH` env contract, the post-build `cp index.html → 404.html`, the `.nojekyll` marker, the deploy-workflow app selector) live in the `nitro` skill. No `app.config.ts`. No `vinxi`.
 
 ### Per-route opt-out of SSR (still prerenders the shell)
 ```tsx
