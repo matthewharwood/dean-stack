@@ -154,7 +154,7 @@ Resolution rule: **producer owns the API surface; consumer owns the integration 
 #### TurboRepo ↔ Biome / Stylelint / TS / bun-test / Playwright (CLI gate composition)
 - Owner: turborepo
 - Defers to owner: each tool skill for its own CLI invocation
-- Rationale: turborepo owns the ordering and `dependsOn` chain that makes `bun run check` run `biome ci → stylelint --max-warnings 0 → tsgo --noEmit → bun test → playwright test` in order; each tool skill owns its own flags and exit-code semantics.
+- Rationale: turborepo owns the ordering and `dependsOn` chain that makes `bun run check` run `biome ci → stylelint --max-warnings 0 → tsgo --noEmit → bun test → build → playwright (storybook + app + app-offline)` in order; the parallel `check:fast` task drops `build` and runs only `--project=storybook` for the pre-push hook (`scripts/install-hooks.sh` writes `.git/hooks/pre-push`). Each tool skill owns its own flags and exit-code semantics.
 
 #### Nitro ↔ Vite PWA / Workbox (build-output assumptions)
 - Owner: nitro

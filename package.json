@@ -13,10 +13,12 @@
   ],
   "scripts": {
     "check": "biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run check",
+    "check:fast": "biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run check:fast",
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@dean-stack/web",
     "biome:watch": "biome check --write --watch .",
-    "gen:app": "turbo gen app"
+    "gen:app": "turbo gen app",
+    "prepare": "bash scripts/install-hooks.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",

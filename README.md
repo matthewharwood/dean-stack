@@ -179,19 +179,27 @@ bun run stylelint:watch   # Stylelint watcher only
 
 ---
 
-## The CLI gate — `bun run check`
+## The CLI gate — `bun run check` and `bun run check:fast`
 
-A single command runs every quality stage in order. Each stage's exit code matters; **any warning is a failure**.
+Two flavours of the same gate. **Any warning from any stage is a failure.**
 
-```
-biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  playwright test
-```
+| Command | Chain | When |
+|---|---|---|
+| `bun run check` | `biome ci → stylelint → tsgo → bun test → build → playwright (storybook + app + app-offline)` | CI, and any time you want full release-quality verification locally |
+| `bun run check:fast` | `biome ci → stylelint → tsgo → bun test → playwright --project=storybook` | Pre-push hook, and the inner-loop "is it green yet" check |
+
+`check:fast` skips the `app` and `app-offline` Playwright projects because they spin up `vite preview` against `dist/` — without a fresh build they validate yesterday's bytes. Those are CI's job. The `storybook` project drives `storybook dev`, which is HEAD-valid every run, so it's safe to gate locally.
 
 ```bash
-bun run check
+bun run check         # full gate
+bun run check:fast    # pre-push gate (also auto-runs on `git push`)
 ```
 
-CI runs the same command. If `bun run check` is red, **stop the current task, fix it, and re-run until green** before proceeding.
+If either is red, **stop the current task, fix it, and re-run until green** before proceeding.
+
+### Pre-push hook
+
+`bun install` runs the `prepare` script which invokes `bash scripts/install-hooks.sh` — that writes a one-line `.git/hooks/pre-push` that `exec`s `bun run check:fast`. No package dependency, no Bun-postinstall friction. Bypass intentionally with `git push --no-verify` (e.g. pushing a WIP branch you intend to clean up before opening the PR).
 
 ### What each stage owns
 
@@ -328,6 +336,11 @@ steps:
   - id: pages
     uses: actions/configure-pages@v5            # emits the canonical base_path
   - run: bun install --frozen-lockfile
+  - run: bunx playwright install --with-deps chromium
+  # Pillar 4 — gate runs BEFORE the prod build so we never deploy code
+  # that fails lint/types/unit/e2e. check.yml is PR-only; this is the
+  # only CI surface that runs on push to main (no parallel workflows).
+  - run: bun run check
   - name: Build ${{ env.APP }}
     env:
       BASE_PATH: ${{ steps.pages.outputs.base_path }}
@@ -362,6 +375,8 @@ If step 3 fails, the offline contract is broken — see `apps/web/tests/maze-dee
 
 The single most important flow: **a kid hitting a deep URL while offline must boot the SPA from cache, hydrate from IDB, and render — with no server round-trip**. Lose this and the iPad-over-LAN scenario breaks.
 
+> **Editing this diagram?** Mermaid's sequence-diagram parser treats `+`, `;`, and `<` followed by a letter (e.g. `<LevelCard ...>`) as syntax tokens inside message and note text — *not* literal characters. Avoid those, then validate with `bunx --bun @mermaid-js/mermaid-cli -i diagram.mmd -o out.svg` before pushing.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -370,49 +385,53 @@ sequenceDiagram
     participant Bundle as Vite bundle
     participant Router as TanStack Router
     participant Suspense as Root Suspense
-    participant IDB as IndexedDB
+    participant IDB as IndexedDB (idb)
     participant Atom as atomWithIDB
+    participant Persist as persist.ts
     participant Channel as BroadcastChannel
 
-    Note over Kid,SW: First visit was online; SW + shell are precached.
+    Note over Kid,SW: First visit was online, so SW and shell are precached.
 
-    Kid->>SW: GET /games/maze/3
-    SW-->>Kid: precached /index.html (shell)
+    Kid->>SW: navigate /games/maze/3
+    SW-->>Kid: precached index.html via navigateFallback
     Kid->>Bundle: parse shell, evaluate JS
-    Bundle->>Router: createRouter() + RouterProvider
-    Router->>Suspense: mount __root, use(idbHydrationPromise)
-    Suspense->>IDB: openDB("dean-stack", 2)
-    IDB->>IDB: switch(oldVersion) — run migrations
+    Bundle->>Suspense: import side-effect kicks off idbHydrationPromise
+    Bundle->>Router: createRouter, mount RouterProvider
+    Router->>Suspense: __root renders, use(idbHydrationPromise)
+    Suspense->>IDB: openDB(dean-stack, v2)
+    IDB->>IDB: upgrade callback runs cumulative migrations
     IDB-->>Suspense: connection ready
-    Suspense->>IDB: getAll("progress") + get("settings")
+    Suspense->>IDB: getAll(progress), get(settings)
     IDB-->>Suspense: raw rows
-    Suspense->>Suspense: Zod parse → resolvedSnapshot
-    Suspense-->>Router: promise resolved
-    Router->>Router: ParamsSchema.parse({ level: "3" })
-    Router->>Atom: read getProgressAtom("maze-3")
-    Atom->>Atom: lazy: snapshot.progress.get("maze-3") ?? fallback
-    Atom-->>Router: { id:"maze-3", level:3, completed:false }
-    Router-->>Kid: <LevelCard level=3 completed=false>
+    Suspense->>Suspense: Zod safeParse rows, set resolvedSnapshot
+    Suspense-->>Router: hydration promise resolved
+    Router->>Router: ParamsSchema.parse coerces level to 3
+    Router->>Atom: read getProgressAtom for id maze-3
+    Atom->>Atom: lazy resolveCurrent, snapshot miss returns fallback
+    Atom-->>Router: Progress id=maze-3 level=1 completed=false
+    Router-->>Kid: render LevelCard with URL level=3, atom completed=false
 
-    Note over Kid,Channel: Kid taps "Complete" — write-through path.
+    Note over Kid,Channel: Kid taps Complete, write-through path.
 
-    Kid->>Atom: set({ id:"maze-3", level:3, completed:true })
-    Atom->>Atom: schema.parse(next) — Pillar 2
-    Atom->>Atom: update in-memory storage — Pillar 3 cache
-    Atom->>Atom: schedule(150ms debounce)
-    Atom->>IDB: db.put("progress", value)
-    IDB-->>Atom: committed
-    Atom->>Channel: postMessage({store:"progress", key:"maze-3"})
-    Channel-->>Kid: other tabs / Storybook iframe re-hydrate
+    Kid->>Atom: setProgress with completed=true
+    Atom->>Atom: ProgressSchema.parse(next), Pillar 2 contract
+    Atom->>Atom: update in-memory storage atom
+    Atom->>Persist: call persistProgress(value)
+    Persist->>Persist: schedule with 150ms debounce, key progress:maze-3
+    Persist->>IDB: db.put(progress, value)
+    IDB-->>Persist: write committed
+    Persist->>Channel: postMessage on dean-stack:idb
+    Channel-->>Kid: other tabs and Storybook iframe re-hydrate
 ```
 
-Three load-bearing properties this diagram encodes:
+Four load-bearing properties this diagram encodes:
 
-- **No network.** Steps 1–4 use only the SW's precache. The router resolves the URL client-side; it never asks a server. The route `/games/maze/3` is **not** in the prerender list — the SW fallback (`navigateFallback: "/index.html"`) hands back the canonical shell, the router takes over.
-- **Single Suspense.** Steps 5–11 happen exactly once at app startup. After `resolvedSnapshot` is populated, every `atomWithIDB` reads from it synchronously — no per-atom suspense, no waterfalls.
-- **Parse on every set.** Step 14 is Pillar 2 in action. The Zod schema is the contract; an invalid set throws and surfaces as a gate failure.
+- **No network.** Steps 1–3 use only the SW's precache. The router resolves `/games/maze/3` client-side and never asks a server — that route is *not* in the prerender list, so Workbox's `navigateFallback: "/index.html"` (with a denylist that excludes `/assets/*`, image/font extensions, and `/sw.js`) hands back the canonical shell and the router takes over from there.
+- **Single Suspense, eager hydration.** `idbHydrationPromise` is a top-level IIFE in `apps/web/app/state/hydration.ts` — step 4 is the *import* side-effect kicking it off, not a function call. By the time `__root.tsx` calls `use(idbHydrationPromise)` (step 6), `openDB` is usually already pending. After `resolvedSnapshot` is populated (step 12), every `atomWithIDB` resolves its initial read synchronously via `getHydratedSnapshot()` — no per-atom suspense, no waterfalls.
+- **Two-stage URL → state resolution.** Step 14 (`ParamsSchema.parse`) coerces the URL segment to a typed `level: number` via `z.coerce.number().int().min(1).max(99)`. Step 16 returns the atom's `fallback` (`{ id, level: 1, completed: false }`) because IDB is empty on a cold offline boot — the rendered `LevelCard` displays `level=3` from the URL and `completed=false` from the fallback, even though no progress row exists yet. Writing one (step 19) creates it.
+- **Parse on every set, debounced write-through.** Step 20 is Pillar 2 in action — `ProgressSchema.parse(next)` inside `atomWithIDB`'s setter (`apps/web/app/lib/atom-with-idb.ts:36`). An invalid set throws and propagates to the root `errorComponent`. Steps 22–24 isolate IDB writes from React's render pipeline: `persist.ts` schedules a 150ms timer per key (`progress:maze-3`), coalescing rapid taps into a single `db.put`, then posts `{ store, key }` on the `dean-stack:idb` BroadcastChannel so other tabs and the Storybook iframe re-hydrate. The value itself is *not* on the channel — the receiver re-reads from IDB, keeping IDB the single source of truth (Pillar 3).
 
-This contract is verified end-to-end by `apps/web/tests/maze-deep-link.offline.spec.ts`.
+This contract is verified end-to-end by `apps/web/tests/maze-deep-link.offline.spec.ts` — currently `.skip`'d pending the Workbox / TanStack-Start `_shell.html` rename ordering fix (see [Known gaps](#known-gaps)).
 
 ---
 

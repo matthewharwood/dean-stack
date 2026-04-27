@@ -49,8 +49,20 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # Build only the selected app. Turbo respects the filter; the inner
-      # build script writes to apps/<app>/dist/client.
+      # Playwright's browser binary is not bundled with the npm package; the
+      # gate's `playwright test` step fails on a fresh runner without it.
+      # `--with-deps` installs OS libs Chromium needs on ubuntu-latest.
+      - run: bunx playwright install --with-deps chromium
+
+      # Pillar 4 — the gate runs BEFORE the production build so we never
+      # publish code that fails lint, types, unit, or e2e. This is the only
+      # CI surface that runs on push to main; check.yml is PR-only.
+      - run: bun run check
+
+      # Build only the selected app with the production base path. Turbo
+      # respects the filter; the inner build script writes to
+      # apps/<app>/dist/client. (The gate's build above used `/` as base
+      # for Playwright preview; this rebuild emits the prod-base artifact.)
       - name: Build ${{ env.APP }}
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}

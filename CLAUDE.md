@@ -66,13 +66,20 @@ Ephemeral UI state (focus, hover, transient toggles) is allowed in plain `useSta
 
 ### 4. CLI-gate-first — zero-warning policy
 
-A single command, `bun run check`, is the quality gate. It runs in this order:
+The quality gate has two flavours, both with the same purity rule (any warning = failure):
 
-```
-biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  playwright test (storybook + app)
-```
+- **`bun run check`** — the full gate. Builds every app and runs every Playwright project (storybook + app + app-offline). This is what CI runs and what verifies a release-quality state. The chain:
+  ```
+  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  build  →  playwright test (storybook + app + app-offline)
+  ```
+- **`bun run check:fast`** — the pre-push gate. Same chain, except the Playwright run is restricted to `--project=storybook`. The `app` and `app-offline` projects spin up `vite preview` against `dist/`, so without a fresh build they'd be re-validating yesterday's bytes — meaningless. They're CI's job. The `storybook` project drives `storybook dev` (HEAD-valid every run) so it's safe to gate locally:
+  ```
+  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  playwright test --project=storybook
+  ```
 
-**Any warning from any tool is a failure.** Pre-commit, `bun run dev`, and CI all run the same gate. If `bun run check` is red, stop the current task, fix it, and re-run until green before proceeding. This applies equally to:
+**`bun run check:fast` runs automatically on `git push`.** A pre-push hook installed by `bash scripts/install-hooks.sh` (auto-run as the `prepare` script after every `bun install`) blocks the push if the gate is red. Override only intentionally: `git push --no-verify`. CI then runs the full `bun run check` on the PR.
+
+**Any warning from any tool is a failure.** If either gate is red, stop the current task, fix it, and re-run until green before proceeding. This applies equally to:
 
 - Biome lint or format violations
 - Stylelint violations
@@ -81,7 +88,7 @@ biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  �
 - Failing `bun test` cases
 - Failing Playwright tests (Storybook stories or application workflows)
 
-`bun run dev` runs Stylelint and Biome in watch mode in parallel with Vite. **Stylelint must error from the CLI watcher**, not just in the IDE — the IDE is not the source of truth and may not even be open.
+`bun run dev` is **not** part of the gate — it runs Stylelint and Biome in watch mode in parallel with Vite for fast inner-loop feedback only. **Stylelint must error from the CLI watcher**, not just in the IDE — the IDE is not the source of truth and may not even be open.
 
 ## Architecture decisions — the *why*
 
@@ -216,9 +223,10 @@ These commands are the standard interface. Every script is a Turbo task with app
 
 | Command | What it does |
 |---|---|
-| `bun install` | Install workspace deps |
+| `bun install` | Install workspace deps; `prepare` runs `scripts/install-hooks.sh` to install the pre-push hook |
 | `bun run dev` | Vite + Stylelint watch + Biome watch + Storybook in parallel; first error stops dev |
-| `bun run check` | The gate: biome ci → stylelint → tsc → bun test → playwright (storybook + app) |
+| `bun run check` | The full gate (CI): biome ci → stylelint → tsc → bun test → build → playwright (storybook + app + app-offline) |
+| `bun run check:fast` | The pre-push gate: same chain except `playwright --project=storybook`. Auto-runs on `git push`; bypass with `git push --no-verify` |
 | `bun run build` | Turbo build → Vite client + SSR bundle → TanStack Start prerender → cp index.html → 404.html → touch .nojekyll |
 | `bun gen:app` | Scaffold a new app under `apps/<name>` via the TurboRepo generator |
 | `bun run preview` | Serve the built static output for local PWA verification |

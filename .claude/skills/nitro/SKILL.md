@@ -101,6 +101,12 @@ jobs:
         uses: actions/configure-pages@v5
 
       - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+
+      # Pillar 4 — gate runs BEFORE the prod build, so we never deploy
+      # code that fails lint/types/unit/e2e. This is the only CI surface
+      # that runs on push to main; check.yml is PR-only.
+      - run: bun run check
 
       - name: Build ${{ env.APP }}
         env:

@@ -1,8 +1,11 @@
 name: check
 
+# PR-only. The push-to-main path runs the gate inside `deploy.yml`'s
+# `build` job (Pillar 4 — gate before deploy). Triggering check on push
+# would create a side-by-side workflow run alongside deploy that does
+# nothing the deploy job isn't already doing — see five-phase-pass
+# sweep-token "duplicate workflow trigger on push to main".
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 

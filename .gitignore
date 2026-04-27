@@ -75,3 +75,11 @@ desktop.ini
 
 # Personal scratchpad — local-only prompts authored by /prompt
 prompts/
+
+# Generator validation artifact — regenerated locally by /five-phase-pass
+# from `turbo/generators/templates/app/`. Never commit: doing so makes CI
+# run a duplicate Playwright suite that races for the same Storybook port
+# (6006) as `apps/web` and tears Storybook down with `script "storybook"
+# exited with code 1`. The template is the source of truth; this directory
+# is its materialization.
+apps/test-project/

@@ -23,7 +23,7 @@ Owns the task graph that schedules every script in the dean-stack monorepo. Turb
 - `playwright` (Wave 4, forward) — Turbo will sequence `playwright test` as the final stage of `check`; the conventions live in the playwright skills.
 
 ## Dean-stack rules
-- Pillar 4 (CLI-gate-first) means: `turbo.json`'s `check` task is the canonical sequencer for `biome ci → stylelint --max-warnings 0 → tsgo --noEmit → bun test → playwright test`. Reorder it and the gate's contract changes.
+- Pillar 4 (CLI-gate-first) means: `turbo.json`'s `check` task is the canonical sequencer for `biome ci → stylelint --max-warnings 0 → tsgo --noEmit → bun test → build → playwright (storybook + app + app-offline)`. The parallel `check:fast` task drops the build step and runs only `--project=storybook` for the pre-push hook (no fresh `dist/`, so `app`/`app-offline` projects are CI's job). Reorder either one and the gate's contract changes.
 - Top-level key is `tasks` (v2), never `pipeline`.
 - Every cacheable task lists `outputs` explicitly (use `"outputs": []` for typecheck-style tasks that produce nothing but should still cache).
 - Strict env mode is the default — env vars used by a task must be listed in its `env` array.
@@ -41,13 +41,17 @@ Owns the task graph that schedules every script in the dean-stack monorepo. Turb
     "check": {
       "dependsOn": ["lint", "stylelint", "typecheck", "test:unit", "test:e2e"]
     },
-    "lint":      { "outputs": [] },
-    "stylelint": { "outputs": [] },
-    "typecheck": { "dependsOn": ["^build"], "outputs": [] },
-    "test:unit": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
-    "test:e2e":  { "dependsOn": ["build"], "outputs": ["playwright-report/**", "test-results/**"] },
-    "build":     { "dependsOn": ["^build"], "outputs": [".output/**", "dist/**"] },
-    "dev":       { "cache": false, "persistent": true }
+    "check:fast": {
+      "dependsOn": ["typecheck", "test:unit", "test:e2e:fast"]
+    },
+    "lint":         { "outputs": [] },
+    "stylelint":    { "outputs": [] },
+    "typecheck":    { "dependsOn": ["^build"], "outputs": [] },
+    "test:unit":    { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
+    "test:e2e":     { "dependsOn": ["build"], "outputs": ["playwright-report/**", "test-results/**"] },
+    "test:e2e:fast":{ "outputs": ["playwright-report/**", "test-results/**"] },
+    "build":        { "dependsOn": ["^build"], "outputs": [".output/**", "dist/**"] },
+    "dev":          { "cache": false, "persistent": true }
   }
 }
 ```

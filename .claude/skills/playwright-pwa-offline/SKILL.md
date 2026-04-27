@@ -27,7 +27,7 @@ The offline-deep-link contract: throttle network to offline, navigate to `/some/
 
 ## Dean-stack rules
 - **ASK FIRST before writing or modifying any Playwright test.** Pillar 4 manifestation; canonical detail in `playwright-conventions`. The offline test has more dials than most (when to install the SW, what to seed in IDB, which routes to verify) — surface the choices and wait for the user's answer.
-- Pillar 3 (IDB-first state) + Pillar 4 (CLI-gate-first) together mean: this test is load-bearing. The offline-deep-link contract from CLAUDE.md (Workbox + prerendered shell + IDB hydration + client-side routing) is verified end-to-end here. A red here means a Workbox or routing change broke the fallback; fix the wiring, not the test.
+- Pillar 3 (IDB-first state) + Pillar 4 (CLI-gate-first) together mean: this test is load-bearing. The offline-deep-link contract from CLAUDE.md (Workbox + prerendered shell + IDB hydration + client-side routing) is verified end-to-end here. The `app-offline` Playwright project runs in the full `bun run check` (CI), but **NOT** in the pre-push `bun run check:fast` — it needs a fresh `dist/` from `bun run build` to be meaningful, so it's CI-gated by design. A red here means a Workbox or routing change broke the fallback; fix the wiring, not the test.
 - The service worker NEVER touches IDB — assets only. IDB is application code (see `idb`).
 - The fallback always points at the canonical prerendered shell (see `tanstack-router-pwa-deep-links`), never at per-route HTML.
 - The offline test runs against `bun run preview` — Vite dev does NOT register the production SW.

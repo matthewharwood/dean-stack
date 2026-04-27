@@ -7,6 +7,9 @@
     "check": {
       "dependsOn": ["typecheck", "test:unit", "test:e2e"]
     },
+    "check:fast": {
+      "dependsOn": ["typecheck", "test:unit", "test:e2e:fast"]
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "outputs": []
@@ -17,6 +20,9 @@
     },
     "test:e2e": {
       "dependsOn": ["build"],
+      "outputs": ["playwright-report/**", "test-results/**"]
+    },
+    "test:e2e:fast": {
       "outputs": ["playwright-report/**", "test-results/**"]
     },
     "build": {

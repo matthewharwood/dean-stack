@@ -28,7 +28,7 @@ Playwright end-to-end tests pointed at the built/preview app: route workflows, I
 ## Dean-stack rules
 - **ASK FIRST before writing or modifying any Playwright test.** Pillar 4 manifestation; canonical detail in `playwright-conventions`. Surface the structural choices (which route, what to assert, IDB seed, network state, reduced-motion) and wait for the user's answer.
 - Pillar 3 (IDB-first state) means: app tests verify the iPad-over-LAN scenario — interact, reload, the route resolves from IDB, progress survives. Lose this and the kid loses progress on a hot reload.
-- Pillar 4 (CLI-gate-first) means: a failing app test fails `bun run check`. Never `test.skip` to make CI green; fix the workflow or the wiring.
+- Pillar 4 (CLI-gate-first) means: a failing app test fails `bun run check`. App-level tests are **CI-only** — the pre-push hook runs `bun run check:fast` which restricts Playwright to `--project=storybook` (`vite preview` against `dist/` would re-validate yesterday's bytes locally; not meaningful). Never `test.skip` to make CI green; fix the workflow or the wiring.
 - Web-first assertions only — `await expect(locator).toBe…()`. No point-in-time queries inside `expect()`.
 - Reduced motion is forced on at the project level (see `playwright-conventions`); animations don't add flake.
 - IDB is **never** mocked. Use real browser IndexedDB; seed via `page.addInitScript`; read via `page.evaluate`.

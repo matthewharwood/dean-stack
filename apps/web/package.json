@@ -13,7 +13,8 @@
     "stylelint:watch": "chokidar \"app/**/*.css\" --initial --debounce 200 -c \"stylelint 'app/**/*.css' --allow-empty-input\"",
     "typecheck": "tsgo --noEmit",
     "test:unit": "bun test app/",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:fast": "playwright test --project=storybook"
   },
   "dependencies": {
     "@dean-stack/schemas": "workspace:*",
