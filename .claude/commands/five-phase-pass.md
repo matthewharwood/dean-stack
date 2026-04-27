@@ -185,8 +185,9 @@ The known-stale-token table. Each row: regex pattern, why it's stale, allow-cont
 | `\.output/public` | dean-stack's static artifact lives at `apps/<app>/dist/client/`, not `.output/public/`. The latter is upstream Nitro's default; TanStack Start SPA mode overrides it. | OK in `nitro/SKILL.md` anti-pattern callout |
 | `upload-pages-artifact@v[12]` | Stale GH Pages action revs — must be `@v3`. | OK in `nitro/SKILL.md` anti-pattern callout |
 | `deploy-pages@v[123]` | Stale GH Pages action revs — must be `@v4`. | OK in `nitro/SKILL.md` anti-pattern callout |
-| `branches:\s*\[\s*main\s*\]` | Workflow triggers must include both `main` and `master` so CI/deploy fires regardless of which is the repo's default branch. dean-stack has been on `master` historically; pinning only `main` silently dropped every push and PR. | OK in deliberate "we used to" historical context; OK in upstream-doc citation blocks |
-| `diff:\s*main` *(in `react-doctor.yml`)* | Hardcoded base branch — use `${{ github.base_ref }}` so the diff matches the PR's actual target branch (works for either default-branch convention). | none — always stale |
+| `diff:\s*main` *(in `react-doctor.yml`)* | Hardcoded base branch in workflow inputs — use `${{ github.base_ref }}` so the diff matches the PR's actual target branch and survives default-branch renames or fork repos with a different default. | none — always stale |
+| `branches:\s*\[\s*master\s*\]` | dean-stack's default branch is **`main`** (renamed from `master`). New workflows should target `[main]`. | OK in `nitro/SKILL.md` migration callout; OK in deliberate "we used to" historical context |
+| `(?s)playwright test.*?(?<!playwright install[^\n]{0,120})\Zubuntu-latest` *(conceptual: a CI job that runs Playwright without `bunx playwright install`)* | Playwright's browser binary is NOT bundled with the npm package. A CI job that calls `bun run check` or any `playwright test` invocation MUST first run `bunx playwright install --with-deps chromium` (the `--with-deps` is needed on `ubuntu-latest` for headless Chromium's apt deps). Without it the runner errors with `browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/...`. | OK in `playwright/SKILL.md` "CI install" pattern; OK in this command's docs |
 
 </sweep-tokens>
 

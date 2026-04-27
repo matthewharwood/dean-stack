@@ -310,7 +310,7 @@ Two GitHub Actions workflows:
 
 ```yaml
 on:
-  push: { branches: [main, master] }   # match either default-branch convention
+  push: { branches: [main] }
   workflow_dispatch:
     inputs:
       app:

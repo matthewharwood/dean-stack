@@ -2,9 +2,9 @@ name: check
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 permissions:
   contents: read
@@ -24,6 +24,11 @@ jobs:
           bun-version-file: "package.json"
 
       - run: bun install --frozen-lockfile
+
+      # Playwright's browser binary is not bundled with the npm package; the
+      # gate's `playwright test` step fails on a fresh runner without it.
+      # `--with-deps` installs OS libs Chromium needs on ubuntu-latest.
+      - run: bunx playwright install --with-deps chromium
 
       - run: bun run check
         env:
