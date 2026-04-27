@@ -23,7 +23,8 @@
       "!.idea",
       "!potential_skills",
       "!prompts",
-      "!skills-lock.json"
+      "!skills-lock.json",
+      "!turbo/generators/templates"
     ]
   }
 }

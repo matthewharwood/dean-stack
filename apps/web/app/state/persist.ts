@@ -39,7 +39,7 @@ export function persistSettings(value: Settings): void {
 export type RemoteWriteMessage = { store: StoreName; key: string };
 
 export function subscribeRemoteWrites(onChange: (msg: RemoteWriteMessage) => void): () => void {
-  if (!channel) return () => {};
+  if (!channel) return () => undefined;
   const handler = (e: MessageEvent) => onChange(e.data as RemoteWriteMessage);
   channel.addEventListener("message", handler);
   return () => channel.removeEventListener("message", handler);

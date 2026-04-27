@@ -12,7 +12,7 @@
     "packages/*"
   ],
   "scripts": {
-    "check": "biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run check",
+    "check": "biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run typecheck test:unit && turbo run test:e2e --filter=@dean-stack/web",
     "check:fast": "biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run check:fast",
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@dean-stack/web",

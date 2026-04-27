@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && cp dist/client/index.html dist/client/404.html && touch dist/client/.nojekyll",
-    "preview": "vite preview --port 3000",
-    "storybook": "storybook dev -p 6006 --no-open",
+    "preview": "vite preview --port 3010",
+    "storybook": "storybook dev -p 6010 --no-open",
     "build-storybook": "storybook build",
     "biome:watch": "chokidar \"**/*.{ts,tsx,js,jsx,json}\" --ignore \"**/node_modules/**\" --ignore \"**/dist/**\" --ignore \"**/.turbo/**\" --ignore \"**/routeTree.gen.ts\" --initial --debounce 200 -c \"biome check --write .\"",
     "stylelint:watch": "chokidar \"app/**/*.css\" --initial --debounce 200 -c \"stylelint 'app/**/*.css' --allow-empty-input\"",
