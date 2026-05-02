@@ -66,7 +66,14 @@ function HydrateThenRender({ children }: { children: ReactNode }): ReactNode {
 
 function RootComponent(): ReactNode {
   return (
-    <html lang="en">
+    // Browser/extension instrumentation (Chrome remote-debugger's
+    // __gchrome_remoteframetoken, password-manager bookkeeping, etc.) routinely
+    // mutates <html>'s attributes before React boots. React 19's strict
+    // hydration treats those as mismatches and surfaces them as the "Invalid
+    // HTML tag nesting" variant. Suppress on this element only — it doesn't
+    // cascade into children, so real hydration bugs deeper in the tree still
+    // throw normally.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>

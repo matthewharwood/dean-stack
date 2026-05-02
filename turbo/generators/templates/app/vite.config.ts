@@ -1,9 +1,17 @@
 import { devtools as tanstackDevtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig, loadEnv } from "vite";
-import { VitePWA } from "vite-plugin-pwa";
 
 import { sharedPlugins } from "./vite.shared";
+
+// PWA layer (vite-plugin-pwa + Workbox) is intentionally OFF.
+// Reason: vite-plugin-pwa's `closeBundle` hook fires before TanStack Start's
+// prerender pass, so `dist/client/sw.js` is never written and the
+// `virtual_pwa-register-*.js` shim hardcodes `/sw.js` (root-relative) instead
+// of the deploy base path. Re-enable when offline-deep-link actually matters
+// (CLAUDE.md milestone 7) and the upstream integration is fixed; until then,
+// `playwright-pwa-offline` tests stay `test.skip`'d and there is no service
+// worker on prod.
 
 // Base URL is driven by the BASE_PATH env var supplied by the deploy workflow
 // (sourced from `actions/configure-pages@v5`'s `base_path` output, which is
@@ -56,35 +64,6 @@ export default defineConfig(async ({ mode }) => {
           crawlLinks: true,
           autoSubfolderIndex: true,
           failOnError: true,
-        },
-      }),
-      VitePWA({
-        strategies: "generateSW",
-        registerType: "autoUpdate",
-        manifest: {
-          name: "{{name}}",
-          short_name: "{{name}}",
-          description: "{{name}} — a dean-stack app",
-          theme_color: "#1f1f3f",
-          background_color: "#ffffff",
-          start_url: ".",
-          display: "standalone",
-        },
-        workbox: {
-          globPatterns: ["**/*.{js,css,html,svg,png,ico,webmanifest}"],
-          navigateFallback: "/index.html",
-          navigateFallbackDenylist: [/^\/assets\//, /\.(?:png|svg|webp|woff2?|ico)$/, /^\/sw\.js$/],
-          runtimeCaching: [
-            {
-              urlPattern: ({ request }) =>
-                request.destination === "image" || request.destination === "font",
-              handler: "CacheFirst",
-              options: {
-                cacheName: "static-assets",
-                expiration: { maxEntries: 100 },
-              },
-            },
-          ],
         },
       }),
     ],

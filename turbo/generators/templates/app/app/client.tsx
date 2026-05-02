@@ -1,4 +1,3 @@
-/// <reference types="vite-plugin-pwa/client" />
 import { StartClient } from "@tanstack/react-start/client";
 import { StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
@@ -15,11 +14,9 @@ applyEngineDefaults();
 // DevTools panel below + `react-scan` in Storybook until upstream resolves the
 // React 19 / TanStack Router clash.
 
-if ("serviceWorker" in navigator) {
-  void import("virtual:pwa-register").then(({ registerSW }) => {
-    registerSW({ immediate: true });
-  });
-}
+// PWA service-worker registration is intentionally absent — see vite.config.ts
+// for the rationale (vite-plugin-pwa is parked until the closeBundle/prerender
+// ordering with TanStack Start is fixed upstream).
 
 // TanStack Start in SPA + prerender mode renders the full document via
 // __root__'s <html>...</html>. Hydration replaces the entire document; there

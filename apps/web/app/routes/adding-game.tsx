@@ -16,12 +16,18 @@ export const Route = createFileRoute("/adding-game")({
 
 function AddingGame() {
   return (
-    <main className="flex flex-col items-center gap-6 min-h-screen justify-center font-display">
-      <h1 className="text-3xl">Adding Game</h1>
-      <p className="text-base text-brand-900/70">Game scaffolding — gameplay coming next.</p>
-      <Link to="/" className="text-brand-700 underline">
-        Back to home
-      </Link>
+    <main className="grid h-screen grid-cols-[1fr_2fr_1fr] gap-2 p-2 font-display">
+      <section aria-label="Left panel" className="relative rounded-md bg-neutral-200" />
+      <div className="grid grid-rows-3 gap-2">
+        <section aria-label="Top center panel" className="relative rounded-md bg-neutral-200" />
+        <section aria-label="Middle center panel" className="relative rounded-md bg-neutral-200" />
+        <section aria-label="Bottom center panel" className="relative rounded-md bg-neutral-200" />
+      </div>
+      <section aria-label="Right panel" className="relative rounded-md bg-neutral-200">
+        <Link to="/" className="absolute bottom-2 right-2 text-sm text-brand-700 underline">
+          Back to home
+        </Link>
+      </section>
     </main>
   );
 }
