@@ -1,4 +1,10 @@
-import { type Progress, ProgressSchema, type Settings, SettingsSchema } from "@dean-stack/schemas";
+import {
+  type Progress,
+  ProgressSchema,
+  SETTINGS_DEFAULT,
+  type Settings,
+  SettingsSchema,
+} from "@dean-stack/schemas";
 
 import { getDB } from "./db";
 
@@ -8,8 +14,6 @@ export type HydratedState = {
 };
 
 export type StoreName = keyof HydratedState;
-
-const DEFAULT_SETTINGS: Settings = { id: "settings", theme: "light", reducedMotion: false };
 
 let resolvedSnapshot: HydratedState | null = null;
 
@@ -22,7 +26,7 @@ export function getHydratedSnapshot(): HydratedState | null {
 // In a prerender / SSR-shell context (no indexedDB), resolves with empty state.
 export const idbHydrationPromise: Promise<HydratedState> = (async () => {
   if (typeof indexedDB === "undefined") {
-    const empty: HydratedState = { progress: new Map(), settings: DEFAULT_SETTINGS };
+    const empty: HydratedState = { progress: new Map(), settings: SETTINGS_DEFAULT };
     resolvedSnapshot = empty;
     return empty;
   }
@@ -36,7 +40,7 @@ export const idbHydrationPromise: Promise<HydratedState> = (async () => {
     const parsed = ProgressSchema.safeParse(raw);
     if (parsed.success) progress.set(parsed.data.id, parsed.data);
   }
-  const settings = SettingsSchema.parse(rawSettings ?? DEFAULT_SETTINGS);
+  const settings = SettingsSchema.parse(rawSettings ?? SETTINGS_DEFAULT);
   const snapshot: HydratedState = { progress, settings };
   resolvedSnapshot = snapshot;
   return snapshot;

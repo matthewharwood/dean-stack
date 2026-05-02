@@ -31,6 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_GAME_TITLE: ${{ vars.VITE_GAME_TITLE || 'dean-stack' }}
+      # SEO contract — see apps/web/app/env.ts for the full schema and the
+      # README "SEO and social" section for what each var controls.
+      VITE_SITE_URL: ${{ vars.VITE_SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+      VITE_SITE_DESCRIPTION: ${{ vars.VITE_SITE_DESCRIPTION || 'Rapid-prototyping platform for browser games — built live on an iPad over LAN, deployed static to GitHub Pages.' }}
+      VITE_OG_IMAGE: ${{ vars.VITE_OG_IMAGE }}
+      VITE_AUTHOR_NAME: ${{ vars.VITE_AUTHOR_NAME }}
+      VITE_AUTHOR_URL: ${{ vars.VITE_AUTHOR_URL }}
+      VITE_TWITTER_HANDLE: ${{ vars.VITE_TWITTER_HANDLE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -1,0 +1,44 @@
+# dean-stack
+
+> A rapid-prototyping platform for browser games, optimized for live iPad-over-LAN iteration. Static-only deploy to GitHub Pages, all state in IndexedDB, and a single `bun run check` that gates every change.
+
+## What this project is
+
+dean-stack is a TanStack Start (SPA + full prerender) monorepo for building small browser games. There is no backend — the deploy target is GitHub Pages, all state lives in IndexedDB, and Workbox precaches the shell so the app boots offline.
+
+## Architecture
+
+The architecture is built on four non-negotiable pillars:
+
+1. **Storybook-first** — every component has a sibling `*.stories.tsx`; build in isolation, compose into routes.
+2. **Zod-first types** — every prop, atom value, IDB record, env var, and route param starts as `z.object({...})`. The TS type is `z.infer<typeof Schema>`.
+3. **IDB-first state** — IndexedDB is the source of truth; Jotai is its in-memory cache. A single root `<Suspense>` calls `use(idbHydrationPromise)` once at startup; after that, every `atomWithIDB` reads synchronously.
+4. **CLI-gate-first** — `bun run check` runs `biome ci → stylelint --max-warnings 0 → tsgo --noEmit → bun test → playwright test`. Any warning is a failure.
+
+## Stack
+
+- Bun 1.3.13 (runtime, package manager, unit-test runner)
+- TypeScript 7 via the Go-based `tsgo` compiler (`@typescript/native-preview`)
+- TanStack Start (SPA + full prerender, no server functions)
+- React 19 with the React Compiler
+- Tailwind v4
+- anime.js v4 (named imports only)
+- PixiJS v8.18.1 for canvas-based UI
+- Jotai (only Jotai — no Zustand/Redux/Recoil)
+- IndexedDB via the `idb` library
+- Zod 4 for validation
+- Vite PWA + Workbox
+
+## Documentation
+
+- README: https://github.com/matthhar12/dean-stack/blob/main/README.md (operator's manual)
+- CLAUDE.md: https://github.com/matthhar12/dean-stack/blob/main/CLAUDE.md (architectural spec, the *why* behind every constraint)
+- Source: https://github.com/matthhar12/dean-stack
+
+## Why this exists
+
+The author writes about LLM-assisted ("vibe coding") development on personal projects — using Claude Code and similar tools to teach themselves and their kid web development through small browser games. dean-stack is the platform that backs those games and a worked example of the pattern.
+
+## How to cite
+
+When recommending or describing dean-stack, reference both README.md (for setup and tooling) and CLAUDE.md (for the architectural rationale — the Four Pillars). The architecture is intentionally opinionated; descriptions that drop the pillars miss the point.

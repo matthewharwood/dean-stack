@@ -1,0 +1,22 @@
+# {{name}}
+
+> A dean-stack browser game built with TanStack Start, Jotai, and IndexedDB. Deployed static to GitHub Pages.
+
+## What this is
+
+{{name}} is a small browser game scaffolded from the dean-stack template. SPA + full prerender via TanStack Start, all state in IndexedDB via Jotai's `atomWithIDB`, no backend.
+
+## Architecture (inherited from dean-stack)
+
+1. Storybook-first — every component ships with a sibling `*.stories.tsx`.
+2. Zod-first types — props, atom values, IDB records, env vars, and route params start as `z.object({...})`.
+3. IDB-first state — IndexedDB is the source of truth; Jotai caches it in memory.
+4. CLI-gate-first — `bun run check` is the single quality gate; any warning is a failure.
+
+## Stack
+
+Bun 1.3.13 • TypeScript 7 • TanStack Start (SPA + prerender) • React 19 + Compiler • Tailwind v4 • anime.js v4 • PixiJS v8 • Jotai • idb • Zod 4 • Vite PWA + Workbox.
+
+## Documentation
+
+See the parent monorepo's CLAUDE.md and README.md for the architectural spec and operator's manual.

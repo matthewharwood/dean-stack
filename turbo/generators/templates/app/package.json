@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && cp dist/client/index.html dist/client/404.html && touch dist/client/.nojekyll",
+    "build": "vite build && cp dist/client/index.html dist/client/404.html && touch dist/client/.nojekyll && bun run scripts/build-sitemap.ts",
     "preview": "vite preview --port 3010",
     "storybook": "storybook dev -p 6010 --no-open",
     "build-storybook": "storybook build",

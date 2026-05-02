@@ -182,6 +182,19 @@ Wait for the user's answer before writing the test. This rule is load-bearing �
 
 There is no server runtime, but T3 env still earns its keep: it validates `VITE_*` client vars at build time and gives a typed `env` import. Set up both `client` and `server` slots so a future move beyond GH Pages does not require a refactor. The `server` slot stays empty for now.
 
+### SEO and social — exact rules
+
+The deploy target is GitHub Pages, but the audience includes LinkedIn previews, blog post embeds, and AI assistants citing the project. The SEO contract is intentionally narrow — every piece is static or build-time, never server-rendered.
+
+- **One module owns the contract.** `apps/<name>/app/lib/seo.ts` exposes `buildSeoMeta`, `buildSeoLinks`, and `buildJsonLd`. All three read from the T3-validated env (`VITE_SITE_URL`, `VITE_SITE_DESCRIPTION`, `VITE_OG_IMAGE`, `VITE_AUTHOR_NAME`, `VITE_AUTHOR_URL`, `VITE_TWITTER_HANDLE`). Components never construct `<meta>` JSX — head injection lives at the route level via TanStack Router's `head` callback.
+- **Defaults at the root, overrides at the leaf.** `__root.tsx` calls `buildSeoMeta({ path: "/" })` so every route gets sensible defaults; per-tag overrides (`title`, `description`, `og:*`, `twitter:*`) come from the leaf route returning its own `buildSeoMeta({ path, title, description })`. TanStack Router deep-merges meta entries by key, so deeper routes win.
+- **Canonical is per-route, NOT root.** Link entries with the same `rel` do not deduplicate, so emitting `rel="canonical"` at the root would produce two on every leaf page. Each route — including `index.tsx` — must return `links: buildSeoLinks({ path })`. The root deliberately skips canonical.
+- **Static `public/` files only.** `robots.txt`, `llms.txt`, and `og-card.svg` (1200×630) live under `apps/<name>/public/`. No server route at `/sitemap[.]xml.ts`, `/robots[.]txt.ts`, or `/llms[.]txt.ts` — the LLMO doc's server-route patterns are architecturally incompatible with SPA + GH Pages. The sitemap is generated at build time by `scripts/build-sitemap.ts`, which walks `dist/client/**/*.html`, excludes `404.html`, and emits `dist/client/sitemap.xml` keyed off `VITE_SITE_URL`.
+- **JSON-LD lives in the root `head` `scripts` slot.** `WebSite` + `SoftwareApplication` schemas are emitted once per page. Per-route Article schemas can be appended later by adding a `scripts` entry to the leaf's head.
+- **No Open Graph image generation pipeline.** The shipped `og-card.svg` works for X/Bluesky out of the box; LinkedIn and Facebook prefer PNG/JPG, so swap in a 1200×630 raster when that matters. Don't introduce an image-generation dep just to convert it.
+
+The contract is verified end-to-end by `apps/<name>/tests/seo.app.spec.ts`. Any new top-level route must add its own `head` returning `buildSeoLinks({ path })` or the test fails.
+
 ## Repository layout (TurboRepo)
 
 The codebase is a monorepo. Expect this shape — refine as it lands, but keep the split:

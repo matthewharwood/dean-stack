@@ -293,7 +293,7 @@ What `bun run build` does, in order:
 2. **Vite bundles the SPA** — React 19, the React Compiler, Tailwind v4.
 3. **TanStack Start prerenders every route** with `prerender.failOnError: true` — a missing route fails the build.
 4. **Workbox writes `sw.js`** precaching the shell.
-5. **Build script** copies `index.html` → `404.html` (GH Pages's SPA fallback) and `touch`es `.nojekyll` (insurance against Jekyll stripping `_`-prefixed paths). The artifact lands at `apps/web/dist/client/`.
+5. **Build script** copies `index.html` → `404.html` (GH Pages's SPA fallback), `touch`es `.nojekyll` (insurance against Jekyll stripping `_`-prefixed paths), then runs `scripts/build-sitemap.ts` to walk the prerendered HTML and emit `sitemap.xml` keyed off `VITE_SITE_URL`. The artifact lands at `apps/web/dist/client/`, with `robots.txt`, `llms.txt`, `og-card.svg`, and `sitemap.xml` alongside `index.html`.
 
 Use `bun run preview` to verify locally — that's the same artifact GitHub Pages serves. Playwright `app` and `app-offline` projects run against this preview server, **not** the dev server.
 
@@ -310,7 +310,7 @@ Two GitHub Actions workflows:
 
 1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 2. **Settings → Environments → `github-pages`** — created automatically by the deploy workflow on first run.
-3. **Settings → Secrets and variables → Actions → Variables** — add `VITE_GAME_TITLE` (and any other `VITE_*` you reference).
+3. **Settings → Secrets and variables → Actions → Variables** — add `VITE_GAME_TITLE` and the SEO contract (`VITE_SITE_URL`, `VITE_SITE_DESCRIPTION`, optionally `VITE_OG_IMAGE`, `VITE_AUTHOR_NAME`, `VITE_AUTHOR_URL`, `VITE_TWITTER_HANDLE`). Defaults are baked into the workflow for `VITE_SITE_URL` (computed from `github.repository_owner`/`github.event.repository.name`) and `VITE_SITE_DESCRIPTION`, so the minimum-viable deploy works without setting any vars — but override `VITE_SITE_URL` to your custom domain if you have one.
    - Values here are **public** — they ship in the JS bundle.
    - **Never** put a real secret in a `VITE_*` field. If you need a private key, GitHub Pages is the wrong target — surface the constraint, don't introduce a server.
 
@@ -568,6 +568,13 @@ Every PR is reviewed against the Four Pillars. Anything that violates one is rev
 - [ ] Any new `VITE_*` env var is added in `apps/web/app/env.ts` *and* in `.github/workflows/deploy.yml`'s `env:` block?
 - [ ] No entries in `app/env.ts`'s `server: {}` slot (GH Pages is static)?
 - [ ] Any new prerendered route is reachable via `<Link>` from another prerendered page (so TanStack Start's `crawlLinks` picks it up) or listed in the `tanstackStart({ prerender: { routes: [...] } })` array?
+
+### SEO and social
+
+- [ ] Any new top-level route declares its own `head` returning `buildSeoLinks({ path })` so a single `<link rel="canonical">` renders (root no longer emits canonical — see `apps/web/app/lib/seo.ts`)?
+- [ ] Per-route titles or descriptions go through `buildSeoMeta({ path, title, description })` so OG and Twitter Card tags update in lockstep with the page title?
+- [ ] No raw `<meta>` JSX in components — head injection is route-level via TanStack Router's `head` callback, not React tree?
+- [ ] `tests/seo.app.spec.ts` still passes — the SEO contract is gate-asserted, not a convention?
 
 ---
 

@@ -3,6 +3,7 @@ import { useAtom } from "jotai";
 import * as z from "zod";
 
 import { LevelCard } from "~/components/level-card";
+import { buildSeoLinks, buildSeoMeta } from "~/lib/seo";
 import { getProgressAtom } from "~/state/atoms";
 
 const ParamsSchema = z.object({
@@ -11,6 +12,17 @@ const ParamsSchema = z.object({
 
 export const Route = createFileRoute("/games/maze/$level")({
   params: { parse: (raw) => ParamsSchema.parse(raw) },
+  head: ({ params }) => {
+    const path = `/games/maze/${params.level}`;
+    return {
+      meta: buildSeoMeta({
+        path,
+        title: `Maze - Level ${params.level}`,
+        description: `Maze level ${params.level} — a dean-stack browser game.`,
+      }),
+      links: buildSeoLinks({ path }),
+    };
+  },
   component: MazeLevel,
 });
 

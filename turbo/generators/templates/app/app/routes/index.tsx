@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { HealthCard } from "~/components/health-card";
 import { env } from "~/env";
+import { buildSeoLinks } from "~/lib/seo";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ links: buildSeoLinks({ path: "/" }) }),
   component: Home,
 });
 

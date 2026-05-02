@@ -1,10 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import * as z from "zod";
 
-// Merge process.env (populated by Bun from .env files at script start, used
-// when this module is loaded by vite.config.ts during config evaluation) with
-// import.meta.env (Vite's static replacement at runtime in the browser bundle).
-// Either context produces the same `env` object.
 const runtimeEnv: Record<string, string | undefined> = {
   ...(typeof process !== "undefined" ? process.env : {}),
   ...(typeof import.meta !== "undefined" ? import.meta.env : {}),
@@ -15,11 +11,20 @@ export const env = createEnv({
   client: {
     VITE_GAME_TITLE: z.string().min(1),
     VITE_API_BASE: z.url().optional(),
+
+    VITE_SITE_URL: z
+      .url()
+      .refine((u) => u.endsWith("/"), { message: "VITE_SITE_URL must end with '/'" }),
+    VITE_SITE_DESCRIPTION: z.string().min(40).max(300),
+    VITE_OG_IMAGE: z.string().min(1).default("/og-card.svg"),
+    VITE_AUTHOR_NAME: z.string().min(1).optional(),
+    VITE_AUTHOR_URL: z.url().optional(),
+    VITE_TWITTER_HANDLE: z
+      .string()
+      .regex(/^@[A-Za-z0-9_]{1,15}$/, "VITE_TWITTER_HANDLE must look like @handle")
+      .optional(),
   },
-  server: {
-    // Intentionally empty on GitHub Pages.
-    // When this app moves off Pages, fill this and add a server runtime.
-  },
+  server: {},
   runtimeEnv,
   emptyStringAsUndefined: true,
 });

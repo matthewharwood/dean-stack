@@ -2,7 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { Provider } from "jotai";
 import { lazy, type ReactNode, Suspense, use } from "react";
 
-import { env } from "~/env";
+import { buildJsonLd, buildSeoMeta } from "~/lib/seo";
 import { idbHydrationPromise } from "~/state/hydration";
 
 // Dev-only TanStack DevTools host + Router plugin. The `import.meta.env.DEV`
@@ -27,11 +27,15 @@ const TanStackDevtools = import.meta.env.DEV
 
 export const Route = createRootRoute({
   head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: env.VITE_GAME_TITLE },
-    ],
+    // Defaults for every route. Children override per-tag (title, description,
+    // og:*, twitter:*) by returning their own buildSeoMeta({ path, title, ... })
+    // — TanStack Router deep-merges head entries by key.
+    //
+    // Canonical link is intentionally NOT emitted here: link entries with the
+    // same `rel` do not deduplicate, so emitting it at the root would produce
+    // two <link rel="canonical"> on every leaf page. Each route owns its own
+    // canonical via buildSeoLinks({ path }).
+    meta: buildSeoMeta({ path: "/" }),
     links: [
       // Inline data-URI favicon — silences the browser's auto `/favicon.ico`
       // request without needing a public/ asset.
@@ -39,6 +43,12 @@ export const Route = createRootRoute({
         rel: "icon",
         type: "image/svg+xml",
         href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231f1f3f'/%3E%3C/svg%3E",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(buildJsonLd()),
       },
     ],
   }),

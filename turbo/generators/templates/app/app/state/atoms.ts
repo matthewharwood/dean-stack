@@ -1,4 +1,9 @@
-import { type Progress, ProgressSchema, SettingsSchema } from "@dean-stack/schemas";
+import {
+  type Progress,
+  ProgressSchema,
+  SETTINGS_DEFAULT,
+  SettingsSchema,
+} from "@dean-stack/schemas";
 import type { WritableAtom } from "jotai";
 
 import { atomWithIDB } from "~/lib/atom-with-idb";
@@ -9,7 +14,7 @@ export const settingsAtom = atomWithIDB(
   SettingsSchema,
   (snapshot) => snapshot.settings,
   persistSettings,
-  { id: "settings", theme: "light", reducedMotion: false },
+  SETTINGS_DEFAULT,
 );
 
 // Parameterized atoms — prefer the IDB key over a family library.
@@ -29,11 +34,12 @@ const progressAtoms = new Map<string, ProgressAtom>();
 export function getProgressAtom(id: string): ProgressAtom {
   let cached = progressAtoms.get(id);
   if (!cached) {
-    cached = atomWithIDB(ProgressSchema, (snapshot) => snapshot.progress.get(id), persistProgress, {
-      id,
-      level: 1,
-      completed: false,
-    });
+    cached = atomWithIDB(
+      ProgressSchema,
+      (snapshot) => snapshot.progress.get(id),
+      persistProgress,
+      ProgressSchema.parse({ id }),
+    );
     progressAtoms.set(id, cached);
   }
   return cached;
