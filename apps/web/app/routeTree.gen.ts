@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AddingGameRouteImport } from './routes/adding-game'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GamesMazeLevelRouteImport } from './routes/games/maze/$level'
 
+const AddingGameRoute = AddingGameRouteImport.update({
+  id: '/adding-game',
+  path: '/adding-game',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const GamesMazeLevelRoute = GamesMazeLevelRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/adding-game': typeof AddingGameRoute
   '/games/maze/$level': typeof GamesMazeLevelRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/adding-game': typeof AddingGameRoute
   '/games/maze/$level': typeof GamesMazeLevelRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/adding-game': typeof AddingGameRoute
   '/games/maze/$level': typeof GamesMazeLevelRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/games/maze/$level'
+  fullPaths: '/' | '/adding-game' | '/games/maze/$level'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/games/maze/$level'
-  id: '__root__' | '/' | '/games/maze/$level'
+  to: '/' | '/adding-game' | '/games/maze/$level'
+  id: '__root__' | '/' | '/adding-game' | '/games/maze/$level'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AddingGameRoute: typeof AddingGameRoute
   GamesMazeLevelRoute: typeof GamesMazeLevelRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/adding-game': {
+      id: '/adding-game'
+      path: '/adding-game'
+      fullPath: '/adding-game'
+      preLoaderRoute: typeof AddingGameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AddingGameRoute: AddingGameRoute,
   GamesMazeLevelRoute: GamesMazeLevelRoute,
 }
 export const routeTree = rootRouteImport
