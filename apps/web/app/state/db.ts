@@ -1,13 +1,19 @@
-import type { Progress, Settings } from "@dean-stack/schemas";
+import {
+  ADDING_GAME_DEFAULT,
+  type AddingGameState,
+  type Progress,
+  type Settings,
+} from "@dean-stack/schemas";
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
 export interface AppDB extends DBSchema {
   progress: { key: string; value: Progress };
   settings: { key: string; value: Settings };
+  "adding-game": { key: string; value: AddingGameState };
 }
 
 const DB_NAME = "dean-stack";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | undefined;
 
@@ -24,6 +30,10 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
       if (oldVersion < 2) {
         const settings = db.createObjectStore("settings", { keyPath: "id" });
         void settings.put({ id: "settings", theme: "light", reducedMotion: false });
+      }
+      if (oldVersion < 3) {
+        const addingGame = db.createObjectStore("adding-game", { keyPath: "id" });
+        void addingGame.put(ADDING_GAME_DEFAULT);
       }
     },
     blocked() {

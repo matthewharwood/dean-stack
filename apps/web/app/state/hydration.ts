@@ -1,4 +1,7 @@
 import {
+  ADDING_GAME_DEFAULT,
+  type AddingGameState,
+  AddingGameStateSchema,
   type Progress,
   ProgressSchema,
   SETTINGS_DEFAULT,
@@ -11,6 +14,7 @@ import { getDB } from "./db";
 export type HydratedState = {
   progress: ReadonlyMap<string, Progress>;
   settings: Settings;
+  addingGame: AddingGameState;
 };
 
 export type StoreName = keyof HydratedState;
@@ -26,14 +30,19 @@ export function getHydratedSnapshot(): HydratedState | null {
 // In a prerender / SSR-shell context (no indexedDB), resolves with empty state.
 export const idbHydrationPromise: Promise<HydratedState> = (async () => {
   if (typeof indexedDB === "undefined") {
-    const empty: HydratedState = { progress: new Map(), settings: SETTINGS_DEFAULT };
+    const empty: HydratedState = {
+      progress: new Map(),
+      settings: SETTINGS_DEFAULT,
+      addingGame: ADDING_GAME_DEFAULT,
+    };
     resolvedSnapshot = empty;
     return empty;
   }
   const db = await getDB();
-  const [rawProgress, rawSettings] = await Promise.all([
+  const [rawProgress, rawSettings, rawAddingGame] = await Promise.all([
     db.getAll("progress"),
     db.get("settings", "settings"),
+    db.get("adding-game", "adding-game"),
   ]);
   const progress = new Map<string, Progress>();
   for (const raw of rawProgress) {
@@ -41,7 +50,8 @@ export const idbHydrationPromise: Promise<HydratedState> = (async () => {
     if (parsed.success) progress.set(parsed.data.id, parsed.data);
   }
   const settings = SettingsSchema.parse(rawSettings ?? SETTINGS_DEFAULT);
-  const snapshot: HydratedState = { progress, settings };
+  const addingGame = AddingGameStateSchema.parse(rawAddingGame ?? ADDING_GAME_DEFAULT);
+  const snapshot: HydratedState = { progress, settings, addingGame };
   resolvedSnapshot = snapshot;
   return snapshot;
 })();

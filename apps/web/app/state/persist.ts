@@ -1,4 +1,4 @@
-import type { Progress, Settings } from "@dean-stack/schemas";
+import type { AddingGameState, Progress, Settings } from "@dean-stack/schemas";
 
 import { getDB } from "./db";
 import type { StoreName } from "./hydration";
@@ -33,6 +33,14 @@ export function persistSettings(value: Settings): void {
     const db = await getDB();
     await db.put("settings", value);
     channel?.postMessage({ store: "settings", key: value.id });
+  });
+}
+
+export function persistAddingGame(value: AddingGameState): void {
+  schedule(`adding-game:${value.id}`, async () => {
+    const db = await getDB();
+    await db.put("adding-game", value);
+    channel?.postMessage({ store: "addingGame", key: value.id });
   });
 }
 

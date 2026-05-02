@@ -1,4 +1,6 @@
 import {
+  ADDING_GAME_DEFAULT,
+  AddingGameStateSchema,
   type Progress,
   ProgressSchema,
   SETTINGS_DEFAULT,
@@ -8,13 +10,20 @@ import type { WritableAtom } from "jotai";
 
 import { atomWithIDB } from "~/lib/atom-with-idb";
 
-import { persistProgress, persistSettings } from "./persist";
+import { persistAddingGame, persistProgress, persistSettings } from "./persist";
 
 export const settingsAtom = atomWithIDB(
   SettingsSchema,
   (snapshot) => snapshot.settings,
   persistSettings,
   SETTINGS_DEFAULT,
+);
+
+export const addingGameAtom = atomWithIDB(
+  AddingGameStateSchema,
+  (snapshot) => snapshot.addingGame,
+  persistAddingGame,
+  ADDING_GAME_DEFAULT,
 );
 
 // Parameterized atoms — prefer the IDB key over a family library.
