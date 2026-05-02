@@ -18,10 +18,16 @@ function resolveBase(): string {
 
 export default defineConfig(async ({ mode }) => {
   // Vite's config bundler runs in a Node subprocess that does NOT inherit
-  // Bun's auto-loaded .env. Populate process.env explicitly, then dynamically
-  // import env.ts so the t3-env validation throws here (Pillar 4 — fail the
-  // build before any artifact uploads), not at first page load.
-  Object.assign(process.env, loadEnv(mode, process.cwd(), ""));
+  // Bun's auto-loaded .env. Fill in missing vars from .env files, but never
+  // clobber values already on process.env — CI workflows set VITE_SITE_URL
+  // etc. via job env, and those must win over the local .env (which holds
+  // the localhost dev defaults). Then dynamically import env.ts so t3-env
+  // validation throws here (Pillar 4 — fail the build before any artifact
+  // uploads), not at first page load.
+  const fileEnv = loadEnv(mode, process.cwd(), "");
+  for (const [key, value] of Object.entries(fileEnv)) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
   await import("./app/env");
 
   return {

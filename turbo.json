@@ -27,6 +27,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
+      "env": ["BASE_PATH", "VITE_*"],
       "outputs": [".output/**", "dist/**"]
     },
     "dev": {
