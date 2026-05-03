@@ -1,0 +1,256 @@
+import type { AddingGameState } from "@dean-stack/schemas";
+
+// A hint is a short pedagogical nudge shown on a wrong evaluation. The
+// `id` is for de-duplication ("don't show the same hint twice in a row")
+// and for future analytics — which hints actually help kids correct?
+//
+// Three display fields, designed so a 7-year-old reading at a glance picks
+// up the actionable bit immediately:
+//   - `emphasis`: 2–6 word punch line displayed huge and colored. The kid
+//                 reads this even if they don't read the body.
+//   - `body`: the longer explanation. Digit runs are highlighted at
+//             render time. Words wrapped in `*asterisks*` render italic
+//             so templates can stress concepts without inline JSX.
+//   - `hands` (optional): finger-counting visual. Renders 0–10 fingers
+//             extended on a pair of drawn hands. Used by templates
+//             where the count is the actionable bit (count-fingers,
+//             number-bonds, missing-number, boundary). Hint generation
+//             only attaches hands when the count fits in 0–10 — bigger
+//             targets fall back to text-only.
+export type Hint = {
+  id: string;
+  emphasis: string;
+  body: string;
+  hands?: { count: number; caption: string | null };
+};
+
+// HandCount supports 0–10. Targets above 10 fall back to text-only
+// hints — no hands to draw. Below the cap, every hand-bearing hint
+// uses the same caption template ("Make N", "Land before N", etc.)
+// so the visual reads consistently across templates.
+const HANDS_MAX = 10;
+const fits = (n: number): boolean => n >= 0 && n <= HANDS_MAX;
+
+// Pure: given the current state (which has the failed outcome on it),
+// returns the hints that apply. Operator-specific hints filter themselves
+// out when the operator is wrong; direction hints branch on too-big vs
+// too-small. The set is intentionally redundant so consecutive losses on
+// the same equation see different angles.
+export function generateHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const target = round.equation.target.value;
+  const computed = round.outcome.computedValue;
+  const operator = round.equation.operator;
+  const comparator = round.equation.comparator ?? "eq";
+  const tooBig = computed > target;
+  const tooSmall = computed < target;
+  const exact = computed === target;
+
+  // 12 hint templates, broken down by category. Each `push` is a separate
+  // angle a 7-year-old might lean on — direction, decomposition, counting,
+  // visualization, operator-specific, etc. The route picks one randomly,
+  // avoiding the previous id so back-to-back losses see fresh framing.
+  const hints: Hint[] = [];
+
+  // ── COMPARATOR-AWARE DIRECTION
+  // Each hint has an emphasis ("punch line") + body. The kid reads the
+  // emphasis at a glance and the body if they have time.
+  if (comparator === "eq") {
+    if (tooBig) {
+      hints.push({
+        id: "direction-too-big",
+        emphasis: "Try smaller!",
+        body: `Your answer is *bigger* than ${target}. Pick smaller cards.`,
+      });
+    } else if (tooSmall) {
+      hints.push({
+        id: "direction-too-small",
+        emphasis: "Go bigger!",
+        body: `Your answer is *smaller* than ${target}. Pick bigger cards.`,
+      });
+    }
+  } else if (comparator === "gt") {
+    hints.push({
+      id: "gt-need-bigger",
+      emphasis: "Aim higher!",
+      body: `You need an answer *bigger* than ${target}.`,
+    });
+    hints.push({
+      id: "gt-overshoot-ok",
+      emphasis: "Overshoot it!",
+      body: `Anything more than ${target} works — pick bold cards.`,
+    });
+  } else {
+    // lt
+    hints.push({
+      id: "lt-need-smaller",
+      emphasis: "Stay small!",
+      body: `Your answer has to be *less* than ${target}.`,
+    });
+    hints.push({
+      id: "lt-undershoot-ok",
+      emphasis: "Stay under!",
+      body: `Anything under ${target} is right. Don't add too much.`,
+    });
+  }
+
+  // ── OFF-BY — only for "eq" where exact match matters. For inequality
+  //   levels the gap is misleading (a gap of 1 might be on either side).
+  if (comparator === "eq" && !exact) {
+    hints.push({
+      id: "off-by",
+      emphasis: `${computed} ≠ ${target}`,
+      body: "Your number isn't quite right yet. Try again.",
+    });
+  }
+
+  // ── INEQUALITY-SPECIFIC: "boundary" framing helps tier-2 reasoning.
+  if (comparator === "gt") {
+    hints.push({
+      id: "gt-boundary",
+      emphasis: "Cross the wall.",
+      body: `Imagine ${target} is a wall. Your answer needs to land on the *other side*.`,
+    });
+  } else if (comparator === "lt") {
+    hints.push({
+      id: "lt-boundary",
+      emphasis: "Stay under the ceiling.",
+      body: `Imagine ${target} is a ceiling. Your answer has to *fit underneath*.`,
+    });
+  }
+
+  // ── NUMBER BONDS — "friends that make 10". Add + eq only.
+  if (operator === "add" && comparator === "eq") {
+    hints.push({
+      id: "number-bonds",
+      emphasis: `Find the friends.`,
+      body: `Numbers that make ${target} come in pairs. Like 3 and 7, or 4 and 6.`,
+      ...(fits(target) ? { hands: { count: target, caption: `Make ${target}` } } : {}),
+    });
+  }
+
+  // ── MISSING NUMBER — reverse framing. Only meaningful for "eq."
+  if (comparator === "eq") {
+    hints.push({
+      id: "missing-number",
+      emphasis: "What's missing?",
+      body: `Cover one card with your finger. What number fills the gap to ${target}?`,
+      ...(fits(target) ? { hands: { count: target, caption: `Fill to ${target}` } } : {}),
+    });
+  }
+
+  // ── COUNTING UP — most concrete strategy. Recasts for inequality
+  //   levels: "count past" or "count under" instead of "count to."
+  // The hand visual is THE money shot for this category — kids count
+  // fingers in the real world, the tooltip mirrors that gesture.
+  if (operator === "add" && comparator === "eq") {
+    hints.push({
+      id: "count-fingers-add",
+      emphasis: "Use your fingers.",
+      body: `Show one number, then *count up* to ${target}.`,
+      ...(fits(target) ? { hands: { count: target, caption: `Count to ${target}` } } : {}),
+    });
+  } else if (operator === "subtract" && comparator === "eq") {
+    // For a - b = target, the answer IS the target (the gap). Show
+    // the gap as fingers — the kid learns to picture subtraction as
+    // "this many fingers between the two numbers."
+    hints.push({
+      id: "count-fingers-sub",
+      emphasis: "Count the gap.",
+      body: `Pick the bigger card. *Count down* to the smaller one.`,
+      ...(fits(target) ? { hands: { count: target, caption: `The gap is ${target}` } } : {}),
+    });
+  } else if (comparator === "gt") {
+    hints.push({
+      id: "count-past",
+      emphasis: "Count past it.",
+      body: `Start at ${target}. Your answer should land *after* it.`,
+      ...(fits(target) ? { hands: { count: target, caption: `Past ${target}` } } : {}),
+    });
+  } else {
+    // comparator === "lt"
+    hints.push({
+      id: "count-under",
+      emphasis: "Land before it.",
+      body: `Count up to ${target}. Your answer should land *before* it.`,
+      ...(fits(target) ? { hands: { count: target, caption: `Stay under ${target}` } } : {}),
+    });
+  }
+
+  // ── VISUALIZATION — physical intuition.
+  hints.push({
+    id: "stacks",
+    emphasis: "Stack them up.",
+    body: `Picture two stacks of blocks. Together they should *reach ${target}*.`,
+  });
+  hints.push({
+    id: "number-line",
+    emphasis: "Hop the line.",
+    body: `Imagine a bunny hopping on a number line. Where does it land?`,
+  });
+
+  // ── OPERATOR-SPECIFIC (subtraction).
+  if (operator === "subtract") {
+    hints.push({
+      id: "sub-bigger-first",
+      emphasis: "Bigger first!",
+      body: `In subtraction, the *first card* has to be bigger than the second.`,
+    });
+    hints.push({
+      id: "sub-pair",
+      emphasis: `${comparator === "eq" ? "First minus second" : "Pick a difference"}`,
+      body: `The first card *minus* the second should ${comparator === "gt" ? "beat" : comparator === "lt" ? "stay under" : "equal"} ${target}.`,
+    });
+  }
+
+  // ── REVERSE — start from the goal. Reframes for inequality levels.
+  if (comparator === "eq") {
+    hints.push({
+      id: "reverse-from-target",
+      emphasis: "Work backwards.",
+      body: `Start with ${target}. What *pair* gets you there?`,
+    });
+  } else if (comparator === "gt") {
+    hints.push({
+      id: "reverse-from-target-gt",
+      emphasis: "Then add more.",
+      body: `Pick one card. How big does the *other* need to be to beat ${target}?`,
+    });
+  } else {
+    hints.push({
+      id: "reverse-from-target-lt",
+      emphasis: "Stay below.",
+      body: `Pick one card. How small does the *other* need to be to stay under ${target}?`,
+    });
+  }
+
+  // ── SWAP — process suggestion.
+  hints.push({
+    id: "swap-card",
+    emphasis: "Try a swap.",
+    body: `You have *5 cards* — try a different one.`,
+  });
+
+  // ── ENCOURAGEMENT — never the only hint, just one in the rotation.
+  hints.push({
+    id: "encouragement",
+    emphasis: "Great try!",
+    body: `Math is like a *puzzle*. Move one card and try again.`,
+  });
+
+  return hints;
+}
+
+// Pick a random hint, avoiding `avoidId` if a non-trivial pool remains.
+// Returns null only when the pool is empty (caller guards on this).
+export function pickRandomHint(
+  hints: readonly Hint[],
+  avoidId: string | null,
+  random: () => number = Math.random,
+): Hint | null {
+  if (hints.length === 0) return null;
+  const filtered = avoidId ? hints.filter((h) => h.id !== avoidId) : hints;
+  const pool = filtered.length > 0 ? filtered : hints;
+  return pool[Math.floor(random() * pool.length)] ?? null;
+}

@@ -22,3 +22,4 @@ type Story = StoryObj<typeof meta>;
 export const Three: Story = { args: { value: 3 } };
 export const Seven: Story = { args: { value: 7 } };
 export const Ten: Story = { args: { value: 10 } };
+export const Target: Story = { args: { value: 10, variant: "target" } };
