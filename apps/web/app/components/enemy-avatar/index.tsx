@@ -1,4 +1,5 @@
 import type { Rarity } from "@dean-stack/schemas";
+import { Info, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
@@ -10,23 +11,23 @@ import { EnemyAvatarPropsSchema } from "./schema";
 // common, warm/saturated at the top. Mythic is the cap (red) and signals
 // "fiercest enemy" at a glance.
 const RARITY_BORDER: Record<Rarity, string> = {
-  common: "border-neutral-400",
-  uncommon: "border-emerald-500",
-  rare: "border-sky-500",
-  epic: "border-violet-500",
-  legendary: "border-amber-500",
-  mythic: "border-rose-600",
+  common: "border-muted-gray",
+  uncommon: "border-success-green",
+  rare: "border-electric-blue",
+  epic: "border-deep-purple",
+  legendary: "border-warning-yellow",
+  mythic: "border-vivid-orange",
 };
 
 // Rarity → HP-bar fill color. Echoes the border so the player reads the
 // avatar as a single unit without the bar feeling stapled-on.
 const RARITY_BAR_FILL: Record<Rarity, string> = {
-  common: "bg-neutral-400",
-  uncommon: "bg-emerald-500",
-  rare: "bg-sky-500",
-  epic: "bg-violet-500",
-  legendary: "bg-amber-500",
-  mythic: "bg-rose-500",
+  common: "bg-muted-gray",
+  uncommon: "bg-success-green",
+  rare: "bg-electric-blue",
+  epic: "bg-deep-purple",
+  legendary: "bg-warning-yellow",
+  mythic: "bg-vivid-orange",
 };
 
 // Trigger window length. The pulse keyframe runs 300ms but the shake +
@@ -82,11 +83,11 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
     return (
       <div
         ref={rootRef}
-        className="grid h-full w-full place-items-center rounded-md border-2 border-dashed border-neutral-500/60 bg-neutral-100/40 p-4 text-center"
+        className="grid h-full w-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
         data-test="enemy-avatar"
         data-state="empty"
       >
-        <span className="text-sm font-medium text-neutral-500">No enemy yet</span>
+        <span className="text-sm font-medium text-muted-gray">No enemy yet</span>
       </div>
     );
   }
@@ -116,13 +117,13 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
   return (
     <div
       ref={rootRef}
-      className={`group relative grid h-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-md border-4 bg-neutral-900 data-[damage-pulse=true]:animate-damage-pulse ${borderClass}`}
+      className={`group relative grid h-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border-4 bg-slate-ink data-[damage-pulse=true]:animate-damage-pulse ${borderClass}`}
       data-test="enemy-avatar"
       data-state="filled"
       data-rarity={enemy.rarity}
     >
       <div className="bg-black/70 px-3 py-2 text-white">
-        <div className="font-display text-sm font-bold leading-tight">{enemy.name}</div>
+        <div className="font-openrunde text-sm font-bold leading-tight">{enemy.name}</div>
         <div className="text-[11px] uppercase tracking-wide text-white/70">
           {enemy.type} · {enemy.rarity}
         </div>
@@ -175,7 +176,7 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
               shared with PlayerAvatar so both avatars read like pages
               from the same field journal. */}
           <div
-            className="absolute inset-0 overflow-y-auto bg-stone-100 px-4 py-3 text-stone-900"
+            className="absolute inset-0 overflow-y-auto bg-canvas-white px-4 py-3 text-slate-ink"
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
@@ -199,19 +200,19 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
           className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
           data-test="enemy-bio-toggle"
         >
-          <span aria-hidden className="text-xs font-bold">
-            {flipped ? "✕" : "i"}
+          <span aria-hidden className="flex items-center justify-center">
+            {flipped ? <X size={14} strokeWidth={2.5} /> : <Info size={14} strokeWidth={2.5} />}
           </span>
         </button>
       </div>
       <div className="bg-black/70 px-3 py-2">
-        <div className="mb-1 flex items-baseline justify-between font-mono text-xs text-white">
+        <div className="mb-1 flex items-baseline justify-between font-openrunde text-xs text-white">
           <span data-test="enemy-hp">
             {liveHp}/{effectiveMax}
           </span>
           <span className="text-white/60">HP</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-sm bg-neutral-800">
+        <div className="h-2 overflow-hidden rounded-lg bg-slate-ink">
           <div
             className={`h-full transition-[width] duration-300 ease-out ${fillClass}`}
             style={{ width: `${hpRatio * 100}%` }}

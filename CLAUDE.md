@@ -64,6 +64,13 @@ This pattern is what makes the iPad live-refresh workflow viable: Vite HMR or a 
 
 Ephemeral UI state (focus, hover, transient toggles) is allowed in plain `useState`. Anything representing game progress, settings, content, or anything the kid would notice losing goes through `atomWithIDB`.
 
+**Recovering from a stale browser DB (`VersionError`).** Iterating on the schema on a long-lived dev browser will eventually leave the browser at a version higher than what's in code (an experiment got reverted, a branch was switched, etc.). `openDB` then throws `VersionError: An attempt was made to open a database using a lower version than the existing version` and the app fails to boot. Two recovery paths:
+
+1. **Bump `DB_VERSION` in `apps/<name>/app/state/db.ts` to a number higher than what the browser has** and add a no-op `if (oldVersion < N) {}` hop to keep the cumulative-migration shape honest. Cheapest unblock; the cost is a permanent dead hop in the migration code that ships forever. Fine while there are no real users; squash before any deploy that real people use.
+2. **Click "Clear state" in the gear-menu (`DevMenu`)**, or run `indexedDB.deleteDatabase("<DB_NAME>")` in the console. `clearAllStorage` (in `app/lib/clear-storage.ts`) is the production-grade recovery: it `closeDB()`s our own connection first (otherwise the open handle blocks `deleteDatabase`, `onblocked` resolves, the reload reopens the same DB unchanged, and the button looks broken), then iterates `indexedDB.databases()` and deletes by name — version-agnostic, blows away whatever stale version the browser holds. Anything new added to `db.ts` that owns a connection MUST also be closed in `closeDB()` for "Clear state" to keep working.
+
+Prefer option 2 — it's reversible by reload and leaves no residue in the schema. Use option 1 only when you can't reach the dev menu (e.g. the app is throwing before the menu mounts).
+
 ### 4. CLI-gate-first — zero-warning policy
 
 The quality gate has two flavours, both with the same purity rule (any warning = failure):

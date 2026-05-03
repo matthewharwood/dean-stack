@@ -46,7 +46,7 @@ export function spawnDamageProjectile(opts: { text: string; from: Element; to: E
   inner.textContent = opts.text;
   inner.style.cssText = [
     "transform: translate(-50%, -50%) scale(0.6)",
-    "font-family: var(--font-display)",
+    "font-family: var(--font-openrunde)",
     "font-size: 4rem",
     "font-weight: 800",
     "line-height: 1",

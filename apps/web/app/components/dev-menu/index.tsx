@@ -98,7 +98,7 @@ export function DevMenu({ children }: { children?: ReactNode }) {
           aria-expanded={open}
           aria-haspopup="menu"
           onClick={() => setOpen((v) => !v)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 bg-white/85 text-neutral-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-neutral-900 active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-light-gray bg-white/85 text-medium-gray shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-slate-ink active:scale-95"
           data-test="dev-menu-button"
         >
           <GearIcon />
@@ -107,7 +107,7 @@ export function DevMenu({ children }: { children?: ReactNode }) {
           <div
             role="menu"
             aria-label="Dev menu"
-            className="absolute top-full right-0 mt-2 min-w-[200px] overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg"
+            className="absolute top-full right-0 mt-2 min-w-[200px] overflow-hidden rounded-lg border border-light-gray bg-white shadow-lg"
             data-test="dev-menu-panel"
           >
             <button
@@ -115,16 +115,16 @@ export function DevMenu({ children }: { children?: ReactNode }) {
               role="menuitem"
               disabled={busy}
               onClick={handleClearState}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 active:bg-rose-100 disabled:opacity-60"
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-vivid-orange transition-colors hover:bg-vivid-orange/10 active:bg-vivid-orange/15 disabled:opacity-60"
               data-test="dev-menu-clear-state"
             >
               <span>{busy ? "Clearing…" : "Clear state"}</span>
-              <span aria-hidden className="text-xs text-rose-400">
+              <span aria-hidden className="text-xs text-vivid-orange/70">
                 ↻
               </span>
             </button>
             {children ? (
-              <div className="border-t border-neutral-200" data-test="dev-menu-extra">
+              <div className="border-t border-light-gray" data-test="dev-menu-extra">
                 {children}
               </div>
             ) : null}

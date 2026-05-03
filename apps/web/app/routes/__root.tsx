@@ -102,9 +102,9 @@ function RootComponent(): ReactNode {
 // `notFoundComponent` above handles in-tree misses.
 export function NotFound(): ReactNode {
   return (
-    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-display">
+    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-openrunde">
       <h1 className="text-3xl">404 — page not found</h1>
-      <a href="/" className="rounded-card bg-brand-500 px-4 py-2 text-white shadow-md">
+      <a href="/" className="rounded-full bg-radiant-violet px-4 py-2 text-white shadow-subtle">
         Go home
       </a>
     </main>
@@ -125,10 +125,10 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
     console.error("[Route error boundary caught]", error);
   }
   return (
-    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-display">
+    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-openrunde">
       <h1 className="text-3xl">Something broke</h1>
       {import.meta.env.DEV ? (
-        <pre className="text-sm text-red-700 max-w-2xl whitespace-pre-wrap">
+        <pre className="text-sm text-vivid-orange max-w-2xl whitespace-pre-wrap">
           {error.message}
           {error.stack ? `\n\n${error.stack}` : null}
         </pre>
@@ -137,11 +137,11 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
         <button
           type="button"
           onClick={reset}
-          className="rounded-card bg-brand-500 px-4 py-2 text-white shadow-md"
+          className="rounded-full bg-radiant-violet px-4 py-2 text-white shadow-subtle"
         >
           Try again
         </button>
-        <a href="/" className="rounded-card bg-gray-200 px-4 py-2 shadow-md">
+        <a href="/" className="rounded-full bg-light-gray px-4 py-2 text-slate-ink shadow-subtle">
           Go home
         </a>
       </div>

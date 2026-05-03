@@ -1,4 +1,5 @@
 import type { Rarity } from "@dean-stack/schemas";
+import { Info, X } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
@@ -9,12 +10,12 @@ import { PlayerAvatarPropsSchema } from "./schema";
 // Rarity → border color. Mirrors EnemyAvatar so the two columns read as
 // siblings — same visual ramp, just left/right.
 const RARITY_BORDER: Record<Rarity, string> = {
-  common: "border-neutral-400",
-  uncommon: "border-emerald-500",
-  rare: "border-sky-500",
-  epic: "border-violet-500",
-  legendary: "border-amber-500",
-  mythic: "border-rose-600",
+  common: "border-muted-gray",
+  uncommon: "border-success-green",
+  rare: "border-electric-blue",
+  epic: "border-deep-purple",
+  legendary: "border-warning-yellow",
+  mythic: "border-vivid-orange",
 };
 
 // Rarity → XP-fill base color. EnemyAvatar uses this for HP fill; the
@@ -22,12 +23,12 @@ const RARITY_BORDER: Record<Rarity, string> = {
 // stays consistent across both columns. The textural diagonal stripes
 // ride on top via a mix-blend overlay (see the bar markup).
 const RARITY_ACCENT: Record<Rarity, string> = {
-  common: "bg-neutral-400",
-  uncommon: "bg-emerald-500",
-  rare: "bg-sky-500",
-  epic: "bg-violet-500",
-  legendary: "bg-amber-500",
-  mythic: "bg-rose-500",
+  common: "bg-muted-gray",
+  uncommon: "bg-success-green",
+  rare: "bg-electric-blue",
+  epic: "bg-deep-purple",
+  legendary: "bg-warning-yellow",
+  mythic: "bg-vivid-orange",
 };
 
 // Confetti palette — vellum, lantern-yellow, kelp-green, brass. Same warm
@@ -116,11 +117,11 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
     return (
       <div
         ref={rootRef}
-        className="grid h-full w-full place-items-center rounded-md border-2 border-dashed border-neutral-500/60 bg-neutral-100/40 p-4 text-center"
+        className="grid h-full w-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
         data-test="player-avatar"
         data-state="empty"
       >
-        <span className="text-sm font-medium text-neutral-500">No player yet</span>
+        <span className="text-sm font-medium text-muted-gray">No player yet</span>
       </div>
     );
   }
@@ -136,14 +137,14 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
   return (
     <div
       ref={rootRef}
-      className={`group relative grid h-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-md border-4 bg-neutral-900 ${borderClass}`}
+      className={`group relative grid h-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border-4 bg-slate-ink ${borderClass}`}
       data-test="player-avatar"
       data-state="filled"
       data-rarity={player.rarity}
       data-levelup={levelUpActive ? "true" : undefined}
     >
       <div className="bg-black/70 px-3 py-2 text-white">
-        <div className="font-display text-sm font-bold leading-tight">{player.name}</div>
+        <div className="font-openrunde text-sm font-bold leading-tight">{player.name}</div>
         <div className="text-[11px] uppercase tracking-wide text-white/70">
           {player.role} · {player.rarity}
         </div>
@@ -170,7 +171,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
           </div>
           {/* BACK — bio. Same parchment + serif body as EnemyAvatar. */}
           <div
-            className="absolute inset-0 overflow-y-auto bg-stone-100 px-4 py-3 text-stone-900"
+            className="absolute inset-0 overflow-y-auto bg-canvas-white px-4 py-3 text-slate-ink"
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
@@ -194,7 +195,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
             className="absolute top-1.5 right-10 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
             data-test="player-cycle-button"
           >
-            <span className="font-mono text-xs font-bold leading-none tabular-nums">
+            <span className="font-openrunde text-xs font-bold leading-none tabular-nums">
               {profileIndex}
             </span>
           </button>
@@ -208,8 +209,8 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
           className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
           data-test="player-bio-toggle"
         >
-          <span aria-hidden className="text-xs font-bold">
-            {flipped ? "✕" : "i"}
+          <span aria-hidden className="flex items-center justify-center">
+            {flipped ? <X size={14} strokeWidth={2.5} /> : <Info size={14} strokeWidth={2.5} />}
           </span>
         </button>
         {/* Level-up overlay — green vignette + confetti. Pointer-events
@@ -237,7 +238,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
               >
                 <span
-                  className="block h-2 w-2 animate-level-up-confetti rounded-sm shadow-md"
+                  className="block h-2 w-2 animate-level-up-confetti rounded-lg shadow-md"
                   style={
                     {
                       background: c.color,
@@ -264,14 +265,14 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
               >
                 <div className="flex flex-col items-center gap-1 text-center">
                   <span
-                    className="animate-level-up-eyebrow font-display text-[10px] font-semibold uppercase tracking-[0.32em] text-emerald-100 drop-shadow-md"
+                    className="animate-level-up-eyebrow font-openrunde text-[10px] font-semibold uppercase tracking-[0.32em] text-pale-mint drop-shadow-md"
                     aria-hidden
                   >
                     Level Up
                   </span>
                   <div className="relative flex h-16 w-24 items-center justify-center">
                     <span
-                      className="absolute animate-level-up-from font-display text-5xl font-bold text-white tabular-nums"
+                      className="absolute animate-level-up-from font-openrunde text-5xl font-bold text-white tabular-nums"
                       style={{
                         textShadow:
                           "0 0 18px rgba(34, 197, 94, 0.85), 0 2px 8px rgba(0, 0, 0, 0.6)",
@@ -281,7 +282,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
                       {levelUpFrom}
                     </span>
                     <span
-                      className="absolute animate-level-up-to font-display text-6xl font-bold text-amber-100 tabular-nums"
+                      className="absolute animate-level-up-to font-openrunde text-6xl font-bold text-warning-yellow/30 tabular-nums"
                       style={{
                         textShadow:
                           "0 0 24px rgba(250, 204, 21, 0.95), 0 0 12px rgba(34, 197, 94, 0.7), 0 4px 12px rgba(0, 0, 0, 0.65)",
@@ -302,7 +303,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
           rarity-accent base via mix-blend-overlay so the texture reads
           across the spectrum without per-rarity tuning. */}
       <div className="bg-black/70 px-3 py-2">
-        <div className="mb-1 flex items-baseline justify-between font-mono text-xs text-white">
+        <div className="mb-1 flex items-baseline justify-between font-openrunde text-xs text-white">
           <span data-test="player-xp-chip" className="tabular-nums">
             {progress != null && xpThreshold != null ? `${progress.xp}/${xpThreshold}` : "—"}
           </span>
@@ -310,7 +311,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
             LV {progress?.level ?? 1}
           </span>
         </div>
-        <div className="relative h-2 overflow-hidden rounded-sm bg-neutral-800">
+        <div className="relative h-2 overflow-hidden rounded-lg bg-slate-ink">
           <div
             className={`relative h-full transition-[width] duration-300 ease-out ${accentClass}`}
             style={{ width: `${xpRatio * 100}%` }}

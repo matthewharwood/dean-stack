@@ -1,15 +1,44 @@
+import { closeDB } from "~/state/db";
+import { cancelPendingWrites } from "~/state/persist";
+
+// Hard timeout for a single `deleteDatabase` request. If the request stays
+// blocked past this (another tab or PWA window has the DB open and won't
+// release it), we give up and reload anyway — the browser closes our tab's
+// handle on unload and the queued delete completes against an empty origin.
+const DELETE_TIMEOUT_MS = 3000;
+
 // Wipe every browser-side storage surface this app touches. Called by the
 // dev menu's "Clear state" affordance to recover from stale-schema bugs:
 // e.g. a persisted IDB row from before a schema field was added still
 // satisfies the parser via `.default()`, so the gameStart effect never
 // re-deals because `round` already exists. Nuke everything and reload.
 //
-// Order is intentional: SW unregister + cache flush first so the next
-// page-load fetch can't be served stale assets; then storage; then cookies.
-// IDB deletion is best-effort — `onblocked` resolves anyway because we're
-// about to reload and the browser will close the connection.
+// Order is intentional and load-bearing — get this wrong and the button
+// silently no-ops on iPad:
+//
+//   1. Cancel pending debounced persist writes. Otherwise a `setTimeout`
+//      scheduled before the click fires mid-clear, calls `getDB()`, opens
+//      a fresh connection, and blocks `deleteDatabase`. The race that put
+//      the user back on round 304 after clearing.
+//   2. Close our own IDB connection AND set the closed flag (in `db.ts`)
+//      so any code path that still calls `getDB()` after step 1 gets a
+//      rejected promise instead of a fresh handle.
+//   3. SW unregister + cache flush so the next page-load fetch can't be
+//      served stale assets.
+//   4. `deleteDatabase` for every DB the origin owns. The call is
+//      name-only — version-agnostic — so a DB at any version (including
+//      one bumped past the code's current `DB_VERSION`) gets blown away.
+//      Wait for `onsuccess` (NOT `onblocked`) with a hard timeout fallback.
+//   5. localStorage / sessionStorage / cookies.
 export async function clearAllStorage(): Promise<void> {
   if (typeof window === "undefined") return;
+
+  // Steps 1–2: stop new IDB connections from being created and close the
+  // existing one. Order matters — cancel writes BEFORE close so a
+  // setTimeout that's already in the macrotask queue can't fire and
+  // re-open between these two lines.
+  cancelPendingWrites();
+  await closeDB();
 
   // Service Worker registrations — unregister so the next load isn't
   // intercepted by a SW that's still serving the old shell.
@@ -25,7 +54,10 @@ export async function clearAllStorage(): Promise<void> {
   }
 
   // IndexedDB — every database, not just the one we know about, in case a
-  // future migration leaves a stray DB behind.
+  // future migration leaves a stray DB behind. Wait for `onsuccess` so the
+  // reload doesn't race ahead of the delete; on `onblocked`, log and let
+  // the timeout decide rather than resolving immediately (that was the
+  // round-304 bug).
   if ("databases" in indexedDB) {
     const dbs = await indexedDB.databases();
     await Promise.all(
@@ -36,12 +68,24 @@ export async function clearAllStorage(): Promise<void> {
               resolve();
               return;
             }
-            const req = indexedDB.deleteDatabase(db.name);
-            req.onsuccess = () => resolve();
-            req.onerror = () => resolve();
-            // `onblocked` fires when another tab still has the DB open. We're
-            // about to reload anyway — resolve and let the reload close it.
-            req.onblocked = () => resolve();
+            const name = db.name;
+            const req = indexedDB.deleteDatabase(name);
+            let done = false;
+            const finish = () => {
+              if (done) return;
+              done = true;
+              resolve();
+            };
+            req.onsuccess = finish;
+            req.onerror = finish;
+            req.onblocked = () => {
+              console.warn(`idb: delete blocked for "${name}" — another connection still open`);
+              // Don't resolve — wait for the holder to close, or hit the timeout.
+            };
+            setTimeout(() => {
+              if (!done) console.warn(`idb: delete timed out for "${name}"; reloading anyway`);
+              finish();
+            }, DELETE_TIMEOUT_MS);
           }),
       ),
     );

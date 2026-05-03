@@ -39,7 +39,7 @@ export function RoundJumpPanel() {
 
   return (
     <div className="flex flex-col" data-test="dev-menu-round-jump">
-      <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+      <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-gray">
         Jump to round
       </div>
       <div className="grid grid-cols-4 gap-1 px-2 pb-2">
@@ -48,12 +48,12 @@ export function RoundJumpPanel() {
             key={round}
             type="button"
             onClick={() => handleJump(round)}
-            className="flex flex-col items-center gap-0.5 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-neutral-700 shadow-sm transition-colors hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+            className="flex flex-col items-center gap-0.5 rounded-lg border border-light-gray bg-white px-2 py-1.5 text-medium-gray shadow-sm transition-colors hover:bg-whisper-purple hover:text-slate-ink active:scale-95"
             data-test={`dev-menu-jump-round-${round}`}
             data-round={round}
           >
-            <span className="font-display text-base font-bold leading-none">{round}</span>
-            <span className="text-[9px] uppercase tracking-wider text-neutral-500">
+            <span className="font-openrunde text-base font-bold leading-none">{round}</span>
+            <span className="text-[9px] uppercase tracking-wider text-muted-gray">
               {roundLabel(round)}
             </span>
           </button>

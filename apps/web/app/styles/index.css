@@ -1,12 +1,109 @@
 @import "tailwindcss";
 
+/* Pixel-named spacing tokens from the design system. Kept OUTSIDE @theme on
+   purpose — Tailwind v4 would otherwise treat e.g. `--spacing-16: 16px` as
+   the value of utility `p-16`, overriding the default scale (`p-16` = 4rem
+   = 64px). Every existing `p-3 / gap-4 / w-16` in the codebase relies on
+   the default `--spacing: 0.25rem` formula, so we keep that intact and let
+   designers opt in to the pixel scale via arbitrary values:
+   `p-[var(--spacing-16)]` etc. */
+:root {
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+}
+
 @theme {
-  --color-brand-500: oklch(62% 0.20 260deg);
-  --color-brand-900: oklch(30% 0.10 260deg);
-  --font-display: "Satoshi", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* ─── Color palette ─────────────────────────────────────────────────
+     Per design rules:
+       • Radiant Violet (#918df6) is the SOLE primary-action background.
+       • Slate Ink (#181925) is the high-contrast text color.
+       • Saturated tints (electric-blue, success-green, warning-yellow,
+         accent-pink, vivid-orange, deep-purple) are reserved for
+         accents/actionable components — never large bg areas. */
+  --color-canvas-white: #fff;
+  --color-slate-ink: #181925;
+  --color-medium-gray: #666;
+  --color-muted-gray: #999;
+  --color-light-gray: #e8e8e8;
+  --color-whisper-purple: #dad9fc;
+  --color-radiant-violet: #918df6;
+  --color-electric-blue: #2c78fc;
+  --color-success-green: #33c758;
+  --color-warning-yellow: #ffa600;
+  --color-accent-pink: #d6409f;
+  --color-pale-mint: #def6e4;
+  --color-deep-purple: #9580ff;
+  --color-vivid-orange: #ff3e00;
+
+  /* ─── Typography ──────────────────────────────────────────────────
+     OpenRunde is the sole family. The legacy `--font-display` and
+     `--font-mono` keys alias to it so any utility class still using
+     `font-display` or `font-mono` resolves to OpenRunde without
+     touching a thousand call sites in one pass. */
+  --font-openrunde:
+    "OpenRunde", ui-sans-serif, system-ui, -apple-system, "BlinkMacSystemFont", "Segoe UI",
+    "Roboto", sans-serif;
+  --font-display: var(--font-openrunde);
+  --font-mono: var(--font-openrunde);
+
+  /* Type scale — tracking values are tuned per size per the design
+     system (display tracks tightest, caption loosest). Tailwind v4 picks
+     up the paired `--text-X--line-height` and `--text-X--letter-spacing`
+     suffixes when emitting the `text-X` utility. */
+  --text-caption: 12px;
+  --text-caption--line-height: 1.56;
+  --text-caption--letter-spacing: -0.05px;
+  --text-body: 14px;
+  --text-body--line-height: 1.43;
+  --text-body--letter-spacing: -0.025px;
+  --text-heading-sm: 18px;
+  --text-heading-sm--line-height: 1.33;
+  --text-heading-sm--letter-spacing: -0.02px;
+  --text-heading: 20px;
+  --text-heading--line-height: 1.22;
+  --text-heading--letter-spacing: -0.018px;
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 1.17;
+  --text-heading-lg--letter-spacing: -0.017px;
+  --text-display: 48px;
+  --text-display--line-height: 1.13;
+  --text-display--letter-spacing: -0.013px;
+
+  /* Tailwind's default --spacing master token — kept so every existing
+     `p-3 / gap-4 / w-16` utility in the codebase keeps resolving to the
+     traditional 0.25rem scale. The named pixel-spacing tokens live in
+     :root above, opt-in via arbitrary values. */
   --spacing: 0.25rem;
-  --radius-card: 1rem;
+
+  /* ─── Border radius ───────────────────────────────────────────────
+     Minimum radius for interactive elements + content containers is 8px
+     (rounded-lg). Pill-shaped buttons/tags use rounded-full. The legacy
+     --radius-card (1rem = 16px) aliases to --radius-2xl so existing
+     rounded-card utilities still resolve. */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-3xl-2: 32px;
+  --radius-card: var(--radius-2xl);
+
+  /* ─── Shadows ─────────────────────────────────────────────────────
+     Use sparingly — only on interactive buttons. Background-color
+     changes carry hierarchy elsewhere. */
+  --shadow-subtle:
+    rgb(0 0 0 / 8%) 0px 1px 1px 1px, rgb(0 0 0 / 6%) 0px 0px 0px 0.5px;
+  --shadow-subtle-2:
+    rgb(0 0 0 / 8%) 0px 1px 1px 0px, rgb(0 0 0 / 5%) 0px 0px 0px 1px;
+  --shadow-subtle-3:
+    rgb(0 0 0 / 6%) 0px 1px 3px 0px, rgb(0 0 0 / 6%) 0px 8px 16px 0px,
+    rgb(0 0 0 / 2%) 0px 0px 0px 1px;
   --breakpoint-3xl: 120rem;
 
   /* Ken-burns yo-yo on the enemy portrait. The image is wider than the
@@ -71,6 +168,13 @@
      hands. transform-box: fill-box (set on the rect) anchors the
      transform-origin to the rect's bottom edge. */
   --animate-finger-extend: finger-extend 380ms ease-out backwards;
+
+  /* Panel mount fade — left / main / right columns of the game board fade
+     in once on every mount (route entry, refresh, hot reload). No forwards
+     needed: the resting state is opacity 1, so when the 300ms run ends the
+     element naturally holds its final value without the animation shadow
+     latching on. */
+  --animate-panel-fade-in: panel-fade-in 300ms ease-out;
 }
 
 /* Pan + breathing zoom: object-position drifts left → right while
@@ -371,9 +475,23 @@
   }
 }
 
+/* Panel mount fade. Pure opacity ramp — no transform so the static
+   layout doesn't briefly compute against shifted boxes during the
+   animation. */
+@keyframes panel-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 /* Reduced-motion: respect the system preference. Extended fingers
    should appear at their final state immediately. The kid's son's
-   eight-year-old eyes can still count them — just statically. */
+   eight-year-old eyes can still count them — just statically. The
+   panel fade collapses to instant for the same reason. */
 @media (prefers-reduced-motion: reduce) {
   @keyframes finger-extend {
     from {
@@ -383,6 +501,16 @@
 
     to {
       transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes panel-fade-in {
+    from {
+      opacity: 1;
+    }
+
+    to {
       opacity: 1;
     }
   }

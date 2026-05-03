@@ -12,6 +12,7 @@ import {
 } from "@dean-stack/schemas";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
+import { ArrowRight, Check } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 
 import { AttackButton } from "~/components/attack-button";
@@ -65,7 +66,7 @@ function GameBoard({ children }: RegionProps) {
   // glyph would otherwise trigger Safari's text-selection magnifier or copy
   // menu and eat the pointer events the drag system is listening for.
   return (
-    <main className="grid h-dvh grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px] font-display select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
+    <main className="grid h-dvh grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px] font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
       {children}
     </main>
   );
@@ -75,7 +76,7 @@ function LeftCol({ children }: RegionProps) {
   return (
     <section
       aria-label="Left panel"
-      className="relative grid grid-rows-[1fr] rounded-md bg-neutral-200 p-3"
+      className="relative grid grid-rows-[1fr] rounded-lg bg-light-gray p-3 animate-panel-fade-in"
     >
       {children}
     </section>
@@ -83,14 +84,14 @@ function LeftCol({ children }: RegionProps) {
 }
 
 function GameMain({ children }: RegionProps) {
-  return <div className="flex min-h-0 flex-col gap-[18px]">{children}</div>;
+  return <div className="flex min-h-0 flex-col gap-[18px] animate-panel-fade-in">{children}</div>;
 }
 
 function Top({ children }: RegionProps) {
   return (
     <section
       aria-label="Top center panel"
-      className="relative h-[200px] shrink-0 rounded-md bg-neutral-200"
+      className="relative h-[200px] shrink-0 rounded-lg bg-light-gray"
     >
       {children}
     </section>
@@ -101,7 +102,7 @@ function Center({ children }: RegionProps) {
   return (
     <section
       aria-label="Middle center panel"
-      className="relative min-h-0 flex-1 rounded-md bg-neutral-200"
+      className="relative min-h-0 flex-1 rounded-lg bg-light-gray"
     >
       {children}
     </section>
@@ -112,7 +113,7 @@ function Bottom({ children }: RegionProps) {
   return (
     <section
       aria-label="Bottom center panel"
-      className="relative h-[200px] shrink-0 rounded-md bg-neutral-200"
+      className="relative h-[200px] shrink-0 rounded-lg bg-light-gray"
     >
       <div className="grid h-full grid-cols-5 gap-[18px] p-[18px]">{children}</div>
     </section>
@@ -123,7 +124,7 @@ function RightCol({ children }: RegionProps) {
   return (
     <section
       aria-label="Right panel"
-      className="relative grid grid-rows-[1fr] rounded-md bg-neutral-200 p-3"
+      className="relative grid grid-rows-[1fr] rounded-lg bg-light-gray p-3 animate-panel-fade-in"
     >
       {children}
     </section>
@@ -178,17 +179,16 @@ const COMPARATOR_GLYPH: Record<Comparator, string> = {
   lt: "<",
 };
 
-// Operator pill — circular, mono-typeface (JetBrains via --font-mono),
-// ligatures on, white card with border + soft shadow. Sized so it never
-// overlaps the operand slots: the equation row's `gap-[28px]` (bumped from
-// 18px) leaves enough breathing room around a 56px pill.
+// Operator pill — circular, OpenRunde, white card with border + subtle
+// shadow. Sized so it never overlaps the operand slots: the equation
+// row's `gap-[28px]` leaves enough breathing room around a 56px pill.
 //
 // The pulse animation fires when the glyph CHANGES between deals: the
-// component runs `op-out` (fade + scale-down + lift) for 200ms, swaps the
-// displayed glyph, then runs `op-in` (drop + scale-up + fade-in) for 280ms.
-// Total ~480ms — the kid's eye catches the operator shift before they
-// start picking cards. CSS keyframes are owned by `data-phase` so the
-// animation is driven purely by attribute changes (no anime.js needed).
+// component runs `op-out` (fade + scale-down + lift) for 200ms, swaps
+// the displayed glyph, then runs `op-in` (drop + scale-up + fade-in)
+// for 280ms. Total ~480ms — the kid's eye catches the operator shift
+// before they start picking cards. CSS keyframes are owned by
+// `data-phase` so the animation is driven purely by attribute changes.
 function OperatorPill({ glyph }: { glyph: string }) {
   const [displayed, setDisplayed] = useState(glyph);
   const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
@@ -209,12 +209,7 @@ function OperatorPill({ glyph }: { glyph: string }) {
 
   return (
     <span
-      className="flex h-14 w-14 shrink-0 select-none items-center justify-center rounded-full border-2 border-neutral-300 bg-white text-3xl font-mono font-bold text-neutral-800 shadow-md data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
-      style={{
-        fontFamily: "var(--font-mono)",
-        fontFeatureSettings: '"liga" 1, "calt" 1',
-        fontVariantLigatures: "contextual",
-      }}
+      className="flex h-14 w-14 shrink-0 select-none items-center justify-center rounded-full border-2 border-light-gray bg-canvas-white font-openrunde text-3xl font-bold text-slate-ink shadow-subtle data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
       data-phase={phase}
       data-test="operator-pill"
     >
@@ -325,41 +320,57 @@ function ActionButton({
   //                       its Pixi animation plays, then onAttack chains
   //                       through to the same continue/advance logic.
   const won = outcome?.won === true;
-  const winResultText: string =
-    won && outcome
-      ? `${outcome.computedValue} = ${outcome.expectedValue} ✓ −${outcome.scoreEarned} HP`
-      : " ";
-  // Reserve the tallest state's height across BOTH the Evaluate and the
-  // 3-up attack rows so swapping between them doesn't shift the cards in
-  // the Bottom region. The attack-button row is the taller of the two
-  // (~80px including the 48px icon + py-3); the Evaluate button is ~52px.
-  // Locking min-h to 80px on the wrapper keeps both layouts visually
-  // anchored — zero CLS between phases.
+  // On a win, the row of three attack cards + the green math summary live
+  // INSIDE a recessed "well" — slightly darker bg, inset shadow, rounded.
+  // The well makes the win-state read as a distinct mode (you committed
+  // a successful equation; now choose the strike) rather than the
+  // attacks floating loose over the Center panel. The well is width-
+  // constrained (max-w-[640px]) so it never bleeds past the Center
+  // column on a wide iPad. The pre-win Evaluate button sits unwelled —
+  // it's a single round button and a well around it would feel heavy.
+  // CLS reservation: the wrapper holds either the Evaluate button (~52px)
+  // or the win-state well (~152px — 24 well-pt + 80 attack-card + 8 gap +
+  // 20 result line + 8 well-pb + a couple px slack). Lock min-h to the
+  // taller of the two so the equation row above doesn't slide up when
+  // the win state mounts. The unused space in Evaluate-state is absorbed
+  // by `items-center` on this row, so the button stays vertically centered.
   return (
-    <div className="flex flex-col items-center gap-3" data-test="action-button">
-      <div className="flex min-h-[80px] w-full items-center justify-center">
+    <div className="flex w-full flex-col items-center gap-3" data-test="action-button">
+      <div className="flex min-h-[160px] w-full items-center justify-center">
         {won ? (
           attacks ? (
-            // No wrap — the 3 attack-choice buttons stay on one row at all
-            // iPad widths the route supports. `w-full max-w-[640px]` caps
-            // the row width on huge screens so the buttons stay tap-sized
-            // rather than stretching out.
-            <div className="flex w-full max-w-[640px] items-stretch justify-center gap-2">
-              {attacks.map((attack) => (
-                <AttackButton
-                  key={attack.id}
-                  attack={attack}
-                  damage={outcome?.scoreEarned ?? 0}
-                  onSelect={onAttack}
-                  pending={attackPending}
-                />
-              ))}
+            <div className="flex w-full max-w-[640px] flex-col items-stretch gap-2 rounded-lg border border-light-gray bg-canvas-white px-3 pt-6 pb-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.08)]">
+              <div className="flex items-stretch justify-center gap-2">
+                {attacks.map((attack) => (
+                  <AttackButton
+                    key={attack.id}
+                    attack={attack}
+                    damage={outcome?.scoreEarned ?? 0}
+                    onSelect={onAttack}
+                    pending={attackPending}
+                  />
+                ))}
+              </div>
+              {outcome ? (
+                <div
+                  className="flex items-center justify-center gap-2 font-openrunde text-sm font-bold text-success-green"
+                  data-test="evaluation-result"
+                  data-outcome="win"
+                  aria-live="polite"
+                >
+                  <span>{outcome.computedValue}</span>
+                  <span aria-hidden>=</span>
+                  <span>{outcome.expectedValue}</span>
+                  <Check size={16} strokeWidth={3} aria-hidden />
+                  <span>−{outcome.scoreEarned} HP</span>
+                </div>
+              ) : null}
             </div>
           ) : (
             <button
               type="button"
               onClick={() => onAttack(null)}
-              className="flex items-center gap-2 rounded-md bg-emerald-600 px-8 py-3 font-bold text-white shadow-md transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+              className="flex items-center gap-2 rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
               data-test="attack-button"
             >
               <CrossedSwordsIcon />
@@ -370,20 +381,12 @@ function ActionButton({
           <button
             type="button"
             onClick={onEvaluate}
-            className="rounded-md bg-brand-500 px-8 py-3 font-bold text-white shadow-md transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+            className="rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
             data-test="evaluate-button"
           >
             Evaluate
           </button>
         )}
-      </div>
-      <div
-        className={`min-h-8 text-2xl font-bold text-emerald-600 transition-opacity duration-200 ${won ? "opacity-100" : "opacity-0"}`}
-        data-test="evaluation-result"
-        data-outcome={won ? "win" : undefined}
-        aria-live="polite"
-      >
-        {winResultText}
       </div>
     </div>
   );
@@ -401,11 +404,11 @@ function Splash({ onBegin }: { onBegin: () => void }) {
       data-test="splash"
     >
       <div className="flex flex-col items-center gap-2">
-        <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-neutral-500">
+        <p className="font-openrunde text-xs font-semibold uppercase tracking-[0.3em] text-muted-gray">
           The trench is waiting
         </p>
-        <h2 className="font-display text-5xl font-bold text-neutral-900">Hadal Tide</h2>
-        <p className="max-w-md text-base text-neutral-700">
+        <h2 className="font-openrunde text-5xl font-bold text-slate-ink">Hadal Tide</h2>
+        <p className="max-w-md text-base text-medium-gray">
           The echoes are confused. They've been counting in the dark for a long time. Help them
           remember.
         </p>
@@ -413,10 +416,11 @@ function Splash({ onBegin }: { onBegin: () => void }) {
       <button
         type="button"
         onClick={onBegin}
-        className="rounded-md bg-brand-500 px-10 py-4 font-display text-xl font-bold text-white shadow-lg transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+        className="flex items-center gap-2 rounded-full bg-radiant-violet px-10 py-4 font-openrunde text-xl font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
         data-test="splash-begin"
       >
-        Begin the descent ➜
+        <span>Begin the descent</span>
+        <ArrowRight size={22} strokeWidth={2.5} aria-hidden />
       </button>
     </div>
   );
@@ -428,14 +432,14 @@ function VictoryPanel({ onPlayAgain }: { onPlayAgain: () => void }) {
       className="flex h-full flex-col items-center justify-center gap-6 p-[18px] text-center"
       data-test="victory-panel"
     >
-      <h2 className="font-display text-4xl font-bold text-neutral-900">The trench is calm.</h2>
-      <p className="max-w-md text-lg text-neutral-700">
+      <h2 className="font-openrunde text-4xl font-bold text-slate-ink">The trench is calm.</h2>
+      <p className="max-w-md text-lg text-medium-gray">
         You sent every wraith back to sleep. The Hadal Tide remembers your kindness.
       </p>
       <button
         type="button"
         onClick={onPlayAgain}
-        className="rounded-md bg-brand-500 px-8 py-3 font-bold text-white shadow-md transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+        className="rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
         data-test="play-again-button"
       >
         Dive again

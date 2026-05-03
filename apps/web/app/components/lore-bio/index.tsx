@@ -58,7 +58,7 @@ export const LoreBio = defineComponent(LoreBioPropsSchema, ({ bio }) => {
       rendered.push(
         <h3
           key={`h-${i}`}
-          className="mt-4 mb-1.5 border-b border-stone-300/80 pb-1 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 first:mt-0"
+          className="mt-4 mb-1.5 border-b border-light-gray/80 pb-1 font-openrunde text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-gray first:mt-0"
         >
           {block.text}
         </h3>,
@@ -72,7 +72,7 @@ export const LoreBio = defineComponent(LoreBioPropsSchema, ({ bio }) => {
         key={`p-${i}`}
         className={
           isFirstPara
-            ? "mb-3 last:mb-0 first-letter:float-left first-letter:mr-1.5 first-letter:font-display first-letter:text-[2.4em] first-letter:font-bold first-letter:leading-[0.9] first-letter:text-stone-700"
+            ? "mb-3 last:mb-0 first-letter:float-left first-letter:mr-1.5 first-letter:font-openrunde first-letter:text-[2.4em] first-letter:font-bold first-letter:leading-[0.9] first-letter:text-medium-gray"
             : "mb-3 last:mb-0"
         }
       >

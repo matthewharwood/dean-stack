@@ -52,3 +52,13 @@ export function subscribeRemoteWrites(onChange: (msg: RemoteWriteMessage) => voi
   channel.addEventListener("message", handler);
   return () => channel.removeEventListener("message", handler);
 }
+
+// Cancel every debounced write that hasn't fired yet. Used by `clearAllStorage`
+// to prevent the race where a pending persist call fires AFTER `closeDB()`
+// runs, opens a fresh IDB connection via `getDB()`, and that new connection
+// blocks `deleteDatabase` — leaving the user on the same DB they thought
+// they cleared.
+export function cancelPendingWrites(): void {
+  for (const timer of pending.values()) clearTimeout(timer);
+  pending.clear();
+}

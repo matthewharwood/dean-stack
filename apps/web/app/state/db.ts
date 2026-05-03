@@ -13,11 +13,19 @@ export interface AppDB extends DBSchema {
 }
 
 const DB_NAME = "dean-stack";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | undefined;
+let closed = false;
 
 export function getDB(): Promise<IDBPDatabase<AppDB>> {
+  if (closed) {
+    // After `closeDB()` we refuse new connections so a pending debounced
+    // persist call can't reopen the DB during `clearAllStorage` and block
+    // the in-flight `deleteDatabase`. The page is about to reload; reject
+    // and let callers swallow it.
+    return Promise.reject(new Error("idb: closed; reload pending"));
+  }
   if (dbPromise) return dbPromise;
   dbPromise = openDB<AppDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
@@ -35,6 +43,10 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
         const addingGame = db.createObjectStore("adding-game", { keyPath: "id" });
         void addingGame.put(ADDING_GAME_DEFAULT);
       }
+      if (oldVersion < 4) {
+        // No-op hop to clear a stale dev DB that was bumped past 3 in a
+        // prior working-tree experiment.
+      }
     },
     blocked() {
       console.warn("idb: blocked by an older connection");
@@ -51,4 +63,22 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
     dbPromise = undefined;
     throw err;
   });
+}
+
+// Close the open connection and refuse further `getDB()` calls so
+// `clearAllStorage` can `deleteDatabase` without our own handle blocking
+// it AND without a pending debounced persist call sneaking a fresh
+// connection in mid-clear. Terminal — the page is expected to reload
+// immediately after.
+export async function closeDB(): Promise<void> {
+  closed = true;
+  if (!dbPromise) return;
+  const promise = dbPromise;
+  dbPromise = undefined;
+  try {
+    const db = await promise;
+    db.close();
+  } catch {
+    // Open never resolved (e.g. VersionError mid-bump). Nothing to close.
+  }
 }

@@ -17,8 +17,9 @@ const BASE: string = import.meta.env.BASE_URL;
 // Authoring follows the same pattern as enemies.ts:
 //   - rarity drives the avatar's border color (visual ramp)
 //   - bios use `## Heading` markdown-ish sections, parsed by LoreBio
-//   - prose stays short, lyrical, and consistent with the Hadal Tide
-//     bible's voice (cozy-mythic, dieselpunk-Victorian, lantern-warm)
+//   - prose is ~3rd-grade reading level, Dav Pilkey energy: short
+//     sentences, kid vocabulary, exclamation points where they earn
+//     it. The lantern-warm spirit stays; the vocabulary doesn't.
 export const PLAYER_REGISTRY: readonly PlayerTemplate[] = [
   PlayerTemplateSchema.parse({
     id: "hadal-player-common-mara-brasswake",
@@ -28,15 +29,15 @@ export const PLAYER_REGISTRY: readonly PlayerTemplate[] = [
     imageUrl: `${BASE}players/hadal-player-common-mara-brasswake.png`,
     bio: `## Role
 
-Apprentice tender. She is in charge of nothing, which is the most important job on the ship — every other job has someone above it, and Mara has only the lanterns and the kelp.
+Lantern helper! She is the NEWEST helper on the ship. She is in charge of nothing. That is actually the most important job. Every other job has somebody bossing it. Mara just has the lanterns and the kelp. And that is plenty!
 
 ## Quirk
 
-She talks to the lanterns when she thinks no one is listening. She is sure they answer. Some of them might.
+She talks to the lanterns when she thinks nobody is listening. She is SURE they answer her back. Some of them might. Spooky? Maybe. Cool? Definitely.
 
 ## On Watch
 
-She is the first one up before a descent and the last one to bed after, and the only one who has ever caught the captain humming.`,
+She wakes up FIRST before going down deep. She goes to bed LAST. And — fun fact — she is the only person who has ever caught the captain humming a song!`,
     attacks: attacksFor("hadal-player-common-mara-brasswake"),
   }),
   PlayerTemplateSchema.parse({
@@ -47,15 +48,15 @@ She is the first one up before a descent and the last one to bed after, and the 
     imageUrl: `${BASE}players/hadal-player-common-oren-tideledger.png`,
     bio: `## Role
 
-Bookkeeper of currents. Oren keeps a brass-bound ledger that tracks every tide the ship has ridden, every echo it has met, and every number it has spoken back into the dark.
+Number guy! Oren has a big book with brass corners. He writes EVERYTHING in it. Every wave the ship rode. Every monster they met. Every number they yelled into the dark. So many numbers!
 
 ## Quirk
 
-He counts under his breath. Always. Even sleeping. The crew has learned to set their watches by the cadence of his breathing.
+He counts under his breath. ALL the time. Even when he is asleep. The crew sets their watches by his sleepy counting. Tick. Tick. Tick. Oren. Tick.
 
 ## On Watch
 
-He sits beside the porthole with a warm pencil and writes the trench down in tidy little columns, as if making it tidy will make it kind.`,
+He sits by the round window with a warm pencil. He writes the deep ocean down in nice neat little columns. Like maybe if he makes it neat, the deep will be nice to him. Maybe!`,
     attacks: attacksFor("hadal-player-common-oren-tideledger"),
   }),
   PlayerTemplateSchema.parse({
@@ -66,15 +67,15 @@ He sits beside the porthole with a warm pencil and writes the trench down in tid
     imageUrl: `${BASE}players/hadal-player-uncommon-sable-kett.png`,
     bio: `## Role
 
-Engineer. Sable knows every bolt on the ship by name and every name in her own house by silence. She prefers the bolts.
+The fix-it lady! Sable knows every bolt on the ship by NAME. She also knows everybody in her own house. Their names? She uses silence for those. She likes the bolts more.
 
 ## Quirk
 
-She fixes things before they are broken. The captain has stopped asking how she knew. She does not always know herself.
+She fixes stuff BEFORE it breaks. Like, how does she know? The captain stopped asking. She does not always know either. Whoa. Spooky.
 
 ## On Watch
 
-She walks the engine deck with a wrench in one hand and a cup of tea in the other, and the engines hum a half-step happier when she passes.`,
+She walks around the engine room. Wrench in one hand. Hot tea in the other. The engines hum a little happier when she goes by. A whole half-step happier!`,
     attacks: attacksFor("hadal-player-uncommon-sable-kett"),
   }),
   PlayerTemplateSchema.parse({
@@ -85,15 +86,15 @@ She walks the engine deck with a wrench in one hand and a cup of tea in the othe
     imageUrl: `${BASE}players/hadal-player-uncommon-pella-copperkeel.png`,
     bio: `## Role
 
-Cook. Pella keeps a copper kettle that has been simmering since before the ship had a name, and she swears the trench can smell it from the bottom.
+The COOK! She has a big copper pot. It has been bubbling since before the ship even had a name. She swears the deep ocean can smell it all the way at the bottom! YUM.
 
 ## Quirk
 
-She over-feeds everyone. She believes hunger is a kind of forgetting and she will not have any of her crew forgetting on her watch.
+She over-feeds EVERYBODY. She thinks being hungry is a kind of forgetting. And she is NOT going to let her crew forget anything. Not on her watch! Eat up!
 
 ## On Watch
 
-She bakes bread on dive days. The smoke goes up the galley flue and out into the dark, and somewhere down there an echo lifts its head and almost remembers a kitchen.`,
+She bakes bread on dive days. The smoke goes up the chimney pipe. Out into the dark. And way down deep, some monster lifts its head. And almost remembers a kitchen. Aww.`,
     attacks: attacksFor("hadal-player-uncommon-pella-copperkeel"),
   }),
   PlayerTemplateSchema.parse({
@@ -104,15 +105,15 @@ She bakes bread on dive days. The smoke goes up the galley flue and out into the
     imageUrl: `${BASE}players/hadal-player-rare-ivo-bellcurrent.png`,
     bio: `## Role
 
-Bell-ringer. Ivo carries the deck-bell that calls the crew to watch, to meals, to the long quiet hour before a descent.
+The BELL guy! Ivo carries the deck bell. It calls the crew to their watch. To meals. To the long quiet hour right before they go down deep. DING DING!
 
 ## Quirk
 
-He rings the bell once, every night, for nobody. He has done it since he was small. He will not say why.
+He rings the bell ONE time. Every night. For NOBODY. He has done this since he was a tiny kid. He will not say why. (Mystery!)
 
 ## On Watch
 
-He is listening for the sunken bell. Everybody knows it. Nobody mentions it. When he hears it, the whole ship will hear it, and that will be the night the trench answers back.`,
+He is listening for the sunken bell. Everybody knows it. Nobody talks about it. When he hears it ring, the whole ship will hear it too. And THAT will be the night the deep answers back. Whoa.`,
     attacks: attacksFor("hadal-player-rare-ivo-bellcurrent"),
   }),
   PlayerTemplateSchema.parse({
@@ -123,15 +124,15 @@ He is listening for the sunken bell. Everybody knows it. Nobody mentions it. Whe
     imageUrl: `${BASE}players/hadal-player-rare-nemi-valeglass.png`,
     bio: `## Role
 
-Cartographer. Nemi draws the trench from memory and from the shape the lanterns make on the cabin ceiling at night.
+The map maker! Nemi draws the trench from her brain. And from the shape the lanterns make on the ceiling at night. Cool.
 
 ## Quirk
 
-Her maps are wrong on purpose. She says the trench moves and a true map has to move with it. Nobody has been brave enough to test her.
+Her maps are WRONG on purpose! She says the trench moves. So a true map has to move too. Nobody is brave enough to test her. Smart!
 
 ## On Watch
 
-She is the one who decides where the ship goes next. She does not consult the others. By the time she folds the map and looks up, the helm is already turning.`,
+She picks where the ship goes next. She does NOT ask the others. By the time she folds up her map, the ship is already turning. Boss energy!`,
     attacks: attacksFor("hadal-player-rare-nemi-valeglass"),
   }),
   PlayerTemplateSchema.parse({
@@ -142,15 +143,15 @@ She is the one who decides where the ship goes next. She does not consult the ot
     imageUrl: `${BASE}players/hadal-player-epic-luma-pearlspoke.png`,
     bio: `## Role
 
-Diplomat. Luma was trained to speak to people and discovered, late, that the only language she truly knows is the one the pearls speak under pressure.
+The talker! Luma was trained to talk to people. Then she found out, kind of late, that the only language she really knows is what pearls speak when they get squished. Weird? Yes. Useful? Also yes!
 
 ## Quirk
 
-She listens before she speaks. Then she listens again. The crew has learned that her silences mean she is choosing the right syllable for the trench.
+She listens before she talks. Then she listens AGAIN. The crew learned that her quiet means she is picking the perfect word to say to the deep.
 
 ## On Watch
 
-When an echo will not settle, the captain sends Luma. She carries no lantern, only a small string of pearls that she puts in her mouth and holds, and the echo always — always — listens.`,
+When a monster will not calm down, the captain sends Luma. She does not bring a lantern. Just a tiny string of pearls. She puts them in her mouth. She holds them. And the monster ALWAYS — always — listens. Every time.`,
     attacks: attacksFor("hadal-player-epic-luma-pearlspoke"),
   }),
   PlayerTemplateSchema.parse({
@@ -161,15 +162,15 @@ When an echo will not settle, the captain sends Luma. She carries no lantern, on
     imageUrl: `${BASE}players/hadal-player-epic-thane-oxbell.png`,
     bio: `## Role
 
-Watchman. Thane carries the loud bell — the one that wakes the whole crew when the trench wakes first.
+He has the BIG bell! The loud one! The one that wakes EVERYBODY up when the deep ocean wakes up first. CLANG!
 
 ## Quirk
 
-He has never been seen sitting down. Not once. The crew has a small wager going. The wager is older than some of them.
+Nobody has EVER seen him sit down. Not one time! The crew has a bet going about it. The bet is older than some of them. Crazy!
 
 ## On Watch
 
-He stands at the prow on every descent with his hand on the bell-rope and his eyes on the dark, and the dark, very politely, watches him back.`,
+He stands at the front of the ship every dive. Hand on the bell rope. Eyes on the dark. And the dark — very politely — watches him right back. Polite dark.`,
     attacks: attacksFor("hadal-player-epic-thane-oxbell"),
   }),
   PlayerTemplateSchema.parse({
@@ -180,15 +181,15 @@ He stands at the prow on every descent with his hand on the bell-rope and his ey
     imageUrl: `${BASE}players/hadal-player-mythical-aster-drownedstar.png`,
     bio: `## Role
 
-Astronomer. Aster is here because the stars she charts are not in the sky. They are at the bottom, and they are very dim, and they are very old.
+She watches stars! But not sky stars. Her stars are way at the BOTTOM of the ocean. And they are very dim. And SUPER old.
 
 ## Quirk
 
-She sleeps in the day and works at the deepest dark. She says the trench has its own constellations and someone has to learn their names before they go out.
+She sleeps in the day. She works in the deepest dark. She says the deep has its own star pictures. Somebody has to learn their names before they blink out forever! That is her job.
 
 ## On Watch
 
-She holds a small piece of glass to her eye and looks at nothing the rest of the crew can see, and she nods, slowly, and writes a single number down.`,
+She holds a tiny piece of glass to her eye. She looks at NOTHING. Or at least, nothing the rest of the crew can see. She nods slowly. Then she writes one number down. Just one.`,
     attacks: attacksFor("hadal-player-mythical-aster-drownedstar"),
   }),
   PlayerTemplateSchema.parse({
@@ -199,15 +200,15 @@ She holds a small piece of glass to her eye and looks at nothing the rest of the
     imageUrl: `${BASE}players/hadal-player-mythical-lantern-bride-bathypel.png`,
     bio: `## Role
 
-Vow-keeper. Bathypel made a promise to the deep when she was very young, and she has been keeping it for so long that the lantern she carries has begun to keep her back.
+She made a PROMISE to the deep when she was very little. She has been keeping it for so long that the lantern she carries has started keeping HER back. Whoa. Trippy.
 
 ## Quirk
 
-She does not blink in the dark. The crew used to find this unsettling. They have, over the years, found it comforting.
+She does NOT blink in the dark. The crew used to think this was super creepy. But over the years they decided it was kind of comforting. Funny how that works!
 
 ## On Watch
 
-She walks the lower deck alone with the lantern held at her chest, and where she walks the air warms by half a degree, and the echoes — even the oldest, even the wraith — turn their heads toward her, gently, the way a child turns toward a mother's voice in the next room.`,
+She walks the lower deck alone. Lantern held at her chest. Where she walks, the air gets a little warmer. And the monsters — even the oldest, even the Wraith — turn their heads toward her. Gentle. The way a kid turns toward their mom's voice in the next room. Aww.`,
     attacks: attacksFor("hadal-player-mythical-lantern-bride-bathypel"),
   }),
 ];

@@ -35,7 +35,7 @@ export const PixiCanvasDemo = defineComponent(PixiCanvasDemoPropsSchema, (props)
   return (
     <div
       data-test="pixi-canvas-demo"
-      className="rounded-card bg-brand-900 p-2 shadow-md"
+      className="rounded-card bg-slate-ink p-2 shadow-md"
       style={{ width: props.width, height: props.height }}
     >
       <canvas

@@ -14,7 +14,7 @@ export const FilterSearch = defineComponent(FilterSearchPropsSchema, (props) => 
   const visible = props.items.filter((i) => i.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <div className="font-display flex flex-col gap-3">
+    <div className="font-openrunde flex flex-col gap-3">
       <input
         type="search"
         placeholder="search…"
@@ -23,7 +23,7 @@ export const FilterSearch = defineComponent(FilterSearchPropsSchema, (props) => 
           const next = e.target.value;
           startTransition(() => setQuery(next));
         }}
-        className="rounded px-3 py-2 text-black"
+        className="rounded-lg px-3 py-2 text-black"
       />
       <ul className="flex flex-col gap-1">
         {visible.map((i) => (

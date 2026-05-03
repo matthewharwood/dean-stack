@@ -582,7 +582,7 @@ export function DraggableCard({
     <div
       ref={ref}
       data-card-id={cardId}
-      className="absolute inset-0 cursor-grab touch-none rounded-[4px] transition-[opacity,box-shadow] duration-150 active:cursor-grabbing pointer-fine:hover:shadow-lg data-[invalid-drop=true]:ring-4 data-[invalid-drop=true]:ring-rose-500/80 data-[valid-drop=true]:ring-4 data-[valid-drop=true]:ring-emerald-400/80 data-[will-replace=true]:opacity-60"
+      className="absolute inset-0 cursor-grab touch-none rounded-[4px] transition-[opacity,box-shadow] duration-150 active:cursor-grabbing pointer-fine:hover:shadow-lg data-[invalid-drop=true]:ring-4 data-[invalid-drop=true]:ring-vivid-orange/80 data-[valid-drop=true]:ring-4 data-[valid-drop=true]:ring-success-green/80 data-[will-replace=true]:opacity-60"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
@@ -622,6 +622,6 @@ export function SlotWrapper({
 // translated away by drag) does the frame show through.
 export function EmptySlot(): ReactNode {
   return (
-    <div className="absolute inset-0 rounded-[4px] border-2 border-dotted border-neutral-700/80 transition-colors duration-150 group-data-[hover=empty]:border-solid group-data-[hover=empty]:border-emerald-500 group-data-[hover=empty]:bg-emerald-100/60" />
+    <div className="absolute inset-0 rounded-[4px] border-2 border-dotted border-medium-gray/80 transition-colors duration-150 group-data-[hover=empty]:border-solid group-data-[hover=empty]:border-success-green group-data-[hover=empty]:bg-pale-mint/60" />
   );
 }

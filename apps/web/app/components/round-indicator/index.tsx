@@ -38,12 +38,12 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
         data-tier-up={tierUp ? "true" : undefined}
       >
         <div className="flex items-baseline gap-3">
-          <span className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+          <span className="font-openrunde text-xs font-semibold uppercase tracking-[0.2em] text-muted-gray">
             Round
           </span>
-          <span className="font-display text-3xl font-bold text-neutral-900">{props.round}</span>
-          <span className="font-mono text-xs text-neutral-500">
-            of <span className="font-bold text-neutral-700">4</span>
+          <span className="font-openrunde text-3xl font-bold text-slate-ink">{props.round}</span>
+          <span className="font-openrunde text-xs text-muted-gray">
+            of <span className="font-bold text-medium-gray">4</span>
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -55,10 +55,10 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
                 key={`r${props.round}-l${level}`}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   current
-                    ? "w-6 bg-brand-500"
+                    ? "w-6 bg-radiant-violet"
                     : reached
-                      ? "w-1.5 bg-brand-500/70"
-                      : "w-1.5 bg-neutral-300"
+                      ? "w-1.5 bg-radiant-violet/70"
+                      : "w-1.5 bg-light-gray"
                 }`}
               />
             );

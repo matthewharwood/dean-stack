@@ -1,3 +1,4 @@
+import { Lightbulb, X } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { HandCount } from "~/components/hand-count";
@@ -37,7 +38,7 @@ function renderBody(body: string): ReactNode {
         inner.push(
           <span
             key={key}
-            className="rounded-[3px] bg-amber-200 px-1 py-[1px] font-bold text-amber-900"
+            className="rounded-[3px] bg-warning-yellow/30 px-1 py-[1px] font-bold text-slate-ink"
           >
             {part}
           </span>,
@@ -47,7 +48,7 @@ function renderBody(body: string): ReactNode {
       }
     }
     const node = isItalic ? (
-      <em key={`em-${charOffset}`} className="font-semibold italic text-amber-900">
+      <em key={`em-${charOffset}`} className="font-semibold italic text-slate-ink">
         {inner}
       </em>
     ) : (
@@ -67,13 +68,11 @@ function renderBody(body: string): ReactNode {
 function FailureChip({ computed, expected }: { computed: number; expected: number }): ReactNode {
   const glyph = computed === expected ? "=" : computed > expected ? ">" : "<";
   return (
-    <div className="flex items-center gap-2 rounded-md border-2 border-rose-300 bg-rose-50 px-3 py-1.5 font-mono text-xl font-bold text-rose-700">
+    <div className="flex items-center gap-2 rounded-lg border-2 border-vivid-orange/40 bg-vivid-orange/10 px-3 py-1.5 font-openrunde text-xl font-bold text-vivid-orange">
       <span>{computed}</span>
-      <span className="text-rose-400">{glyph}</span>
+      <span className="text-vivid-orange/70">{glyph}</span>
       <span>{expected}</span>
-      <span aria-hidden className="ml-1 text-rose-500">
-        ✗
-      </span>
+      <X size={20} strokeWidth={3} className="ml-1 text-vivid-orange" aria-hidden />
     </div>
   );
 }
@@ -88,17 +87,20 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
     <button
       type="button"
       onClick={props.onDismiss}
-      className="flex w-full items-start gap-4 rounded-md border border-amber-300 bg-amber-50 px-5 py-4 text-left shadow-lg animate-hint-slide-in cursor-pointer"
+      className="flex w-full items-start gap-4 rounded-lg border border-warning-yellow/40 bg-warning-yellow/10 px-5 py-4 text-left shadow-lg animate-hint-slide-in cursor-pointer"
       data-test="hint-tooltip"
       aria-label="Hint — tap to dismiss"
     >
-      <span aria-hidden className="shrink-0 text-3xl animate-hint-icon-bounce origin-bottom">
-        💡
-      </span>
+      <Lightbulb
+        size={32}
+        strokeWidth={2}
+        className="shrink-0 text-warning-yellow animate-hint-icon-bounce origin-bottom"
+        aria-hidden
+      />
       <div className="flex min-w-0 flex-col gap-1.5 flex-1">
         {/* Emphasis — large, colored, uppercase punch line. The kid reads
             this even if they read nothing else. */}
-        <h3 className="font-display text-2xl font-extrabold leading-tight text-amber-900 tracking-tight">
+        <h3 className="font-openrunde text-2xl font-extrabold leading-tight text-slate-ink tracking-tight">
           {props.emphasis}
         </h3>
         {/* Failure chip — only when there's a failed result to show. */}
@@ -112,7 +114,7 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
         ) : null}
         {/* Body — smaller, regular weight, with digit highlights and
             italic emphasis from the *asterisk* markers in the template. */}
-        <p className="font-display text-sm leading-snug text-amber-950/90">
+        <p className="font-openrunde text-sm leading-snug text-slate-ink">
           {renderBody(props.body)}
         </p>
         {/* Finger-counting visual — drawn hands extending the right

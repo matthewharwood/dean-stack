@@ -96,7 +96,7 @@ function Hand({
           : { overflow: "visible" }
       }
     >
-      {/* Wrist — small rounded rectangle anchoring the bottom of the
+      {/* Wrist — small rounded-lg rectangle anchoring the bottom of the
           composition. Kept narrower than the palm so the silhouette
           reads as a hand rather than a paddle. */}
       <rect
@@ -110,7 +110,7 @@ function Hand({
         strokeWidth="2"
       />
 
-      {/* Palm — rounded path with gentle inward curves at the knuckle
+      {/* Palm — rounded-lg path with gentle inward curves at the knuckle
           line and wrist. The path is anchored so the four-finger
           knuckles sit along the top edge (y=72) and the side near the
           thumb (left edge in canonical orientation) bulges out. */}
@@ -274,7 +274,7 @@ export const HandCount = defineComponent(HandCountPropsSchema, (props) => {
         </div>
       </div>
       {props.caption ? (
-        <span className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-amber-800/80">
+        <span className="font-openrunde text-xs font-semibold uppercase tracking-[0.18em] text-medium-gray">
           {props.caption}
         </span>
       ) : null}

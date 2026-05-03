@@ -6,7 +6,7 @@ import { ScoreboardPropsSchema } from "./schema";
 export const Scoreboard = defineComponent(ScoreboardPropsSchema, (props) => {
   const top = topScore(props.scores);
   return (
-    <ol className="rounded-card bg-brand-500 p-4 text-white shadow-md font-display">
+    <ol className="rounded-card bg-radiant-violet p-4 text-white shadow-md font-openrunde">
       {props.scores.map((s) => {
         const isTop = props.highlightTop && top?.player === s.player;
         return (

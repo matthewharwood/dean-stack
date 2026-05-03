@@ -12,7 +12,7 @@ export const LevelCard = defineComponent(LevelCardPropsSchema, (props) => {
   return (
     <div
       ref={ref}
-      className="rounded-card bg-brand-500 p-6 text-white shadow-md font-display flex flex-col gap-3 items-center"
+      className="rounded-card bg-radiant-violet p-6 text-white shadow-md font-openrunde flex flex-col gap-3 items-center"
     >
       <h2 className="text-xl">Level {props.level}</h2>
       {props.completed ? (
@@ -21,7 +21,7 @@ export const LevelCard = defineComponent(LevelCardPropsSchema, (props) => {
         <button
           type="button"
           onClick={() => props.onComplete()}
-          className="rounded bg-white text-brand-900 px-4 py-2"
+          className="rounded-lg bg-white text-slate-ink px-4 py-2"
         >
           Complete
         </button>

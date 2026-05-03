@@ -17,10 +17,12 @@ const BASE: string = import.meta.env.BASE_URL;
 // HP values are calibrated against the per-level damage in `levels.ts`
 // (damage = equation target). Update both together if you tune one.
 //
-// Bios authored via the calvin-game-designer agent against the Bible
-// (docs/hadal-tide.md) — the wraith and kelp-censer are sibling tier
-// bosses (different responses to the same loss); minor recurring motifs
-// are the sunken bell and the vanished surface.
+// Bios are written for ~3rd-grade readers — short sentences, kid
+// vocabulary, Dav Pilkey energy (Captain Underpants / Dog Man).
+// Keep the spooky-cozy ocean-monster heart, but no abstract grief
+// metaphors: the kid is the audience. The wraith and kelp-censer
+// remain sibling bosses (same loss, different response); recurring
+// motifs are still the sunken bell and the vanished surface.
 export const ENEMY_REGISTRY: readonly EnemyTemplate[] = [
   // ── Tier 1 ──────────────────────────────────────────────────────────
   EnemyTemplateSchema.parse({
@@ -32,15 +34,15 @@ export const ENEMY_REGISTRY: readonly EnemyTemplate[] = [
     imageUrl: `${BASE}enemies/hadal-tide-minnow-echo.png`,
     bio: `## Was
 
-Once it swam in shallow water where the sun came down in pieces. It still remembers the warm parts, sort of. The shape of a kelp shadow. The taste of a wave.
+A teeny tiny fish! It used to swim where the sun made shiny stripes on the water. The water was warm. It loved the warm parts. It loved counting waves, too. One wave! Two waves! THREE waves!
 
 ## Is
 
-Now it drifts in a slow circle the size of your hand, looking for the count it used to keep. Minnows always counted. One-of-us, two-of-us, three-of-us, all-of-us. If you're quiet you can hear it trying.
+Now it just floats in a little circle. The circle is about as big as your hand. It is still trying to count. But it gets stuck. "One... uhhh... two... uhhh..." Poor little guy.
 
 ## To Settle It
 
-The first echo most pilots meet, and the easiest. Give it back a small true number and watch its little fin remember which way is up.`,
+This one is SUPER easy. Just give it a number. Any true number! Its tiny fin will go wiggle and it will remember which way is up. Done!`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-pressure-puff-echo",
@@ -51,15 +53,15 @@ The first echo most pilots meet, and the easiest. Give it back a small true numb
     imageUrl: `${BASE}enemies/hadal-pressure-puff-echo.png`,
     bio: `## Was
 
-The Puff is round because the deep is heavy and it has been holding its breath for a very long time. Nobody told it the holding was over.
+The Puff is round. Like a balloon! That is because the deep ocean is HEAVY and it has been holding its breath for a really long time. Nobody told it to stop.
 
 ## Is
 
-It moves the way a thought moves when you are sleepy: slow, big, almost. Inside it, somewhere, is the number it used to be before it swelled. Smaller than you'd guess.
+It moves slow. Like when you are sleepy and just woke up. Inside it is the number it used to be before it puffed up big. The number is way smaller than you think. Tiny!
 
 ## Tell
 
-When it sighs, the water around it warms by half a degree. That is the only weather down here.`,
+When it sighs, the water gets a tiny bit warmer. That is the only kind of weather down here. Cool, huh?`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-glow-polyp-echo",
@@ -70,15 +72,15 @@ When it sighs, the water around it warms by half a degree. That is the only weat
     imageUrl: `${BASE}enemies/hadal-glow-polyp-echo.png`,
     bio: `## Was
 
-A handful of soft green stars on a stem. The polyp glows in the rhythm of a song no one alive can name, and if you watch the pulses long enough you can almost count along.
+A bunch of soft green stars stuck on a stick! It glows. It blinks in the rhythm of a song. Nobody knows the song. But if you watch the blinks long enough, you can almost count along. Blink. Blink. BLINK!
 
 ## Is
 
-Fragile. Not because the deep is cruel, but because it gave most of itself away as light a long time ago, hoping someone above might see. Someone did, once. The polyp remembers a face but not whose.
+Kinda fragile. Why? Because it gave most of itself away as LIGHT. A long time ago. It was hoping someone way up top would see. Someone did see! Once. A face. The polyp can't remember whose face, though.
 
 ## To Settle It
 
-Help it find a number and one of its stars steadies. That is enough.`,
+Help it find a number. One of its little stars goes steady. That is all. That is enough.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-silt-crawler-echo",
@@ -89,15 +91,15 @@ Help it find a number and one of its stars steadies. That is enough.`,
     imageUrl: `${BASE}enemies/hadal-silt-crawler-echo.png`,
     bio: `## Was
 
-Older than the trench wall it rests against. The crawler measures time in settled silt — one grain, then a hundred, then a hundred hundred — and somewhere under all that quiet it forgot which number it was on.
+This guy is OLD. Older than the wall it sits on. It counts time by sand. One grain. Then a hundred. Then a hundred hundred! After all that counting it forgot what number it was on. Whoops.
 
 ## Is
 
-It does not hurry. It has not hurried in a thousand years. When it shifts, a small gold cloud rises and the cloud is full of things that used to be shells.
+It does NOT hurry. It has not hurried in a thousand years. When it moves, a little gold cloud poofs up. The cloud is full of stuff that used to be shells. (Gross? Cool? Both!)
 
 ## To Settle It
 
-Be patient with it. It has been patient with everything.`,
+Be patient with it. It has been patient with everything else. So you can be patient too.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-ember-snail-echo",
@@ -108,15 +110,15 @@ Be patient with it. It has been patient with everything.`,
     imageUrl: `${BASE}enemies/hadal-ember-snail-echo.png`,
     bio: `## Was
 
-Deep where the water is cold enough to hurt, the ember snail carries a coal in the curl of its shell. The coal has been lit since before there were people. Nobody knows who lit it.
+Way deep where the water is super cold, this snail carries a HOT COAL inside its shell. The coal has been on fire since before there were any people! Nobody knows who lit it. Spooky!
 
 ## Is
 
-It moves toward warm things. A vent. A lantern. A pilot. Not to take the warmth — to compare. The snail is checking, in its slow snail way, whether its little fire is still the right kind of fire.
+It moves toward warm stuff. A vent! A lantern! YOU! It is not trying to steal the warm. It is checking. Snails check things real slow. It wants to know if its little fire is still the right kind of fire.
 
 ## To Settle It
 
-Give it a true answer and the coal brightens for a moment. You can see, deep inside the shell, the smaller snail it used to be. Then the dark again. But warmer.`,
+Give it a true answer. The coal will get bright for a second. You can see, way deep inside the shell, the smaller snail it used to be! Then the dark comes back. But the dark is warmer now. Aww.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-pressure-wraith",
@@ -127,15 +129,15 @@ Give it a true answer and the coal brightens for a moment. You can see, deep ins
     imageUrl: `${BASE}enemies/hadal-pressure-wraith.png`,
     bio: `## Was
 
-Something else once — a tide, a name, a hand on a railing. It cannot find any of those things now, only the weight where they used to be.
+It used to be SOMETHING ELSE. A tide. A name. A hand on a railing. But it cannot find any of those things now. It can only feel the heavy spot where they used to be.
 
 ## Is
 
-The Forgetting given a long time to settle. Heavy. Slow. Folded in on itself the way grief folds. It drifts toward a sunken bell that nobody has rung in a hundred years, because the bell is the last loud thing it can almost remember.
+It has been forgetting for a LOOOONG time. So it is heavy. It floats slow. It is all bunched up. It drifts toward an old sunken bell. Nobody has rung that bell in a hundred years. But the bell is the last loud thing it can almost remember.
 
 ## To Settle It
 
-Do not be afraid of it. It is not angry. It is tired in a way the surface does not have a word for. Give it the right number, gently, and the folding loosens. Then it rests, and the bell rings once, very far away, and you keep going down.`,
+Do not be scared! It is not mad. It is just tired. The kind of tired we do not even have a word for up here. Give it the right number, gently, and the bunchy parts loosen up. Then it rests. And way far away, the bell goes BONG. One time. And you keep going down.`,
   }),
   // ── Tier 2 ──────────────────────────────────────────────────────────
   EnemyTemplateSchema.parse({
@@ -147,15 +149,15 @@ Do not be afraid of it. It is not angry. It is tired in a way the surface does n
     imageUrl: `${BASE}enemies/hadal-glass-manta-echo.png`,
     bio: `## Was
 
-Older than glass — older than the idea of windows. The manta drifts on a line it drew for itself when the world was younger.
+This thing is OLDER THAN GLASS. Older than even the idea of windows! It floats along a line it drew. Way back when the world was little.
 
 ## Is
 
-You see the trench wall through it before you see it. It will not cross that line. Not for a current, not for a pilot, not for anything. The line is the last rule it can remember, and the rule is the only piece of itself it has left.
+You see the wall right through it before you see the manta. It will NOT cross that line. Not for a current. Not for you. Not for ANYTHING. The line is the last rule it remembers. It is the only piece of itself it has left.
 
 ## To Settle It
 
-If your number is on its side of the line, it lets you pass. If it isn't, it waits. The manta has waited longer than you can count.`,
+If your number is on its side of the line, it lets you pass. If it is not, it waits. The manta has waited longer than you can count. Like, forever.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-brine-needle-urchin-echo",
@@ -166,15 +168,15 @@ If your number is on its side of the line, it lets you pass. If it isn't, it wai
     imageUrl: `${BASE}enemies/hadal-brine-needle-urchin-echo.png`,
     bio: `## Was
 
-A small bristled coin of an animal, salt-stiff and prickly. The needle urchin grew its spines to keep something out, and it cannot now remember what.
+A little salty coin of an animal. With SPIKES! The spikes were to keep something out. But it forgot what. Was it sharks? Was it noodles? It just doesn't know anymore.
 
 ## Is
 
-It guards a circle of seafloor about as wide as a dinner plate. Inside the circle: nothing. Outside the circle: also nothing. But the circle is the urchin's, and it knows the difference even if you don't.
+It guards a circle on the floor. The circle is about the size of a dinner plate. Inside the circle: NOTHING. Outside the circle: ALSO nothing! But the circle is HIS. And he knows the difference, even if you don't.
 
 ## To Settle It
 
-It will let you near if your answer is small enough to fit inside the circle. If you bring something too big, the spines lift, politely, and ask you to try again.`,
+It will let you come near if your answer is small enough to fit in the circle. If you bring something too big, the spikes go up. Politely! Then it asks you to try again. So polite.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-basalt-lantern-leech-echo",
@@ -185,15 +187,15 @@ It will let you near if your answer is small enough to fit inside the circle. If
     imageUrl: `${BASE}enemies/hadal-basalt-lantern-leech-echo.png`,
     bio: `## Was
 
-The lantern is older than the leech. The leech is older than the rock. Nobody knows where the lantern came from.
+The lantern is older than the leech. The leech is older than the rock. Nobody knows where the lantern came from. A mystery! Spooky mystery time.
 
 ## Is
 
-It clings to volcanic stone with a grip nothing has ever pried loose, carrying the tiny lantern in its mouth. The leech believes — as much as a leech believes anything — that it was given the lantern to hold until someone came back for it. The someone has not come back.
+It sticks to the rock SUPER hard. Nobody has ever pried it off. It holds the tiny lantern in its mouth. The leech thinks — as much as a leech can think — that someone gave it the lantern to hold. They said they would come back. They didn't. Yet.
 
 ## To Settle It
 
-When you pass, it lifts the light a little, hopeful. Answer it true and the lantern flares, just for a heartbeat, bright enough that you can see, far away in the dark, the shape of a sunken bell.`,
+When you go by, it lifts the light up a little. Hopeful! Answer it true and the lantern goes FLASH. Bright for one heartbeat. Bright enough that you can see, way far away in the dark, the shape of a sunken bell.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-sandglass-stalker-echo",
@@ -204,15 +206,15 @@ When you pass, it lifts the light a little, hopeful. Answer it true and the lant
     imageUrl: `${BASE}enemies/hadal-sandglass-stalker-echo.png`,
     bio: `## Was
 
-Shaped like an hourglass and moving like one — a slow trickle of gold from the top half to the bottom, then a turn, then another slow trickle. The stalker has been turning itself for longer than the trench has had a name.
+Shaped like an hourglass! Moves like one too. Slow gold sand trickles from the top to the bottom. Then it FLIPS itself over. Then more sand. It has been flipping itself for longer than the trench even had a name.
 
 ## Is
 
-It watches. Patiently. Pilots, currents, other echoes, the slow drift of silt on the floor. It is keeping count of something, and the count matters to it more than anything else.
+It watches. It watches EVERYTHING! Pilots. Currents. Other monsters. Even the slow dust on the floor. It is keeping count of something. And the count matters to it more than anything else.
 
 ## To Settle It
 
-If your number comes before its number, it lets the sand fall. If your number comes after, it turns itself over and waits for you to try again. It is not in a hurry. It has all the time there ever was.`,
+If your number comes before its number, it lets the sand fall. If your number comes after, it flips itself over and waits for you to try again. It is not in a hurry. It has all the time there ever was.`,
   }),
   EnemyTemplateSchema.parse({
     id: "hadal-kelp-censer-echo",
@@ -223,15 +225,15 @@ If your number comes before its number, it lets the sand fall. If your number co
     imageUrl: `${BASE}enemies/hadal-kelp-censer-echo.png`,
     bio: `## Was
 
-Imagine a cathedral made of seaweed. Imagine, in the middle of it, a great brass cup swinging on a chain of kelp, and inside the cup a smoke that does not rise because there is no up down here, only deeper.
+Picture a HUGE green hall made of seaweed. In the middle there is a big brass cup swinging on a kelp chain. The cup is full of smoke. The smoke does not go up. There is no "up" down here. Only deeper.
 
 ## Is
 
-What the pressure-wraith might have been, if grief had grown leaves instead of folding in. It is the wraith's other half — the same loss, answered with green instead of weight. Where the wraith drifts toward the sunken bell to remember a sound, the censer stays still and lets the smoke do the remembering for it.
+You know the Pressure Wraith? This one is its other half. Same sad story. But this one grew leaves instead of getting all bunched up. The Wraith floats toward the bell to remember a sound. The Censer just sits still and lets the smoke remember for it.
 
 ## To Settle It
 
-The smoke smells like a kitchen you have never been in. Like bread, almost. Like a voice calling you inside. Give it the right number, in the right order, and for one long breath the smoke rises the way smoke is supposed to, and somewhere very far up, a window opens.`,
+The smoke smells like a kitchen you have never been in. Like bread. Almost like a voice calling you inside. Give it the right number, in the right order. For ONE long breath the smoke goes up the way smoke is supposed to. And way up high somewhere, a window opens. Whoa.`,
   }),
 ];
 

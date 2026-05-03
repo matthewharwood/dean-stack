@@ -10,9 +10,12 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   return (
-    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-display">
+    <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-openrunde">
       <h1 className="text-3xl">{env.VITE_GAME_TITLE}</h1>
-      <Link to="/adding-game" className="rounded-card bg-brand-500 px-4 py-2 text-white shadow-md">
+      <Link
+        to="/adding-game"
+        className="rounded-full bg-radiant-violet px-4 py-2 text-white shadow-subtle"
+      >
         Play Adding Game
       </Link>
     </main>

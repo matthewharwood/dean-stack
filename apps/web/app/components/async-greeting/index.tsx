@@ -9,5 +9,5 @@ const greetingPromise: Promise<string> = new Promise((resolve) => {
 
 export function AsyncGreeting() {
   const greeting = use(greetingPromise);
-  return <p className="font-display rounded-card bg-brand-500 p-4 text-white">{greeting}</p>;
+  return <p className="font-openrunde rounded-card bg-radiant-violet p-4 text-white">{greeting}</p>;
 }
