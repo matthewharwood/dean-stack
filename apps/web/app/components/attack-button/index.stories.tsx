@@ -12,7 +12,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const noop = (): void => {};
+const noop = (): void => {
+  // story-only stub for the onSelect handler
+};
 
 export const Slash: Story = {
   args: {
@@ -74,7 +76,16 @@ export const Pending: Story = {
   },
 };
 
+// Row uses a custom render and ignores the inherited args; but the Story
+// type still demands the meta-derived prop shape, so we provide a stub
+// args object that the render fn doesn't actually consume.
 export const Row: Story = {
+  args: {
+    attack: { id: "row-stub", name: "Stub", kind: "wave", color: "#fff", glyph: "•" },
+    damage: 6,
+    onSelect: noop,
+    pending: false,
+  },
   render: () => (
     <div style={{ display: "flex", gap: 12 }}>
       <AttackButton

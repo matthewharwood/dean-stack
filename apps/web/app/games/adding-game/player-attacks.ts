@@ -76,3 +76,16 @@ export const ATTACKS_BY_PLAYER_ID: Record<string, readonly [Attack, Attack, Atta
     { id: "bathypel-3", name: "Bridal Storm", kind: "rain", color: "#fbcfe8", glyph: "❅" },
   ],
 };
+
+// Typed lookup. Throws loudly when the registry references a pilot id
+// that has no attack tuple in this map — surfaces typos at module load
+// (when `players.ts` runs each `.parse()`) instead of letting a `!`
+// non-null assertion paper over a missing entry. The throw replaces
+// the lint-forbidden non-null assertion at every call site.
+export function attacksFor(playerId: string): readonly [Attack, Attack, Attack] {
+  const tuple = ATTACKS_BY_PLAYER_ID[playerId];
+  if (!tuple) {
+    throw new Error(`player-attacks: no attack tuple registered for "${playerId}"`);
+  }
+  return tuple;
+}

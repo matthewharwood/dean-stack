@@ -23,6 +23,7 @@ import { HintTooltip } from "~/components/hint-tooltip";
 import { PlayerAvatar } from "~/components/player-avatar";
 import { RoundCompleteFx } from "~/components/round-complete-fx";
 import { RoundIndicator } from "~/components/round-indicator";
+import { RoundJumpPanel } from "~/components/round-jump-panel";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
 import { attackFxRuntime } from "~/games/adding-game/attack-fx/runtime";
 import { dealRound } from "~/games/adding-game/deal";
@@ -810,7 +811,9 @@ function AddingGame() {
 
   return (
     <>
-      <DevMenu />
+      <DevMenu>
+        <RoundJumpPanel />
+      </DevMenu>
       <AttackFxLayer />
       {introPlaying ? <DiveInIntro onComplete={handleIntroComplete} /> : null}
       <RoundCompleteFx

@@ -1,5 +1,6 @@
 import { type PlayerTemplate, PlayerTemplateSchema } from "@dean-stack/schemas";
-import { ATTACKS_BY_PLAYER_ID } from "./player-attacks";
+
+import { attacksFor } from "./player-attacks";
 
 // Vite serves files from `public/` at the root in dev and prefixed with the
 // configured `base` in production. Mirrors the BASE handling in enemies.ts.
@@ -36,7 +37,7 @@ She talks to the lanterns when she thinks no one is listening. She is sure they 
 ## On Watch
 
 She is the first one up before a descent and the last one to bed after, and the only one who has ever caught the captain humming.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-common-mara-brasswake"]!,
+    attacks: attacksFor("hadal-player-common-mara-brasswake"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-common-oren-tideledger",
@@ -55,7 +56,7 @@ He counts under his breath. Always. Even sleeping. The crew has learned to set t
 ## On Watch
 
 He sits beside the porthole with a warm pencil and writes the trench down in tidy little columns, as if making it tidy will make it kind.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-common-oren-tideledger"]!,
+    attacks: attacksFor("hadal-player-common-oren-tideledger"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-uncommon-sable-kett",
@@ -74,7 +75,7 @@ She fixes things before they are broken. The captain has stopped asking how she 
 ## On Watch
 
 She walks the engine deck with a wrench in one hand and a cup of tea in the other, and the engines hum a half-step happier when she passes.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-uncommon-sable-kett"]!,
+    attacks: attacksFor("hadal-player-uncommon-sable-kett"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-uncommon-pella-copperkeel",
@@ -93,7 +94,7 @@ She over-feeds everyone. She believes hunger is a kind of forgetting and she wil
 ## On Watch
 
 She bakes bread on dive days. The smoke goes up the galley flue and out into the dark, and somewhere down there an echo lifts its head and almost remembers a kitchen.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-uncommon-pella-copperkeel"]!,
+    attacks: attacksFor("hadal-player-uncommon-pella-copperkeel"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-rare-ivo-bellcurrent",
@@ -112,7 +113,7 @@ He rings the bell once, every night, for nobody. He has done it since he was sma
 ## On Watch
 
 He is listening for the sunken bell. Everybody knows it. Nobody mentions it. When he hears it, the whole ship will hear it, and that will be the night the trench answers back.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-rare-ivo-bellcurrent"]!,
+    attacks: attacksFor("hadal-player-rare-ivo-bellcurrent"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-rare-nemi-valeglass",
@@ -131,7 +132,7 @@ Her maps are wrong on purpose. She says the trench moves and a true map has to m
 ## On Watch
 
 She is the one who decides where the ship goes next. She does not consult the others. By the time she folds the map and looks up, the helm is already turning.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-rare-nemi-valeglass"]!,
+    attacks: attacksFor("hadal-player-rare-nemi-valeglass"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-epic-luma-pearlspoke",
@@ -150,7 +151,7 @@ She listens before she speaks. Then she listens again. The crew has learned that
 ## On Watch
 
 When an echo will not settle, the captain sends Luma. She carries no lantern, only a small string of pearls that she puts in her mouth and holds, and the echo always — always — listens.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-epic-luma-pearlspoke"]!,
+    attacks: attacksFor("hadal-player-epic-luma-pearlspoke"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-epic-thane-oxbell",
@@ -169,7 +170,7 @@ He has never been seen sitting down. Not once. The crew has a small wager going.
 ## On Watch
 
 He stands at the prow on every descent with his hand on the bell-rope and his eyes on the dark, and the dark, very politely, watches him back.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-epic-thane-oxbell"]!,
+    attacks: attacksFor("hadal-player-epic-thane-oxbell"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-mythical-aster-drownedstar",
@@ -188,7 +189,7 @@ She sleeps in the day and works at the deepest dark. She says the trench has its
 ## On Watch
 
 She holds a small piece of glass to her eye and looks at nothing the rest of the crew can see, and she nods, slowly, and writes a single number down.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-mythical-aster-drownedstar"]!,
+    attacks: attacksFor("hadal-player-mythical-aster-drownedstar"),
   }),
   PlayerTemplateSchema.parse({
     id: "hadal-player-mythical-lantern-bride-bathypel",
@@ -207,7 +208,7 @@ She does not blink in the dark. The crew used to find this unsettling. They have
 ## On Watch
 
 She walks the lower deck alone with the lantern held at her chest, and where she walks the air warms by half a degree, and the echoes — even the oldest, even the wraith — turn their heads toward her, gently, the way a child turns toward a mother's voice in the next room.`,
-    attacks: ATTACKS_BY_PLAYER_ID["hadal-player-mythical-lantern-bride-bathypel"]!,
+    attacks: attacksFor("hadal-player-mythical-lantern-bride-bathypel"),
   }),
 ];
 

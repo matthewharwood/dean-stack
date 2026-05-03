@@ -1,4 +1,4 @@
-import { Graphics } from "pixi.js";
+import { Graphics, type Ticker } from "pixi.js";
 
 import { tintedSoftCircle } from "../runtime";
 
@@ -32,7 +32,8 @@ export function runThrust(ctx: AttackCtx): Promise<void> {
   return new Promise<void>((resolve) => {
     let elapsed = 0;
     let sparked = false;
-    const tick = (deltaMS: number): void => {
+    const tick = (ticker: Ticker): void => {
+      const deltaMS = ticker.deltaMS;
       elapsed += deltaMS;
       const t = Math.min(1, elapsed / ATTACK_DURATION_MS);
       const flight = Math.min(1, elapsed / 280);
@@ -94,6 +95,6 @@ export function runThrust(ctx: AttackCtx): Promise<void> {
         resolve();
       }
     };
-    app.ticker.add((ticker) => tick(ticker.deltaMS));
+    app.ticker.add(tick);
   });
 }

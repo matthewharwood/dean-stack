@@ -1,6 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 
 import { clearAllStorage } from "~/lib/clear-storage";
+
+// Context exposed to DevMenu children so route-specific menu items can
+// dismiss the panel after they fire (e.g. RoundJumpPanel closes the
+// menu so the kid sees the new round immediately). Only valid inside a
+// rendered DevMenu — useDevMenu throws otherwise to surface misuse.
+type DevMenuApi = { close: () => void };
+const DevMenuContext = createContext<DevMenuApi | null>(null);
+
+export function useDevMenu(): DevMenuApi {
+  const ctx = useContext(DevMenuContext);
+  if (!ctx) throw new Error("useDevMenu: must be used inside <DevMenu>");
+  return ctx;
+}
 
 // Lucide-style gear glyph. Inline so there's no icon-package dependency for
 // a single icon, and so the path renders identically in Storybook and prod.
@@ -24,14 +37,19 @@ function GearIcon() {
   );
 }
 
-// Dev / parent menu. Today: one item, "Clear state". Lives top-right, fixed
-// to the viewport so it floats above the game grid without affecting layout.
-// Click outside or press Esc to dismiss.
+// Dev / parent menu. Lives top-right, fixed to the viewport so it floats
+// above the game grid without affecting layout. Click outside or press
+// Esc to dismiss.
+//
+// First-party items: "Clear state". Route-specific items can be passed
+// as `children` (e.g. the adding-game route renders a round-jump panel
+// here). Children get a `useDevMenu().close()` to dismiss the menu
+// after they act.
 //
 // Intentionally not gated behind `import.meta.env.DEV` — the user wants this
 // available in deployed builds too while iterating on the schema. When the
 // game stabilizes, gate it or move it behind a long-press affordance.
-export function DevMenu() {
+export function DevMenu({ children }: { children?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,40 +90,47 @@ export function DevMenu() {
   }
 
   return (
-    <div ref={containerRef} className="fixed top-3 right-3 z-50">
-      <button
-        type="button"
-        aria-label="Open dev menu"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 bg-white/85 text-neutral-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-neutral-900 active:scale-95"
-        data-test="dev-menu-button"
-      >
-        <GearIcon />
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          aria-label="Dev menu"
-          className="absolute top-full right-0 mt-2 min-w-[180px] overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg"
-          data-test="dev-menu-panel"
+    <DevMenuContext.Provider value={{ close: () => setOpen(false) }}>
+      <div ref={containerRef} className="fixed top-3 right-3 z-50">
+        <button
+          type="button"
+          aria-label="Open dev menu"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 bg-white/85 text-neutral-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-neutral-900 active:scale-95"
+          data-test="dev-menu-button"
         >
-          <button
-            type="button"
-            role="menuitem"
-            disabled={busy}
-            onClick={handleClearState}
-            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 active:bg-rose-100 disabled:opacity-60"
-            data-test="dev-menu-clear-state"
+          <GearIcon />
+        </button>
+        {open ? (
+          <div
+            role="menu"
+            aria-label="Dev menu"
+            className="absolute top-full right-0 mt-2 min-w-[200px] overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg"
+            data-test="dev-menu-panel"
           >
-            <span>{busy ? "Clearing…" : "Clear state"}</span>
-            <span aria-hidden className="text-xs text-rose-400">
-              ↻
-            </span>
-          </button>
-        </div>
-      ) : null}
-    </div>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={handleClearState}
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 active:bg-rose-100 disabled:opacity-60"
+              data-test="dev-menu-clear-state"
+            >
+              <span>{busy ? "Clearing…" : "Clear state"}</span>
+              <span aria-hidden className="text-xs text-rose-400">
+                ↻
+              </span>
+            </button>
+            {children ? (
+              <div className="border-t border-neutral-200" data-test="dev-menu-extra">
+                {children}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </DevMenuContext.Provider>
   );
 }
