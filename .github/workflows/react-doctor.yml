@@ -15,6 +15,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # required for --diff against base
+          # Check out the PR head branch by NAME, not the merge SHA. Without
+          # this, GH Actions checks out a detached HEAD and react-doctor
+          # auto-detects "no feature branch" and falls back to a full-codebase
+          # scan, ignoring the explicit --diff arg and surfacing the
+          # pre-existing baseline as new failures.
+          ref: ${{ github.head_ref }}
 
       - uses: actions/setup-node@v4
         with:
