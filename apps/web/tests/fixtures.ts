@@ -13,6 +13,7 @@ export const test = base.extend<Fixtures>({
         const dbs = (await indexedDB.databases?.()) ?? [];
         await Promise.all(dbs.map((d) => d.name && indexedDB.deleteDatabase(d.name)));
       });
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- this `use` is Playwright's fixture-lifecycle callback (`async ({ page }, use) => { ... await use(value) }`), not React's use() hook. The name is a Playwright convention; renaming would break every fixture in the project.
       await use();
     },
     { auto: true },
