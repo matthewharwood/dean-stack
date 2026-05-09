@@ -5,13 +5,16 @@
   "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "check": {
-      "dependsOn": ["typecheck", "test:unit", "test:e2e"]
+      "dependsOn": ["typecheck", "check:sonar", "test:unit", "test:e2e"]
     },
     "check:fast": {
-      "dependsOn": ["typecheck", "test:unit", "test:e2e:fast"]
+      "dependsOn": ["typecheck", "check:sonar", "test:unit", "test:e2e:fast"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "check:sonar": {
       "outputs": []
     },
     "test:unit": {

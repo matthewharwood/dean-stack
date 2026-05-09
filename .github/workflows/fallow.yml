@@ -7,9 +7,10 @@ name: fallow
 # uploaded as an artifact for review, not a gate.
 #
 # Why separate from `check.yml`: dead-code analysis is whole-codebase, not
-# diff-scoped, so it doesn't need the `ref: github.head_ref` + `git branch
-# main origin/main` dance the react-doctor workflow needs. Simpler workflow,
-# clearer signal.
+# diff-scoped — it scans the PR head's full state, not the diff against
+# main. We still pin `ref: ${{ github.head_ref }}` (same as react-doctor)
+# so the scan reports on what the author wrote, not on a synthetic merge
+# commit that mixes in main's current state.
 
 on:
   pull_request:
@@ -23,6 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR head BY NAME, not the synthetic merge SHA.
+          # The default `pull_request` checkout is a merge commit (PR head
+          # merged into base), which mixes main's current state into the
+          # scan — making fallow's "current state on this branch" report
+          # depend on whether main has moved since branch-off. Pinning to
+          # `head_ref` makes the scan deterministic for the PR author.
+          # Same pattern as `react-doctor.yml`.
+          ref: ${{ github.head_ref }}
 
       - uses: actions/setup-node@v4
         with:

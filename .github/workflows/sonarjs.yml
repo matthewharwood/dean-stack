@@ -1,0 +1,45 @@
+name: sonarjs
+
+# eslint-plugin-sonarjs runs as a separate signal from `check`,
+# `react-doctor`, and `fallow`. It's a second-opinion code-smell scan
+# (cognitive complexity, bug patterns, dead-branch detection) layered
+# on top of Biome (which owns formatting + the bulk of lint).
+#
+# The local pre-push gate (`bun run check:fast`) already runs this via
+# the `check:sonar` workspace task; this workflow is the CI-side mirror,
+# matching the pattern used by react-doctor and fallow.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Check out the PR head BY NAME, not the synthetic merge SHA.
+          # Same rationale as fallow.yml + react-doctor.yml: the scan
+          # should report on what the author wrote, not on a merge of
+          # main + PR head whose result depends on what main is doing.
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: "package.json"
+
+      - run: bun install --frozen-lockfile
+
+      # Direct invocation of the workspace task. `--max-warnings 0` in
+      # the script makes any sonarjs finding a non-zero exit. Mirrors
+      # `bun run check:fast`'s sonarjs leg.
+      - name: sonarjs scan
+        run: bun --filter=@dean-stack/web run check:sonar

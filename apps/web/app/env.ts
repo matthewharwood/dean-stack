@@ -21,7 +21,7 @@ export const env = createEnv({
     VITE_AUTHOR_URL: z.url().optional(),
     VITE_TWITTER_HANDLE: z
       .string()
-      .regex(/^@[A-Za-z0-9_]{1,15}$/, "VITE_TWITTER_HANDLE must look like @handle")
+      .regex(/^@\w{1,15}$/, "VITE_TWITTER_HANDLE must look like @handle")
       .optional(),
   },
   server: {},

@@ -498,11 +498,11 @@ export function DraggableCard({
     // red ring (over a disabled card), nothing (empty space). The kid can
     // read either the slot's signal or the card's signal and know the
     // drop's status — both cues update together.
-    const nextFeedback: "valid" | "invalid" | "none" = target
-      ? "valid"
-      : overDisabled
-        ? "invalid"
-        : "none";
+    const nextFeedback: "valid" | "invalid" | "none" = (() => {
+      if (target) return "valid";
+      if (overDisabled) return "invalid";
+      return "none";
+    })();
     if (nextFeedback === "valid") {
       drag.el.dataset.validDrop = "true";
       delete drag.el.dataset.invalidDrop;

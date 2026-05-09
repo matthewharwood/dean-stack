@@ -40,50 +40,55 @@ async function seedEncounters(page: import("@playwright/test").Page, count: numb
   // the requested encounter count threaded in.
   await page.addInitScript(
     async ([id, n]) => {
-      await new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open("dean-stack", 4);
-        open.onupgradeneeded = () => {
-          const db = open.result;
-          if (!db.objectStoreNames.contains("progress"))
-            db.createObjectStore("progress", { keyPath: "id" });
-          if (!db.objectStoreNames.contains("settings"))
-            db.createObjectStore("settings", { keyPath: "id" });
-          if (!db.objectStoreNames.contains("adding-game"))
-            db.createObjectStore("adding-game", { keyPath: "id" });
-        };
-        open.onerror = () => reject(open.error);
-        open.onsuccess = () => {
-          const db = open.result;
-          const tx = db.transaction("adding-game", "readwrite");
-          tx.objectStore("adding-game").put({
-            id: "adding-game",
-            status: "idle",
-            player: {
-              id: "player",
-              name: "Player",
-              score: 0,
-              hand: [
-                { id: "hand:0", cardId: null },
-                { id: "hand:1", cardId: null },
-                { id: "hand:2", cardId: null },
-                { id: "hand:3", cardId: null },
-                { id: "hand:4", cardId: null },
-              ],
-              selectedPilotId: null,
-              pilotProgress: {},
-            },
-            enemy: { id: "enemy", name: "Enemy", score: 0 },
-            cards: {},
-            round: null,
-            enemyEncounters: { [id as string]: n as number },
-          });
-          tx.oncomplete = () => {
-            db.close();
-            resolve();
+      // Promise-wrap the IDBOpenDBRequest so the callback nesting flattens
+      // to two `await`s instead of four nested-arrow callback levels.
+      const openDb = (): Promise<IDBDatabase> =>
+        new Promise((resolve, reject) => {
+          const req = indexedDB.open("dean-stack", 4);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains("progress"))
+              db.createObjectStore("progress", { keyPath: "id" });
+            if (!db.objectStoreNames.contains("settings"))
+              db.createObjectStore("settings", { keyPath: "id" });
+            if (!db.objectStoreNames.contains("adding-game"))
+              db.createObjectStore("adding-game", { keyPath: "id" });
           };
+          req.onerror = () => reject(req.error);
+          req.onsuccess = () => resolve(req.result);
+        });
+      const awaitTx = (tx: IDBTransaction): Promise<void> =>
+        new Promise((resolve, reject) => {
+          tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error);
-        };
+        });
+
+      const db = await openDb();
+      const tx = db.transaction("adding-game", "readwrite");
+      tx.objectStore("adding-game").put({
+        id: "adding-game",
+        status: "idle",
+        player: {
+          id: "player",
+          name: "Player",
+          score: 0,
+          hand: [
+            { id: "hand:0", cardId: null },
+            { id: "hand:1", cardId: null },
+            { id: "hand:2", cardId: null },
+            { id: "hand:3", cardId: null },
+            { id: "hand:4", cardId: null },
+          ],
+          selectedPilotId: null,
+          pilotProgress: {},
+        },
+        enemy: { id: "enemy", name: "Enemy", score: 0 },
+        cards: {},
+        round: null,
+        enemyEncounters: { [id as string]: n as number },
       });
+      await awaitTx(tx);
+      db.close();
     },
     [ENEMY_ID, count] as [string, number],
   );

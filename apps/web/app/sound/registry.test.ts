@@ -22,7 +22,7 @@ describe("SFX_REGISTRY", () => {
   });
 
   test("gain (when set) is in [0, 1]", () => {
-    for (const [_id, entry] of Object.entries(SFX_REGISTRY)) {
+    for (const entry of Object.values(SFX_REGISTRY)) {
       if (entry.gain === undefined) continue;
       expect(entry.gain).toBeGreaterThanOrEqual(0);
       expect(entry.gain).toBeLessThanOrEqual(1);

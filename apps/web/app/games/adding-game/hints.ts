@@ -1,4 +1,12 @@
-import type { AddingGameState } from "@dean-stack/schemas";
+import type { AddingGameState, Comparator } from "@dean-stack/schemas";
+
+// Verb form per comparator — used in hint body templates.
+// Hoisted so the templates don't carry nested ternaries.
+const COMPARATOR_VERB: Record<Comparator, string> = {
+  eq: "equal",
+  gt: "beat",
+  lt: "stay under",
+};
 
 // A hint is a short pedagogical nudge shown on a wrong evaluation. The
 // `id` is for de-duplication ("don't show the same hint twice in a row")
@@ -216,7 +224,7 @@ export function generateHints(state: AddingGameState): Hint[] {
     hints.push({
       id: "sub-pair",
       emphasis: `${comparator === "eq" ? "First minus second" : "Pick a difference"}`,
-      body: `The first card *minus* the second should ${comparator === "gt" ? "beat" : comparator === "lt" ? "stay under" : "equal"} ${target}.`,
+      body: `The first card *minus* the second should ${COMPARATOR_VERB[comparator] ?? "equal"} ${target}.`,
     });
   }
 
@@ -295,7 +303,11 @@ function generateFindMissingResultHints(state: AddingGameState): Hint[] {
   const slot2 = eq.operandSlots[2];
   const cardValue = (cardId: string | null | undefined): number =>
     cardId ? (state.cards[cardId]?.value ?? 0) : 0;
-  const lockedSlot = slot0?.locked ? slot0 : slot1?.locked ? slot1 : null;
+  const lockedSlot = (() => {
+    if (slot0?.locked) return slot0;
+    if (slot1?.locked) return slot1;
+    return null;
+  })();
   const playerOperandSlot = slot0?.locked ? slot1 : slot0;
   const staticValue = cardValue(lockedSlot?.cardId);
   const playerOperand = cardValue(playerOperandSlot?.cardId);

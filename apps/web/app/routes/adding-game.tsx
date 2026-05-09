@@ -516,50 +516,57 @@ function ActionButton({
   // taller of the two so the equation row above doesn't slide up when
   // the win state mounts. The unused space in Evaluate-state is absorbed
   // by `items-center` on this row, so the button stays vertically centered.
+  // Three render branches at this row, decided by `won` × `attacks?`:
+  //   - won + attacks      → 3-card attack picker (the standard flow)
+  //   - won + no attacks   → legacy single "Attack!" button (no pilot)
+  //   - !won               → Evaluate button (pre-eval state)
+  // Independent && expressions read cleaner than a nested ternary here.
+  const showAttackPicker = won && attacks;
+  const showLegacyAttack = won && !attacks;
   return (
     <div className="flex w-full flex-col items-center gap-3" data-test="action-button">
       <div className="flex min-h-[160px] w-full items-center justify-center">
-        {won ? (
-          attacks ? (
-            <div className="flex w-full max-w-[640px] flex-col items-stretch gap-2 rounded-lg border border-light-gray bg-canvas-white px-3 pt-6 pb-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.08)]">
-              <div className="flex items-stretch justify-center gap-2">
-                {attacks.map((attack) => (
-                  <AttackButton
-                    key={attack.id}
-                    attack={attack}
-                    damage={outcome?.scoreEarned ?? 0}
-                    onSelect={onAttack}
-                    pending={attackPending}
-                  />
-                ))}
-              </div>
-              {outcome ? (
-                <div
-                  className="flex items-center justify-center gap-2 font-openrunde text-sm font-bold text-success-green"
-                  data-test="evaluation-result"
-                  data-outcome="win"
-                  aria-live="polite"
-                >
-                  <span>{outcome.computedValue}</span>
-                  <span aria-hidden>=</span>
-                  <span>{outcome.expectedValue}</span>
-                  <Check size={16} strokeWidth={3} aria-hidden />
-                  <span>−{outcome.scoreEarned} HP</span>
-                </div>
-              ) : null}
+        {showAttackPicker && (
+          <div className="flex w-full max-w-[640px] flex-col items-stretch gap-2 rounded-lg border border-light-gray bg-canvas-white px-3 pt-6 pb-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="flex items-stretch justify-center gap-2">
+              {attacks.map((attack) => (
+                <AttackButton
+                  key={attack.id}
+                  attack={attack}
+                  damage={outcome?.scoreEarned ?? 0}
+                  onSelect={onAttack}
+                  pending={attackPending}
+                />
+              ))}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onAttack(null)}
-              className="flex items-center gap-2 rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
-              data-test="attack-button"
-            >
-              <CrossedSwordsIcon />
-              <span>Attack!</span>
-            </button>
-          )
-        ) : (
+            {outcome ? (
+              <div
+                className="flex items-center justify-center gap-2 font-openrunde text-sm font-bold text-success-green"
+                data-test="evaluation-result"
+                data-outcome="win"
+                aria-live="polite"
+              >
+                <span>{outcome.computedValue}</span>
+                <span aria-hidden>=</span>
+                <span>{outcome.expectedValue}</span>
+                <Check size={16} strokeWidth={3} aria-hidden />
+                <span>−{outcome.scoreEarned} HP</span>
+              </div>
+            ) : null}
+          </div>
+        )}
+        {showLegacyAttack && (
+          <button
+            type="button"
+            onClick={() => onAttack(null)}
+            className="flex items-center gap-2 rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+            data-test="attack-button"
+          >
+            <CrossedSwordsIcon />
+            <span>Attack!</span>
+          </button>
+        )}
+        {!won && (
           <div className="relative">
             <button
               type="button"
@@ -1039,11 +1046,13 @@ function AddingGame() {
   // committing — keeps the avatar from flashing the empty frame for one
   // render.
   const selectedPilotId = game.player.selectedPilotId;
-  const currentPlayer = game.round
-    ? selectedPilotId
-      ? (findPlayerTemplate(selectedPilotId) ?? PLAYER_REGISTRY[0] ?? null)
-      : (PLAYER_REGISTRY[0] ?? null)
-    : null;
+  const currentPlayer = (() => {
+    if (!game.round) return null;
+    if (selectedPilotId) {
+      return findPlayerTemplate(selectedPilotId) ?? PLAYER_REGISTRY[0] ?? null;
+    }
+    return PLAYER_REGISTRY[0] ?? null;
+  })();
   const currentIndex = currentPlayer
     ? PLAYER_REGISTRY.findIndex((p) => p.id === currentPlayer.id)
     : -1;
@@ -1092,11 +1101,13 @@ function AddingGame() {
             ) : null}
           </Top>
           <Center>
-            {ended ? (
-              <VictoryPanel onPlayAgain={handlePlayAgain} />
-            ) : !game.round ? (
-              <Splash onBegin={handleBegin} />
-            ) : game.round ? (
+            {/* Three-way render: victory > splash (no round) > active round.
+                The third arm doesn't need its own ternary because the
+                preceding `!game.round ?` is exhaustive — if we reach the
+                else, game.round is truthy. */}
+            {ended && <VictoryPanel onPlayAgain={handlePlayAgain} />}
+            {!ended && !game.round && <Splash onBegin={handleBegin} />}
+            {!ended && game.round && (
               <div className="flex h-full flex-col items-center justify-center gap-6 p-[18px]">
                 <EquationView
                   equation={game.round.equation}
@@ -1149,7 +1160,7 @@ function AddingGame() {
                   ) : null}
                 </div>
               </div>
-            ) : null}
+            )}
           </Center>
           <Bottom>
             <Hand

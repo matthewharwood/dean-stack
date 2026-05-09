@@ -452,12 +452,12 @@ function buildScene(app: Application, refs: FxRefs): () => void {
     // and a gentle scale-up for the whole 8s so the title "settles in."
     if (textContainerRef !== null) {
       const t = elapsed;
+      // alpha defaults to 0 (the t<400 and t>=7600 windows); only the
+      // three middle windows assign a non-zero value.
       let alpha = 0;
-      if (t < 400) alpha = 0;
-      else if (t < 1600) alpha = (t - 400) / 1200;
+      if (t >= 400 && t < 1600) alpha = (t - 400) / 1200;
       else if (t < 6400) alpha = 1;
       else if (t < 7600) alpha = 1 - (t - 6400) / 1200;
-      else alpha = 0;
       textContainerRef.alpha = Math.max(0, Math.min(1, alpha));
       const scaleProgress = Math.min(1, t / 2000);
       const scale = 0.92 + 0.08 * scaleProgress;

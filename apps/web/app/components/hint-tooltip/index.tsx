@@ -68,8 +68,13 @@ function Body({ body }: { body: string }): ReactNode {
 // failure context sits with explanation context. Red, bold, biggish so
 // the chip itself emphasizes what didn't work; the emphasis line above
 // emphasizes how to fix it.
+function comparisonGlyph(computed: number, expected: number): "=" | ">" | "<" {
+  if (computed === expected) return "=";
+  return computed > expected ? ">" : "<";
+}
+
 function FailureChip({ computed, expected }: { computed: number; expected: number }): ReactNode {
-  const glyph = computed === expected ? "=" : computed > expected ? ">" : "<";
+  const glyph = comparisonGlyph(computed, expected);
   return (
     <div className="flex items-center gap-2 rounded-lg border-2 border-vivid-orange/40 bg-vivid-orange/10 px-3 py-1.5 font-openrunde text-xl font-bold text-vivid-orange">
       <span>{computed}</span>

@@ -11,7 +11,9 @@
     "@dean-stack/tsconfig",
     "@turbo/gen",
     "babel-plugin-react-compiler",
-    "nitro"
+    "nitro",
+    "@dreamsicle.io/stylelint-config-tailwindcss",
+    "chokidar-cli"
   ],
   "ignoreExportsUsedInFile": true
 }
