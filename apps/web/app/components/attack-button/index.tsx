@@ -1,5 +1,6 @@
 import { ATTACK_ICON } from "~/games/adding-game/attack-icons";
 import { defineComponent } from "~/lib/define-component";
+import { useSound } from "~/sound";
 
 import { AttackButtonPropsSchema } from "./schema";
 
@@ -20,10 +21,15 @@ import { AttackButtonPropsSchema } from "./schema";
 export const AttackButton = defineComponent(AttackButtonPropsSchema, (props) => {
   const { attack, damage, onSelect, pending } = props;
   const Icon = ATTACK_ICON[attack.kind];
+  const sfx = useSound();
   return (
     <button
       type="button"
-      onClick={() => onSelect(attack)}
+      onClick={() => {
+        // Play per-character variant if registered, kind-base fallback, silent if neither.
+        sfx.playAttack(attack);
+        onSelect(attack);
+      }}
       disabled={pending}
       className="group relative flex min-h-[80px] min-w-0 flex-1 max-w-[200px] flex-col items-start gap-0.5 rounded-lg border-2 border-light-gray bg-white px-3 pt-6 pb-2 text-left shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
       data-test="attack-button"

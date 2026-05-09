@@ -3,6 +3,8 @@ import {
   type AddingGameState,
   type Progress,
   type Settings,
+  SOUND_SETTINGS_DEFAULT,
+  type SoundSettings,
 } from "@dean-stack/schemas";
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
@@ -10,10 +12,11 @@ export interface AppDB extends DBSchema {
   progress: { key: string; value: Progress };
   settings: { key: string; value: Settings };
   "adding-game": { key: string; value: AddingGameState };
+  "sound-settings": { key: string; value: SoundSettings };
 }
 
 const DB_NAME = "dean-stack";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | undefined;
 let closed = false;
@@ -46,6 +49,10 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
       if (oldVersion < 4) {
         // No-op hop to clear a stale dev DB that was bumped past 3 in a
         // prior working-tree experiment.
+      }
+      if (oldVersion < 5) {
+        const soundSettings = db.createObjectStore("sound-settings", { keyPath: "id" });
+        void soundSettings.put(SOUND_SETTINGS_DEFAULT);
       }
     },
     blocked() {

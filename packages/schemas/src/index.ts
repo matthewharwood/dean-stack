@@ -29,3 +29,13 @@ export const ProgressSchema = z.object({
   completed: z.boolean().default(false),
 });
 export type Progress = z.infer<typeof ProgressSchema>;
+
+// Sound playback settings — global mute + master volume. Persists across reloads
+// so a parent muting for naptime doesn't have to re-mute every page load.
+export const SoundSettingsSchema = z.object({
+  id: z.literal("sound-settings").default("sound-settings"),
+  enabled: z.boolean().default(true),
+  masterVolume: z.number().min(0).max(1).default(1),
+});
+export type SoundSettings = z.infer<typeof SoundSettingsSchema>;
+export const SOUND_SETTINGS_DEFAULT: SoundSettings = SoundSettingsSchema.parse({});
