@@ -22,6 +22,14 @@ jobs:
           # pre-existing baseline as new failures.
           ref: ${{ github.head_ref }}
 
+      # Create a LOCAL ref for the base branch. Checkout above only created
+      # `refs/remotes/origin/${base_ref}`; react-doctor's `--diff main` calls
+      # `git diff main`, which needs `refs/heads/main` to exist. Without this
+      # step, react-doctor fails with: "Diff base branch 'main' does not
+      # exist (run `git fetch` to update remote refs)."
+      - name: Create local ref for base branch
+        run: git branch ${{ github.base_ref }} origin/${{ github.base_ref }}
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
