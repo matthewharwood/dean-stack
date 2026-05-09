@@ -15,15 +15,29 @@ import { findLevel, type LevelConfig } from "./levels";
 // both call this to compute the next round; the result is then merged into
 // the IDB-backed addingGameAtom.
 //
-// Contract:
-//   - Hand has exactly HAND_SIZE cards.
-//   - At least one (a, b) pair in hand satisfies the level's equation:
-//       add:      a + b === target
-//       subtract: a − b === target  (a > b implied since target > 0)
-//   - All card ids in the returned catalog are unique.
-//   - Equation has 2 operand slots (both empty) and a target card with the
-//     level's `target` value.
-//   - Enemy is seeded from the level's enemyId at the registry's maxHp.
+// Two equation shapes — chosen by `level.equationShape`:
+//
+//   "find-sum" (default, R1–R4):
+//     Hand has exactly HAND_SIZE cards, all unlocked.
+//     At least one (a, b) pair in hand satisfies the level's equation:
+//       add:      a + b === target   (eq) / a + b > target (gt) / a + b < target (lt)
+//       subtract: a − b === target  (and similar for gt/lt; a > b implied for eq)
+//     Equation has 2 operand slots (both empty, both unlocked) and a target
+//     card with the level's `target` value.
+//
+//   "find-missing-result" (R5–R6):
+//     Hand has HAND_SIZE cards. Exactly two of them are guaranteed to satisfy
+//     the equation: pick `a` from the hand range, compute `b = static OP a`
+//     (or `a OP static = b` per `staticOperand.position`); plant `a` and `b`
+//     so the kid has a valid pair available. The static itself does NOT
+//     consume a hand slot — it lives in the equation's locked operand slot.
+//     Equation has THREE operand slots: [LHS-1, LHS-2, result]. One of
+//     LHS-1/LHS-2 is locked + pre-filled with the static card; the other
+//     LHS slot AND the result slot are empty + unlocked. `target` on the
+//     equation is null (the kid produces the RHS).
+//
+// All card ids in the returned catalog are unique; enemy is seeded from
+// the level's enemyId at the level's hp.
 //
 // `random` is injected so unit tests can run with a seeded source. Production
 // uses `Math.random`.
@@ -46,44 +60,85 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
   const pickInt = (min: number, max: number): number =>
     Math.floor(random() * (max - min + 1)) + min;
 
-  // Guaranteed pair satisfying the level's equation. Caller has already
-  // validated that the level config supports a valid pair via levels.ts.
-  const [a, b] = pickGuaranteedPair(level, pickInt);
+  const shape = level.equationShape ?? "find-sum";
+  const tStamp = Date.now();
 
-  // Fillers — extra cards from the same range. Some may incidentally form
-  // additional valid pairs; that's acceptable per spec ("two fives or…").
+  // Common: the 5-card player hand. Both shapes plant a guaranteed pair —
+  // for find-sum it's (a, b) such that the equation holds; for
+  // find-missing-result it's (a, b = static OP a) so the kid can pick
+  // both the operand and the result from their hand.
+  const guaranteed =
+    shape === "find-missing-result"
+      ? pickGuaranteedMissingResultPair(level, pickInt)
+      : pickGuaranteedPair(level, pickInt);
+
   const fillers: number[] = [];
   for (let i = 0; i < HAND_SIZE - 2; i++) {
     fillers.push(pickInt(level.handValueRange.min, level.handValueRange.max));
   }
-
-  const values = shuffle([a, b, ...fillers], random);
+  const values = shuffle([guaranteed[0], guaranteed[1], ...fillers], random);
 
   const cards: CardCatalog = {};
   const hand: HandSlot[] = [];
   for (let i = 0; i < HAND_SIZE; i++) {
     const value = values[i];
     if (value === undefined) throw new Error("dealRound: hand index out of range");
-    const cardId = `card:r${levelIndex}:t${Date.now()}:h${i}`;
+    const cardId = `card:r${levelIndex}:t${tStamp}:h${i}`;
     const card: Card = { id: cardId, value };
     cards[cardId] = card;
     hand.push({ id: `hand:${i}`, cardId });
   }
 
-  // Target card — pre-dealt into the equation, not draggable.
-  const targetCardId = `card:r${levelIndex}:t${Date.now()}:target`;
-  const targetCard: Card = { id: targetCardId, value: level.target };
-  cards[targetCardId] = targetCard;
+  let equation: Equation;
+  if (shape === "find-missing-result") {
+    if (!level.staticOperand) {
+      throw new Error(
+        `dealRound: level ${levelIndex} is find-missing-result but has no staticOperand`,
+      );
+    }
+    // Static lives as a real card in the catalog so evaluate.ts reads it
+    // through the same `cards[slot.cardId]?.value` path as everything else.
+    // The slot gets `locked: true` so drag.tsx and applySwap refuse to
+    // move it.
+    const staticCardId = `card:r${levelIndex}:t${tStamp}:static`;
+    const staticCard: Card = { id: staticCardId, value: level.staticOperand.value };
+    cards[staticCardId] = staticCard;
 
-  const equation: Equation = {
-    operandSlots: [
-      { id: "eq:0", cardId: null },
-      { id: "eq:1", cardId: null },
-    ],
-    operator: level.operator,
-    comparator: level.comparator,
-    target: targetCard,
-  };
+    const staticAtFirst = level.staticOperand.position === "first";
+    equation = {
+      shape: "find-missing-result",
+      operandSlots: [
+        // LHS-1
+        staticAtFirst
+          ? { id: "eq:0", cardId: staticCardId, locked: true }
+          : { id: "eq:0", cardId: null, locked: false },
+        // LHS-2
+        staticAtFirst
+          ? { id: "eq:1", cardId: null, locked: false }
+          : { id: "eq:1", cardId: staticCardId, locked: true },
+        // RHS — the kid's result slot, always empty and unlocked at deal time.
+        { id: "eq:result", cardId: null, locked: false },
+      ],
+      operator: level.operator,
+      comparator: level.comparator,
+      target: null,
+    };
+  } else {
+    // find-sum (R1–R4): RHS is the displayed target card.
+    const targetCardId = `card:r${levelIndex}:t${tStamp}:target`;
+    const targetCard: Card = { id: targetCardId, value: level.target };
+    cards[targetCardId] = targetCard;
+    equation = {
+      shape: "find-sum",
+      operandSlots: [
+        { id: "eq:0", cardId: null, locked: false },
+        { id: "eq:1", cardId: null, locked: false },
+      ],
+      operator: level.operator,
+      comparator: level.comparator,
+      target: targetCard,
+    };
+  }
 
   // Enemy template lookup — mismatched id between LEVELS and ENEMY_REGISTRY
   // is a hard error at boot rather than a silent null-enemy avatar.
@@ -99,13 +154,15 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
 
   // Phase: matching. Dealing is a logical step that completes here — the visual
   // dealing animation will land us in matching when it's built. For now,
-  // matching is the steady state the player sees.
+  // matching is the steady state the player sees. wrongAttempts starts at 0
+  // — every fresh deal resets the per-stage mistakes counter.
   const round: Round = {
     index: levelIndex,
     phase: "matching",
     equation,
     outcome: null,
     enemy,
+    wrongAttempts: 0,
   };
 
   return { round, cards, hand };
@@ -191,10 +248,76 @@ function pickGuaranteedPair(
   );
 }
 
+// Pair-picker for find-missing-result levels. We need:
+//   - a player operand `a` in handValueRange (the kid drags this into the
+//     unlocked LHS slot).
+//   - a player result `b` ALSO in handValueRange (the kid drags this into
+//     the result slot).
+//   - both satisfying `static OP a == b` (position "first")
+//     OR `a OP static == b` (position "second").
+//
+// For add: b = static + a (first) OR a + static (second) → same value.
+// For subtract / position "first": b = static - a → need a in
+//   [max(min, static - max), min(max, static - min)] so b ∈ [min, max].
+// For subtract / position "second": b = a - static → need a ≥ static AND
+//   a ≤ static + max so b ∈ [min, max]. Levels deliberately keep
+//   subtraction at position "first" (see levels.ts comment); we handle
+//   the "second" branch defensively in case future level data flips.
+function pickGuaranteedMissingResultPair(
+  level: LevelConfig,
+  pickInt: (min: number, max: number) => number,
+): [number, number] {
+  const cfg = level.staticOperand;
+  if (!cfg) throw failMissing(level);
+  const { operator } = level;
+  const { min, max } = level.handValueRange;
+  const k = cfg.value;
+
+  if (operator === "add") {
+    // Both positions yield b = k + a. Need a ∈ [min, max] AND b ∈ [min, max].
+    const aMin = Math.max(min, min - k);
+    const aMax = Math.min(max, max - k);
+    if (aMax < aMin) throw failMissing(level);
+    const a = pickInt(aMin, aMax);
+    return [a, a + k];
+  }
+
+  if (operator === "subtract") {
+    if (cfg.position === "first") {
+      // b = k - a. Need a ∈ [min, max] AND b ∈ [min, max] → a ∈ [k-max, k-min].
+      const aMin = Math.max(min, k - max);
+      const aMax = Math.min(max, k - min);
+      if (aMax < aMin) throw failMissing(level);
+      const a = pickInt(aMin, aMax);
+      return [a, k - a];
+    }
+    // position "second": b = a - k. Need a ∈ [min, max] AND b ∈ [min, max] →
+    // a ∈ [max(min, k+min), min(max, k+max)] = [max(min, k+min), max].
+    const aMin = Math.max(min, k + min);
+    const aMax = Math.min(max, k + max);
+    if (aMax < aMin) throw failMissing(level);
+    const a = pickInt(aMin, aMax);
+    return [a, a - k];
+  }
+
+  throw new Error(
+    `levels: unsupported find-missing-result operator (${operator}) for level ${level.index}`,
+  );
+}
+
 function fail(level: LevelConfig): Error {
   return new Error(
     `levels: cannot generate guaranteed pair for level ${level.index} ` +
       `(${level.operator}/${level.comparator}, target=${level.target}, ` +
+      `range=[${level.handValueRange.min},${level.handValueRange.max}])`,
+  );
+}
+
+function failMissing(level: LevelConfig): Error {
+  return new Error(
+    `levels: cannot generate find-missing-result pair for level ${level.index} ` +
+      `(${level.operator}, static=${level.staticOperand?.value}, ` +
+      `position=${level.staticOperand?.position}, ` +
       `range=[${level.handValueRange.min},${level.handValueRange.max}])`,
   );
 }

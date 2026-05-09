@@ -8,10 +8,10 @@ import { applyXpGain } from "./xp";
 // First-level index for each round. Derived once from LEVELS so a level
 // renumber doesn't desync. The keys are ALSO the round-button labels in
 // the DevMenu — adding a round means extending this map AND every other
-// site listed in the FIVE-ROUND CHECKLIST below.
+// site listed in the ADD-A-ROUND CHECKLIST below.
 //
-// ┌──────────────────────────── FIVE-ROUND CHECKLIST ────────────────────────────┐
-// │ If you ever add a Round 5 (or beyond), update **every** site below or the   │
+// ┌──────────────────────────── ADD-A-ROUND CHECKLIST ───────────────────────────┐
+// │ If you ever add a Round 7 (or beyond), update **every** site below or the   │
 // │ jump tool will silently misbehave (XP credit short, indicator wrong round): │
 // │                                                                              │
 // │ 1. levels.ts — append LEVELS, bump FINAL_LEVEL_INDEX, push the new round    │
@@ -19,25 +19,28 @@ import { applyXpGain } from "./xp";
 // │    localLevelIndex with the new round.                                      │
 // │ 2. ROUND_START_LEVEL below — add the entry. Its value is the index of the   │
 // │    NEW round's first level (== ROUND_BOUNDARIES[N-2] + 1).                  │
-// │ 3. The `1 | 2 | 3 | 4` literal union in this file's `Round` type AND in     │
-// │    the matching schemas (RoundIndicatorPropsSchema.round, etc.) gets        │
-// │    extended to include the new literal.                                     │
+// │ 3. The `1 | 2 | 3 | 4 | 5 | 6` literal union in this file's `Round` type    │
+// │    AND in the matching schemas (RoundIndicatorPropsSchema.round, etc.)      │
+// │    gets extended to include the new literal.                                │
 // │ 4. components/round-jump-panel/index.tsx — the panel renders one button     │
 // │    per ROUND_START_LEVEL key. It already iterates dynamically, so step 2    │
-// │    is enough — but verify the row still fits.                               │
-// │ 5. RoundIndicator's `round={... }` reads — confirm any hard-coded "of 4"    │
-// │    text is updated where appropriate.                                       │
+// │    is enough — but verify the row still fits, and add a roundLabel entry.   │
+// │ 5. RoundIndicator's "of 6" footer text — update when adding rounds.         │
+// │ 6. evaluate.ts / deal.ts / hints.ts — if the new round introduces a new     │
+// │    equation shape, branch them too.                                         │
 // │                                                                              │
 // │ The comment above ROUND_START_LEVEL is the single source of truth — keep   │
 // │ it accurate when you add the round.                                         │
 // └──────────────────────────────────────────────────────────────────────────────┘
-export type Round = 1 | 2 | 3 | 4;
+export type Round = 1 | 2 | 3 | 4 | 5 | 6;
 
 export const ROUND_START_LEVEL: Record<Round, number> = {
   1: 1,
   2: 7,
   3: 13,
   4: 19,
+  5: 24,
+  6: 29,
 };
 
 // Total XP a perfect playthrough of rounds 1..(round-1) would have

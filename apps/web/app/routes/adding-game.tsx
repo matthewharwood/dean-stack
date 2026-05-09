@@ -27,9 +27,11 @@ import { RoundIndicator } from "~/components/round-indicator";
 import { RoundJumpPanel } from "~/components/round-jump-panel";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
 import { attackFxRuntime } from "~/games/adding-game/attack-fx/runtime";
+import { applyAutoAssist } from "~/games/adding-game/auto-assist";
 import { dealRound } from "~/games/adding-game/deal";
 import { DraggableCard, EmptySlot, SlotWrapper } from "~/games/adding-game/drag";
 import { findEnemyTemplate } from "~/games/adding-game/enemies";
+import { encountersFor, incrementEncounter } from "~/games/adding-game/enemy-encounters";
 import { evaluateRound } from "~/games/adding-game/evaluate";
 import { spawnDamageProjectile } from "~/games/adding-game/fx";
 import { generateHints, type Hint, pickRandomHint } from "~/games/adding-game/hints";
@@ -135,11 +137,16 @@ function Hand({
   hand,
   cards,
   dragLocked,
+  display,
   onSwap,
 }: {
   hand: readonly HandSlot[];
   cards: CardCatalog;
   dragLocked: boolean;
+  // R5/R6 pass "ten-frame" so the kid's hand cards render as the 2×5
+  // grid the math-ed worksheets use. R1–R4 stay on the numeric default.
+  // Explicit `| undefined` matches strict exactOptionalPropertyTypes.
+  display?: "numeric" | "ten-frame" | undefined;
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
 }) {
   return (
@@ -155,6 +162,7 @@ function Hand({
                 locator={{ kind: "hand", id: slot.id }}
                 cardId={card.id}
                 value={card.value}
+                display={display}
                 dragLocked={dragLocked}
                 onSwap={onSwap}
               />
@@ -229,11 +237,64 @@ function EquationView({
   dragLocked: boolean;
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
 }) {
+  // ── find-missing-result (R5–R6) ────────────────────────────────────
+  // 3-slot layout: [LHS-1] op [LHS-2] = [result]. One of LHS-1/LHS-2 is
+  // locked + pre-filled with the static; the other LHS slot AND the
+  // result slot are kid-droppable. The locked slot renders a non-
+  // draggable Card (variant="target", disabled) so it visually reads as
+  // the same affordance the kid is already used to from the find-sum
+  // RHS — "this number is given to you."
+  //
+  // Every card here renders as a ten-frame so the kid SEES dot patterns
+  // instead of digits — the SHAPE of the count is the lesson.
+  if (equation.shape === "find-missing-result") {
+    const [op0, op1, opResult] = equation.operandSlots;
+    if (!op0 || !op1 || !opResult) {
+      throw new Error("EquationView: find-missing-result needs 3 operandSlots");
+    }
+    return (
+      <div
+        className="flex items-center justify-center gap-[28px]"
+        data-test="equation"
+        data-shape="find-missing-result"
+      >
+        <DropOrLockedSlot
+          slot={op0}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="ten-frame"
+          onSwap={onSwap}
+        />
+        <OperatorPill glyph={OPERATOR_GLYPH[equation.operator]} />
+        <DropOrLockedSlot
+          slot={op1}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="ten-frame"
+          onSwap={onSwap}
+        />
+        <OperatorPill glyph="=" />
+        <DropOrLockedSlot
+          slot={opResult}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="ten-frame"
+          onSwap={onSwap}
+        />
+      </div>
+    );
+  }
+
+  // ── find-sum (R1–R4) ───────────────────────────────────────────────
+  // gap bumped 18 → 28 so the 56px operator pill never crowds an empty
+  // slot's dotted-ring hover state. The slots are 100px wide; with the
+  // larger gap, the pill sits in clear air on both sides.
   return (
-    // gap bumped 18 → 28 so the 56px operator pill never crowds an empty
-    // slot's dotted-ring hover state. The slots are 100px wide; with the
-    // larger gap, the pill sits in clear air on both sides.
-    <div className="flex items-center justify-center gap-[28px]">
+    <div
+      className="flex items-center justify-center gap-[28px]"
+      data-test="equation"
+      data-shape="find-sum"
+    >
       {equation.operandSlots.map((slot, idx) => {
         const card = slot.cardId ? cards[slot.cardId] : undefined;
         return (
@@ -261,8 +322,58 @@ function EquationView({
       })}
       <OperatorPill glyph={COMPARATOR_GLYPH[equation.comparator ?? "eq"]} />
       <div className="h-[140px] w-[100px] shrink-0">
-        <Card value={equation.target.value} variant="target" disabled />
+        <Card value={equation.target?.value ?? 0} variant="target" disabled />
       </div>
+    </div>
+  );
+}
+
+// One slot in the find-missing-result layout. Locked → display-only Card
+// (the static); unlocked → standard SlotWrapper + DraggableCard pattern.
+function DropOrLockedSlot({
+  slot,
+  cards,
+  dragLocked,
+  display,
+  onSwap,
+}: {
+  slot: { id: string; cardId: string | null; locked: boolean };
+  cards: CardCatalog;
+  dragLocked: boolean;
+  // R5/R6 pass "ten-frame"; R1–R4 don't render this component (find-sum
+  // shape uses the inline 2-slot layout above). Explicit `| undefined`
+  // matches strict exactOptionalPropertyTypes.
+  display?: "numeric" | "ten-frame" | undefined;
+  onSwap: (source: SlotLocator, target: SlotLocator) => void;
+}) {
+  const card = slot.cardId ? cards[slot.cardId] : undefined;
+  if (slot.locked) {
+    return (
+      <div
+        className="h-[140px] w-[100px] shrink-0"
+        data-test="equation-slot"
+        data-slot-locked="true"
+      >
+        <Card value={card?.value ?? 0} variant="target" display={display} disabled />
+      </div>
+    );
+  }
+  return (
+    <div className="h-[140px] w-[100px] shrink-0" data-test="equation-slot">
+      <SlotWrapper kind="equation" slotId={slot.id}>
+        <EmptySlot />
+        {card ? (
+          <DraggableCard
+            key={card.id}
+            locator={{ kind: "equation", id: slot.id }}
+            cardId={card.id}
+            value={card.value}
+            display={display}
+            dragLocked={dragLocked}
+            onSwap={onSwap}
+          />
+        ) : null}
+      </SlotWrapper>
     </div>
   );
 }
@@ -296,9 +407,31 @@ function CrossedSwordsIcon() {
   );
 }
 
+// Shows for 3 seconds above the disabled Evaluate button, then unmounts.
+// The keyframe handles the visual lifecycle (fade-in, gentle pulse, fade-
+// out); the React timer drives the actual mount/unmount so a second tap
+// while the prompt is up resets it (the parent re-keys this component on
+// every disabled tap).
+function FillPrompt({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const t = window.setTimeout(onDone, 3000);
+    return () => window.clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div
+      role="status"
+      className="pointer-events-none absolute -top-12 left-1/2 z-20 -translate-x-1/2 animate-fill-prompt rounded-full bg-vivid-orange px-4 py-1.5 font-openrunde text-sm font-bold whitespace-nowrap text-white shadow-lg"
+      data-test="fill-prompt"
+    >
+      Fill out the board!
+    </div>
+  );
+}
+
 function ActionButton({
   outcome,
   attacks,
+  canEvaluate,
   onEvaluate,
   onAttack,
   attackPending,
@@ -308,12 +441,43 @@ function ActionButton({
   // to a single legacy "Attack" button (no pilot selected — shouldn't
   // happen during a real run, but keeps the UI safe).
   attacks: readonly [Attack, Attack, Attack] | null;
+  // True iff every operandSlot in the round's equation has a card —
+  // covers find-sum (both operands) and find-missing-result (kid's
+  // operand AND result; static is always pre-filled). False → the
+  // Evaluate button visually mutes, the click handler shakes the
+  // button and shows the "Fill out the board!" prompt instead of
+  // running the evaluator.
+  canEvaluate: boolean;
   onEvaluate: () => void;
   onAttack: (attack: Attack | null) => void;
   // True between attack-click and animation completion. Disables every
   // attack button so the kid can't double-fire.
   attackPending: boolean;
 }) {
+  // Disabled-tap feedback. `shake` flips true on a disabled tap and
+  // clears 500ms later (matches the damage-shake keyframe duration);
+  // re-tapping during a shake re-triggers via the toggle. `promptKey`
+  // remounts <FillPrompt> on every disabled tap so the 3s lifecycle
+  // restarts even if the kid taps repeatedly.
+  const [shake, setShake] = useState(false);
+  const [promptKey, setPromptKey] = useState(0);
+  useEffect(() => {
+    if (!shake) return;
+    const t = window.setTimeout(() => setShake(false), 500);
+    return () => window.clearTimeout(t);
+  }, [shake]);
+  const handleEvaluateClick = (): void => {
+    if (canEvaluate) {
+      onEvaluate();
+      return;
+    }
+    setShake(false);
+    // Force a fresh truthy → true transition on the next tick so the
+    // CSS animation re-fires (CSS only re-runs a keyframe when the
+    // animation rule transitions from absent to present).
+    requestAnimationFrame(() => setShake(true));
+    setPromptKey((k) => k + 1);
+  };
   // Two visual states:
   //   - default / loss : "Evaluate" — re-evaluates the current arrangement
   //   - won            : 3 attack-choice buttons — kid picks an attack,
@@ -378,14 +542,24 @@ function ActionButton({
             </button>
           )
         ) : (
-          <button
-            type="button"
-            onClick={onEvaluate}
-            className="rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
-            data-test="evaluate-button"
-          >
-            Evaluate
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleEvaluateClick}
+              className={
+                canEvaluate
+                  ? "rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95 data-[shake=true]:animate-damage-shake"
+                  : "cursor-not-allowed rounded-full bg-muted-gray/60 px-8 py-3 font-bold text-white/85 shadow-subtle data-[shake=true]:animate-damage-shake"
+              }
+              data-test="evaluate-button"
+              data-can-evaluate={canEvaluate ? "true" : "false"}
+              data-shake={shake ? "true" : undefined}
+              aria-disabled={!canEvaluate}
+            >
+              Evaluate
+            </button>
+            {promptKey > 0 ? <FillPrompt key={promptKey} onDone={() => setPromptKey(0)} /> : null}
+          </div>
         )}
       </div>
     </div>
@@ -422,6 +596,36 @@ function Splash({ onBegin }: { onBegin: () => void }) {
         <span>Begin the descent</span>
         <ArrowRight size={22} strokeWidth={2.5} aria-hidden />
       </button>
+    </div>
+  );
+}
+
+// Small chip in the Top region beside the RoundIndicator. Surfaces the
+// running count of losing evaluations on the CURRENT stage so the kid can
+// see their own try count climb. Hidden until the kid has missed once —
+// a constant "Mistakes: 0" would just be noise.
+//
+// At wrongAttempts >= 3 the find-missing-result auto-assist has fired
+// (one card pre-placed + locked); the badge tilts into a warmer "helped"
+// styling so the kid notices the equation just got easier.
+function MistakesBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const helped = count >= 3;
+  return (
+    <div
+      role="status"
+      className={
+        helped
+          ? "flex items-center gap-1.5 rounded-full bg-vivid-orange/15 px-3 py-1 font-openrunde text-sm font-bold text-vivid-orange"
+          : "flex items-center gap-1.5 rounded-full bg-light-gray px-3 py-1 font-openrunde text-sm font-semibold text-medium-gray"
+      }
+      data-test="mistakes-badge"
+      data-mistakes={count}
+      data-helped={helped ? "true" : undefined}
+      aria-label={`Mistakes this stage: ${count}`}
+    >
+      <span aria-hidden>✕</span>
+      <span>{count}</span>
     </div>
   );
 }
@@ -500,7 +704,9 @@ function AddingGame() {
   // previous level matched any of those AND we advanced past it, fire the
   // celebration with the round number that was just completed. The
   // celebration component renders the "Round N → Round N+1" text.
-  const [celebration, setCelebration] = useState<null | { fromRound: 1 | 2 | 3 | 4 }>(null);
+  const [celebration, setCelebration] = useState<null | {
+    fromRound: 1 | 2 | 3 | 4 | 5 | 6;
+  }>(null);
   const prevLevelRef = useRef<number | null>(game.round?.index ?? null);
   useEffect(() => {
     const curr = game.round?.index ?? null;
@@ -518,7 +724,7 @@ function AddingGame() {
 
   useEffect(() => {
     if (game.status === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
-      setCelebration({ fromRound: 4 });
+      setCelebration({ fromRound: 6 });
     }
   }, [game.status]);
 
@@ -606,10 +812,47 @@ function AddingGame() {
       if (!prev.round) return prev;
       const stillOutcome = evaluateRound(prev);
       if (!stillOutcome) return prev;
-      return {
+
+      // Wins don't advance wrongAttempts. The setter only writes the
+      // outcome and the route's win-flow takes over from there.
+      if (stillOutcome.won) {
+        return {
+          ...prev,
+          round: { ...prev.round, phase: "evaluating", outcome: stillOutcome },
+        };
+      }
+
+      // Loss path. Increment the per-stage counter; the EXACT 2 → 3
+      // transition triggers the find-missing-result auto-assist (the
+      // assist scans the kid's hand + slots, places ONE correct card,
+      // and locks it). Subsequent losses keep the counter climbing
+      // but `applyAutoAssist` is gated by which slot is still unlocked
+      // — the second pass (count = 6th wrong) places the result; a
+      // third pass returns null because both kid-slots are locked.
+      const nextWrongAttempts = (prev.round.wrongAttempts ?? 0) + 1;
+      const withOutcome: AddingGameState = {
         ...prev,
-        round: { ...prev.round, phase: "evaluating", outcome: stillOutcome },
+        round: {
+          ...prev.round,
+          phase: "evaluating",
+          outcome: stillOutcome,
+          wrongAttempts: nextWrongAttempts,
+        },
       };
+
+      // Auto-assist: only for find-missing-result, only on the EXACT
+      // 2 → 3 step (so we don't fire on every wrong attempt past 3).
+      // To open the second assist (placing the result card) without a
+      // separate UI trigger, fire again at 6 wrongs — same code path.
+      const shouldAssist =
+        prev.round.equation.shape === "find-missing-result" &&
+        (nextWrongAttempts === 3 || nextWrongAttempts === 6);
+      if (!shouldAssist) return withOutcome;
+
+      const assisted = applyAutoAssist(withOutcome);
+      // applyAutoAssist returns null when no action is possible (e.g. both
+      // kid-slots already locked). Fall back to the un-assisted state.
+      return assisted ?? withOutcome;
     });
   };
 
@@ -674,11 +917,13 @@ function AddingGame() {
     const newHp = round.enemy.hp - damage;
 
     if (newHp <= 0) {
-      // XP from this defeat = the value of the equation that defeated the
-      // enemy. This naturally scales with dungeon level (later equations
-      // have larger targets) without a separate multiplier. Awarded only
-      // to the currently-selected pilot.
-      const xpGain = round.equation.target.value;
+      // XP from this defeat = the equation's "win value":
+      //   - find-sum levels (R1–R4): the equation target.
+      //   - find-missing-result levels (R5–R6): the kid's chosen result
+      //     card (lives at operandSlots[2]) — same number that drives
+      //     `scoreEarned` in evaluate.ts.
+      const xpGain = round.outcome.scoreEarned;
+      const defeatedTemplateId = round.enemy.templateId;
       const nextLevelIndex = round.index + 1;
       if (nextLevelIndex > FINAL_LEVEL_INDEX) {
         // Game cleared — set status:ended, drop round, blank the hand. The
@@ -699,6 +944,7 @@ function AddingGame() {
             cards: {},
             player: { ...prev.player, hand: emptyHand(), pilotProgress },
             round: null,
+            enemyEncounters: incrementEncounter(prev.enemyEncounters, defeatedTemplateId),
           };
         });
         return;
@@ -719,6 +965,7 @@ function AddingGame() {
           cards: dealt.cards,
           player: { ...prev.player, hand: dealt.hand, pilotProgress },
           round: dealt.round,
+          enemyEncounters: incrementEncounter(prev.enemyEncounters, defeatedTemplateId),
         };
       });
       return;
@@ -831,18 +1078,20 @@ function AddingGame() {
             enemy={enemyTemplate}
             hp={roundEnemy?.hp ?? null}
             maxHp={game.round ? (findLevel(game.round.index)?.hp ?? null) : null}
+            encounters={encountersFor(game.enemyEncounters, roundEnemy?.templateId)}
           />
         </LeftCol>
         <GameMain>
           <Top>
             {game.round ? (
-              <div className="flex h-full w-full items-center px-3">
+              <div className="flex h-full w-full items-center justify-between px-3">
                 <RoundIndicator
                   round={roundOf(game.round.index)}
                   levelIndex={game.round.index}
                   localLevel={localLevelIndex(game.round.index)}
                   tierLevelCount={levelsInRound(roundOf(game.round.index))}
                 />
+                <MistakesBadge count={game.round.wrongAttempts ?? 0} />
               </div>
             ) : null}
           </Top>
@@ -868,6 +1117,7 @@ function AddingGame() {
                   <ActionButton
                     outcome={game.round.outcome}
                     attacks={currentPlayer?.attacks ?? null}
+                    canEvaluate={game.round.equation.operandSlots.every((s) => s.cardId !== null)}
                     onEvaluate={handleEvaluate}
                     onAttack={handleAttack}
                     attackPending={attackPending}
@@ -910,6 +1160,9 @@ function AddingGame() {
               hand={game.player.hand}
               cards={game.cards}
               dragLocked={dragLocked}
+              display={
+                game.round?.equation.shape === "find-missing-result" ? "ten-frame" : "numeric"
+              }
               onSwap={handleSwap}
             />
           </Bottom>

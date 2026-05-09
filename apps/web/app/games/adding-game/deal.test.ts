@@ -46,6 +46,36 @@ function hasValidPair(
   return false;
 }
 
+// find-missing-result solvability: there must exist `a` in the hand AND
+// `b` in the hand such that `static OP a == b` (or `a OP static == b` when
+// position == "second"). Two cards from the kid's 5; static is in the
+// equation, NOT the hand.
+function hasValidMissingResultPair(
+  values: readonly number[],
+  operator: Operator,
+  staticValue: number,
+  position: "first" | "second",
+): boolean {
+  for (let i = 0; i < values.length; i++) {
+    for (let j = 0; j < values.length; j++) {
+      if (i === j) continue;
+      const a = values[i];
+      const b = values[j];
+      if (a === undefined || b === undefined) continue;
+      let lhs: number;
+      if (operator === "add") {
+        lhs = position === "first" ? staticValue + a : a + staticValue;
+      } else if (operator === "subtract") {
+        lhs = position === "first" ? staticValue - a : a - staticValue;
+      } else {
+        return false;
+      }
+      if (lhs === b) return true;
+    }
+  }
+  return false;
+}
+
 function handValues(result: ReturnType<typeof dealRound>): number[] {
   return result.hand
     .map((slot) => (slot.cardId ? result.cards[slot.cardId]?.value : undefined))
@@ -70,10 +100,12 @@ describe("dealRound — level 1 (round 1 opener, add target 6)", () => {
 
   test("equation operator and target match the level config", () => {
     const result = dealRound({ levelIndex: 1, random: seededRandom(3) });
+    expect(result.round.equation.shape).toBe("find-sum");
     expect(result.round.equation.operandSlots).toHaveLength(2);
     expect(result.round.equation.operandSlots[0]?.cardId).toBeNull();
+    expect(result.round.equation.operandSlots[0]?.locked).toBe(false);
     expect(result.round.equation.operandSlots[1]?.cardId).toBeNull();
-    expect(result.round.equation.target.value).toBe(6);
+    expect(result.round.equation.target?.value).toBe(6);
     expect(result.round.equation.operator).toBe("add");
     expect(result.round.equation.comparator).toBe("eq");
   });
@@ -87,17 +119,112 @@ describe("dealRound — level 1 (round 1 opener, add target 6)", () => {
 });
 
 describe("dealRound — every level produces a solvable hand", () => {
-  // Sweep all levels × 20 seeds. Every deal must satisfy its operator +
-  // comparator constraint — this is the load-bearing dealer contract.
+  // Sweep all levels × 20 seeds. Every deal must satisfy its
+  // shape-appropriate constraint — load-bearing dealer contract.
   for (const level of LEVELS) {
-    test(`level ${level.index} (${level.operator} ${level.comparator} ${level.target}) generates a valid pair`, () => {
+    const shape = level.equationShape ?? "find-sum";
+    test(`level ${level.index} (${shape}, ${level.operator} ${level.comparator} ${level.target}) generates a valid hand`, () => {
       for (let seed = 1; seed <= 20; seed++) {
         const result = dealRound({ levelIndex: level.index, random: seededRandom(seed) });
-        const ok = hasValidPair(handValues(result), level.operator, level.comparator, level.target);
-        expect(ok).toBe(true);
+        if (shape === "find-missing-result") {
+          if (!level.staticOperand) {
+            throw new Error("test fixture: find-missing-result level missing staticOperand");
+          }
+          const ok = hasValidMissingResultPair(
+            handValues(result),
+            level.operator,
+            level.staticOperand.value,
+            level.staticOperand.position,
+          );
+          expect(ok).toBe(true);
+        } else {
+          const ok = hasValidPair(
+            handValues(result),
+            level.operator,
+            level.comparator,
+            level.target,
+          );
+          expect(ok).toBe(true);
+        }
       }
     });
   }
+});
+
+describe("dealRound — find-missing-result equation shape (R5–R6)", () => {
+  test("level 24 (R5: 1 + ? = ?, position=first) emits 3 operandSlots with first locked", () => {
+    const result = dealRound({ levelIndex: 24, random: seededRandom(1) });
+    const eq = result.round.equation;
+    expect(eq.shape).toBe("find-missing-result");
+    expect(eq.target).toBeNull();
+    expect(eq.operandSlots).toHaveLength(3);
+
+    const [s0, s1, s2] = eq.operandSlots;
+    expect(s0?.locked).toBe(true);
+    expect(s0?.cardId).not.toBeNull();
+    expect(s1?.locked).toBe(false);
+    expect(s1?.cardId).toBeNull();
+    expect(s2?.locked).toBe(false);
+    expect(s2?.cardId).toBeNull();
+
+    // Static card in catalog has the right value.
+    const staticCardId = s0?.cardId;
+    expect(staticCardId).toBeTruthy();
+    if (staticCardId) {
+      expect(result.cards[staticCardId]?.value).toBe(1);
+    }
+  });
+
+  test("level 25 (R5: ? + 2 = ?, position=second) locks operandSlots[1]", () => {
+    const result = dealRound({ levelIndex: 25, random: seededRandom(2) });
+    const eq = result.round.equation;
+    const [s0, s1, s2] = eq.operandSlots;
+    expect(s0?.locked).toBe(false);
+    expect(s0?.cardId).toBeNull();
+    expect(s1?.locked).toBe(true);
+    expect(s1?.cardId).not.toBeNull();
+    expect(s2?.locked).toBe(false);
+    expect(s2?.cardId).toBeNull();
+
+    const staticCardId = s1?.cardId;
+    if (staticCardId) {
+      expect(result.cards[staticCardId]?.value).toBe(2);
+    }
+  });
+
+  test("level 29 (R6: 6 - ? = ?, subtract) emits subtract operator + 3 slots", () => {
+    const result = dealRound({ levelIndex: 29, random: seededRandom(3) });
+    const eq = result.round.equation;
+    expect(eq.shape).toBe("find-missing-result");
+    expect(eq.operator).toBe("subtract");
+    expect(eq.operandSlots).toHaveLength(3);
+    const s0 = eq.operandSlots[0];
+    expect(s0?.locked).toBe(true);
+    if (s0?.cardId) {
+      expect(result.cards[s0.cardId]?.value).toBe(6);
+    }
+  });
+
+  test("hand still has HAND_SIZE cards (static does NOT consume a hand slot)", () => {
+    const result = dealRound({ levelIndex: 24, random: seededRandom(4) });
+    expect(result.hand).toHaveLength(HAND_SIZE);
+  });
+
+  test("R5/R6 hand cards are all capped at 1..5 across many seeds", () => {
+    // The 1–5 cap is the load-bearing tuning for these rounds. Sweeping
+    // every R5/R6 level × 30 seeds ensures both the guaranteed pair AND
+    // the fillers stay in range — a regression here would surface a
+    // 6-card the kid can't possibly use.
+    for (let levelIndex = 24; levelIndex <= 33; levelIndex++) {
+      for (let seed = 1; seed <= 30; seed++) {
+        const result = dealRound({ levelIndex, random: seededRandom(seed) });
+        for (const value of handValues(result)) {
+          expect(value).toBeGreaterThanOrEqual(1);
+          expect(value).toBeLessThanOrEqual(5);
+        }
+      }
+    }
+  });
 });
 
 describe("dealRound — invariants", () => {

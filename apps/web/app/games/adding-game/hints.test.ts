@@ -87,12 +87,42 @@ describe("generateHints", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("every level produces at least 8 hints on a wrong answer", () => {
+  test("every find-sum level (R1–R4) produces at least 8 hints on a wrong answer", () => {
     for (let level = 1; level <= 23; level++) {
       const state = makeStateWithOutcome({ levelIndex: level, computed: 0, expected: 10 });
       const hints = generateHints(state);
       expect(hints.length).toBeGreaterThanOrEqual(8);
     }
+  });
+
+  test("every find-missing-result level (R5–R6) produces hints on a wrong answer", () => {
+    // R5/R6 levels (24..33) — the new shape. Each must surface at least
+    // one finger-counting hand AND one operator-specific hint so the kid
+    // sees pedagogically diverse framing.
+    for (let level = 24; level <= 33; level++) {
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 0, expected: 10 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(4);
+      // All ids start with "fmr-" so the filter is unambiguous.
+      const ids = hints.map((h) => h.id);
+      for (const id of ids) {
+        expect(id.startsWith("fmr-")).toBe(true);
+      }
+    }
+  });
+
+  test("R5 add level surfaces the add-specific count-up hint", () => {
+    const state = makeStateWithOutcome({ levelIndex: 24, computed: 3, expected: 0 });
+    const ids = generateHints(state).map((h) => h.id);
+    expect(ids).toContain("fmr-add-count-up");
+    expect(ids).not.toContain("fmr-sub-count-down");
+  });
+
+  test("R6 subtract level surfaces the sub-specific count-down hint", () => {
+    const state = makeStateWithOutcome({ levelIndex: 29, computed: 10, expected: 0 });
+    const ids = generateHints(state).map((h) => h.id);
+    expect(ids).toContain("fmr-sub-count-down");
+    expect(ids).not.toContain("fmr-add-count-up");
   });
 
   // Level 13 is round 3: add / gt / target 7.

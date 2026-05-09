@@ -3,6 +3,7 @@ import { Info, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
+import { derivePosterUrl } from "~/games/adding-game/poster-variant";
 import { defineComponent } from "~/lib/define-component";
 
 import { EnemyAvatarPropsSchema } from "./schema";
@@ -100,6 +101,10 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
   const hpRatio = effectiveMax > 0 ? Math.max(0, Math.min(1, liveHp / effectiveMax)) : 0;
   const borderClass = RARITY_BORDER[enemy.rarity];
   const fillClass = RARITY_BAR_FILL[enemy.rarity];
+  // Poster variant — derived from prior-defeat count. The route reads the
+  // count from `addingGame.enemyEncounters[enemy.id]`; the component is
+  // pure so stories can drive variants directly via the `encounters` arg.
+  const posterUrl = derivePosterUrl(enemy.imageUrl, props.encounters ?? 0);
 
   // Single-column grid: header (name + type), portrait (square, fills),
   // footer (HP bar). The grid lets the portrait grow while header/footer
@@ -151,10 +156,12 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
             style={{ backfaceVisibility: "hidden" }}
           >
             <img
-              src={enemy.imageUrl}
+              src={posterUrl}
               alt={enemy.name}
               className="absolute inset-0 h-full w-full animate-ken-burns-pan object-cover"
               draggable={false}
+              data-test="enemy-poster"
+              data-poster-encounters={props.encounters ?? 0}
             />
             {/* Red vignette overlay — radial gradient with a transparent
                 center so the artwork stays legible. Opacity ramps via

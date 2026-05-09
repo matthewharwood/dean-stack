@@ -36,10 +36,26 @@ const fits = (n: number): boolean => n >= 0 && n <= HANDS_MAX;
 // out when the operator is wrong; direction hints branch on too-big vs
 // too-small. The set is intentionally redundant so consecutive losses on
 // the same equation see different angles.
+//
+// Two equation shapes are supported:
+//   - "find-sum" (R1–R4): "what pair makes target?" — original hint
+//     vocabulary stays the way it was.
+//   - "find-missing-result" (R5–R6): "static OP a = b, kid plays a and
+//     b" — `target` on the equation is null, "expected" comes from
+//     outcome.expectedValue (= the kid's chosen result card). New
+//     hint pool framed around mental computation: "add to {static}",
+//     "what comes after {static} {op} {a}?".
 export function generateHints(state: AddingGameState): Hint[] {
   const round = state.round;
   if (!round?.outcome) return [];
-  const target = round.equation.target.value;
+
+  if (round.equation.shape === "find-missing-result") {
+    return generateFindMissingResultHints(state);
+  }
+
+  const targetCard = round.equation.target;
+  if (!targetCard) return [];
+  const target = targetCard.value;
   const computed = round.outcome.computedValue;
   const operator = round.equation.operator;
   const comparator = round.equation.comparator ?? "eq";
@@ -253,4 +269,152 @@ export function pickRandomHint(
   const filtered = avoidId ? hints.filter((h) => h.id !== avoidId) : hints;
   const pool = filtered.length > 0 ? filtered : hints;
   return pool[Math.floor(random() * pool.length)] ?? null;
+}
+
+// ─── find-missing-result (R5–R6) hints ───────────────────────────────────
+// Levels of the form `K + ? = ?` (R5, add) or `K - ? = ?` (R6, subtract).
+// `K` is the static operand, the kid plays the OTHER operand AND the
+// result. Loss states fall into three buckets:
+//   - both kid slots empty → "drop a card here, then a card there"
+//   - operand placed, result empty → "now what's K + a?"
+//   - both placed but inconsistent → "your math doesn't match — try another"
+//
+// `outcome.expectedValue` carries the kid's CURRENT result-slot value
+// (slotValue(2)), so direction nudges work the same as find-sum.
+function generateFindMissingResultHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+  const operator = eq.operator;
+  const computed = round.outcome.computedValue; // K op a (or a op K)
+  const result = round.outcome.expectedValue; // kid's result card (or 0 if empty)
+
+  // Find the static value AND the kid's chosen operand.
+  const slot0 = eq.operandSlots[0];
+  const slot1 = eq.operandSlots[1];
+  const slot2 = eq.operandSlots[2];
+  const cardValue = (cardId: string | null | undefined): number =>
+    cardId ? (state.cards[cardId]?.value ?? 0) : 0;
+  const lockedSlot = slot0?.locked ? slot0 : slot1?.locked ? slot1 : null;
+  const playerOperandSlot = slot0?.locked ? slot1 : slot0;
+  const staticValue = cardValue(lockedSlot?.cardId);
+  const playerOperand = cardValue(playerOperandSlot?.cardId);
+  const operandPlaced = !!playerOperandSlot?.cardId;
+  const resultPlaced = !!slot2?.cardId;
+  const tooBig = result > computed;
+  const tooSmall = result < computed;
+  const opGlyph = operator === "subtract" ? "−" : "+";
+
+  const hints: Hint[] = [];
+
+  // ── EMPTY-STATE STARTERS ─────────────────────────────────────────────
+  if (!operandPlaced && !resultPlaced) {
+    hints.push({
+      id: "fmr-fill-both",
+      emphasis: "Fill both slots.",
+      body: `Put one card in the *empty box* on the left, then a card in the *answer box* on the right.`,
+    });
+  }
+  if (operandPlaced && !resultPlaced) {
+    // Compute what the answer SHOULD be given the kid's current operand.
+    const need = operator === "add" ? staticValue + playerOperand : staticValue - playerOperand;
+    hints.push({
+      id: "fmr-need-result",
+      emphasis: `Find ${need}.`,
+      body: `${staticValue} ${opGlyph} ${playerOperand} = ?  Drop the answer in the *right box*.`,
+      ...(fits(need) ? { hands: { count: need, caption: `Make ${need}` } } : {}),
+    });
+  }
+  if (!operandPlaced && resultPlaced) {
+    hints.push({
+      id: "fmr-need-operand",
+      emphasis: "Pick a left card.",
+      body: `Put a card in the *empty left box*. The right box is your answer for ${staticValue} ${opGlyph} that card.`,
+    });
+  }
+
+  // ── DIRECTION (both placed but inconsistent) ─────────────────────────
+  if (operandPlaced && resultPlaced) {
+    if (tooBig) {
+      hints.push({
+        id: "fmr-result-too-big",
+        emphasis: "Answer is too big.",
+        body: `${staticValue} ${opGlyph} ${playerOperand} = *${computed}*. Pick a *smaller* answer card.`,
+      });
+    } else if (tooSmall) {
+      hints.push({
+        id: "fmr-result-too-small",
+        emphasis: "Answer is too small.",
+        body: `${staticValue} ${opGlyph} ${playerOperand} = *${computed}*. Pick a *bigger* answer card.`,
+      });
+    }
+    hints.push({
+      id: "fmr-mismatch",
+      emphasis: `${computed} ≠ ${result}`,
+      body: `Your math doesn't match. Either change a card on the *left*, or change the *answer*.`,
+    });
+  }
+
+  // ── ADD-SPECIFIC (R5) ────────────────────────────────────────────────
+  if (operator === "add") {
+    hints.push({
+      id: "fmr-add-count-up",
+      emphasis: `Count up from ${staticValue}.`,
+      body: `Start at ${staticValue}. Add the *left card* one finger at a time. Where do you stop?`,
+      ...(operandPlaced && fits(staticValue + playerOperand)
+        ? {
+            hands: {
+              count: staticValue + playerOperand,
+              caption: `${staticValue} + ${playerOperand}`,
+            },
+          }
+        : {}),
+    });
+    hints.push({
+      id: "fmr-add-bigger-bigger",
+      emphasis: "Bigger left, bigger answer.",
+      body: `When the left card grows, the *answer grows too*. Pick a bold left card and a bold right card.`,
+    });
+    hints.push({
+      id: "fmr-add-pair-up",
+      emphasis: "Pair them up.",
+      body: `Find two of YOUR cards where one PLUS ${staticValue} *equals* the other.`,
+    });
+  }
+
+  // ── SUB-SPECIFIC (R6) ────────────────────────────────────────────────
+  if (operator === "subtract") {
+    hints.push({
+      id: "fmr-sub-count-down",
+      emphasis: `Count down from ${staticValue}.`,
+      body: `Start at ${staticValue}. Take *the left card away* one finger at a time. Where do you land?`,
+      ...(operandPlaced && fits(staticValue - playerOperand) && staticValue >= playerOperand
+        ? {
+            hands: {
+              count: staticValue - playerOperand,
+              caption: `${staticValue} − ${playerOperand}`,
+            },
+          }
+        : {}),
+    });
+    hints.push({
+      id: "fmr-sub-pick-small-left",
+      emphasis: "Small left, big answer.",
+      body: `In ${staticValue} − ?, a *small left card* leaves a BIG answer. A big left card leaves a small one.`,
+    });
+    hints.push({
+      id: "fmr-sub-pair-up",
+      emphasis: "Find the pair.",
+      body: `Pick a left card. The answer is ${staticValue} *minus* that — find a card that matches.`,
+    });
+  }
+
+  // ── ENCOURAGEMENT — never the only hint, just one in the rotation. ───
+  hints.push({
+    id: "fmr-encouragement",
+    emphasis: "You got this.",
+    body: `Two boxes to fill. The *left card* is your choice; the *right card* must equal ${staticValue} ${opGlyph} that.`,
+  });
+
+  return hints;
 }

@@ -37,3 +37,15 @@ export const Round3Mid: Story = {
 export const Round4Boss: Story = {
   args: { round: 4, levelIndex: 23, localLevel: 5, tierLevelCount: 5 },
 };
+export const Round5Start: Story = {
+  args: { round: 5, levelIndex: 24, localLevel: 1, tierLevelCount: 5 },
+};
+export const Round5Boss: Story = {
+  args: { round: 5, levelIndex: 28, localLevel: 5, tierLevelCount: 5 },
+};
+export const Round6Start: Story = {
+  args: { round: 6, levelIndex: 29, localLevel: 1, tierLevelCount: 5 },
+};
+export const Round6Boss: Story = {
+  args: { round: 6, levelIndex: 33, localLevel: 5, tierLevelCount: 5 },
+};

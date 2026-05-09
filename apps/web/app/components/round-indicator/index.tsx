@@ -43,7 +43,7 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
           </span>
           <span className="font-openrunde text-3xl font-bold text-slate-ink">{props.round}</span>
           <span className="font-openrunde text-xs text-muted-gray">
-            of <span className="font-bold text-medium-gray">4</span>
+            of <span className="font-bold text-medium-gray">6</span>
           </span>
         </div>
         <div className="flex items-center gap-1">

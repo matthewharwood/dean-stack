@@ -28,6 +28,12 @@ function setEquationCardId(
   return slots.map((s) => (s.id === id ? { ...s, cardId } : s));
 }
 
+function isEquationSlotLocked(state: AddingGameState, locator: SlotLocator): boolean {
+  if (locator.kind !== "equation") return false;
+  const slot = state.round?.equation.operandSlots.find((s) => s.id === locator.id);
+  return slot?.locked === true;
+}
+
 // Atomically swap whatever's in `source` and `target`. Empty slots count —
 // "place a card on empty slot" is a swap with `null`.
 //
@@ -37,7 +43,9 @@ function setEquationCardId(
 //   equation ↔ hand    — un-place from equation back to a chosen hand slot
 //   equation ↔ equation — re-order operands within the equation
 //
-// Self-swap (same locator) is a no-op; missing round is a no-op.
+// Self-swap (same locator) is a no-op; missing round is a no-op. Locked
+// equation slots (find-missing-result static operand) refuse swaps in EITHER
+// direction — defense in depth on top of drag.tsx skipping their handlers.
 export function applySwap(
   state: AddingGameState,
   source: SlotLocator,
@@ -45,6 +53,9 @@ export function applySwap(
 ): AddingGameState {
   if (slotLocatorEquals(source, target)) return state;
   if (!state.round) return state;
+  if (isEquationSlotLocked(state, source) || isEquationSlotLocked(state, target)) {
+    return state;
+  }
 
   const sourceCardId = readCardId(state, source);
   const targetCardId = readCardId(state, target);

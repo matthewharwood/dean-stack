@@ -101,4 +101,36 @@ describe("applySwap", () => {
     expect(next.round?.phase).toBe("matching");
     expect(next.round?.outcome).toBeNull();
   });
+
+  test("locked equation slot refuses both source and target swaps (R5/R6 static)", () => {
+    // Level 24 has a locked static at operandSlots[0].
+    const dealt = dealRound({ levelIndex: 24, random: () => 0.5 });
+    const state: AddingGameState = {
+      ...ADDING_GAME_DEFAULT,
+      status: "playing",
+      cards: dealt.cards,
+      player: { ...ADDING_GAME_DEFAULT.player, hand: dealt.hand },
+      round: dealt.round,
+    };
+
+    // Drop hand → locked slot is rejected.
+    const tryIn = applySwap(
+      state,
+      { kind: "hand", id: "hand:0" },
+      { kind: "equation", id: "eq:0" },
+    );
+    expect(tryIn).toBe(state);
+
+    // Drag locked slot → hand is rejected (kid can't yank the static out).
+    const tryOut = applySwap(
+      state,
+      { kind: "equation", id: "eq:0" },
+      { kind: "hand", id: "hand:0" },
+    );
+    expect(tryOut).toBe(state);
+
+    // Unlocked slots still work normally.
+    const ok = applySwap(state, { kind: "hand", id: "hand:0" }, { kind: "equation", id: "eq:1" });
+    expect(ok).not.toBe(state);
+  });
 });

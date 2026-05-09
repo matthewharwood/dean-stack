@@ -1,11 +1,13 @@
-import type { Comparator, Operator } from "@dean-stack/schemas";
+import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 
 // Per-level configuration: which enemy you fight, what equation shape the
 // dealer produces, what value range hand cards are drawn from, and how
 // much HP the enemy has THIS round (since the same enemy returns across
-// rounds with mounting HP). Damage = `target` value on a winning eval.
+// rounds with mounting HP). Damage = `target` value on a winning eval
+// for find-sum levels; for find-missing-result levels, damage = the kid's
+// chosen result card.
 //
-// FOUR ROUNDS structure (the kid's progression):
+// SIX ROUNDS structure (the kid's progression):
 //   Round 1 — addition only, equality.   The "spirits" learning to count.
 //   Round 2 — subtraction only, equality. The same six echoes, but now
 //             the kid needs the inverse operation.
@@ -13,12 +15,43 @@ import type { Comparator, Operator } from "@dean-stack/schemas";
 //             reasoning — "land on this side of the wall."
 //   Round 4 — five new echoes, mixed everything. Any operator, any
 //             comparator. The trench has taught the kid; this is the
-//             gauntlet.
+//             gauntlet's first run.
+//   Round 5 — same five tier-2 echoes return. find-missing-result + add:
+//             one operand is a static, the kid plays the other operand
+//             AND the result. "Static + ? = ?" / "? + static = ?".
+//             Encounter 2 → posters flip to the _L1 variant.
+//   Round 6 — same five tier-2 echoes again. find-missing-result +
+//             subtract. Encounter 3 → posters flip to the _L2 variant
+//             (the cap). HP scales another notch.
+//
+// Round 5/6 fields:
+//   - equationShape: "find-missing-result"
+//   - staticOperand.position: "first" or "second" — which LHS slot is
+//     pre-filled with the static (the OTHER LHS slot + the result slot
+//     are kid-played).
+//   - staticOperand.value: the static integer.
+//   - target: still required by the schema; for find-missing-result it's
+//     a baseline reference (highest plausible result for the level) used
+//     to size the hand range and surface in storybook fallbacks. The
+//     evaluator does NOT compare against it for this shape.
+export type StaticOperandConfig = {
+  position: "first" | "second";
+  value: number;
+};
+
 export type LevelConfig = {
   index: number;
   enemyId: string;
   operator: Operator;
   comparator: Comparator;
+  // Equation shape — controls dealer + evaluator semantics. Defaults to
+  // "find-sum" via the dealer when omitted, so existing tier-1 entries
+  // can stay terse.
+  equationShape?: EquationShape;
+  // Only meaningful when equationShape === "find-missing-result". The
+  // dealer pre-fills the chosen operand position with this value and
+  // marks the slot locked.
+  staticOperand?: StaticOperandConfig;
   target: number;
   // HP for THIS encounter. Overrides EnemyTemplate.maxHp because the
   // same enemy returns at different difficulty across rounds; the
@@ -248,30 +281,180 @@ export const LEVELS: readonly LevelConfig[] = [
     hp: 50,
     handValueRange: { min: 8, max: 22 },
   },
+  // ── ROUND 5 — find-missing-result + add ─────────────────────────────
+  // The five tier-2 echoes return for their second encounter (poster
+  // variant flips _L1). Equation shape: `static + ? = ?`. The kid plays
+  // BOTH the operand and the result; both cards (and therefore every
+  // card the kid touches in this round) come from a 1–5 hand range.
+  // Static is constrained so static + a ≤ 5 always has a solution:
+  //
+  //   static=1 → a∈[1,4], b∈[2,5]   (easiest — 4 valid pairs)
+  //   static=2 → a∈[1,3], b∈[3,5]
+  //   static=3 → a∈[1,2], b∈[4,5]
+  //   static=4 → a∈[1,1], b∈[5,5]   (tightest — only (1,5))
+  //
+  // The cognitive ramp comes from the SHAPE (kid plays 2 cards, mentally
+  // computes the result) plus the gradually-tightening static — NOT from
+  // big numbers. Position alternates "first" / "second" so the kid sees
+  // both `K + a = b` and `a + K = b` framings.
+  //
+  // HP is calibrated against per-turn damage = the kid's chosen result
+  // ∈ [1, 5]. ~2–4 turns per enemy keeps the difficulty honest without
+  // grinding.
+  {
+    index: 24,
+    enemyId: "hadal-glass-manta-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 1 },
+    target: 5,
+    hp: 6,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 25,
+    enemyId: "hadal-brine-needle-urchin-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "second", value: 2 },
+    target: 5,
+    hp: 8,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 26,
+    enemyId: "hadal-basalt-lantern-leech-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 3 },
+    target: 5,
+    hp: 10,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 27,
+    enemyId: "hadal-sandglass-stalker-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "second", value: 2 },
+    target: 5,
+    hp: 12,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 28,
+    enemyId: "hadal-kelp-censer-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 4 },
+    target: 5,
+    hp: 15,
+    handValueRange: { min: 1, max: 5 },
+  },
+  // ── ROUND 6 — find-missing-result + subtract ────────────────────────
+  // Third (and capped) encounter — posters flip to _L2. Equation shape:
+  // `static - ? = ?`. Same 1–5 cap as R5: every kid-played card is in
+  // [1, 5]. Static is chosen so static − a ∈ [1, 5] is always
+  // satisfiable; that means static ∈ [4, 10]:
+  //
+  //   static=6 → a∈[1,5], b∈[1,5]   (widest — 5 valid pairs)
+  //   static=5 → a∈[1,4], b∈[1,4]
+  //   static=7 → a∈[2,5], b∈[2,5]
+  //   static=8 → a∈[3,5], b∈[3,5]
+  //   static=9 → a∈[4,5], b∈[4,5]   (tightest — 2 pairs)
+  //
+  // Position is always "first" so the static is the minuend (`K − ? = ?`).
+  // "Second" would mean `a − K = b`, forcing a ≥ K — narrow, awkward, and
+  // pedagogically weaker for "count down from K." HP scales gently; per-
+  // turn damage caps at 5 same as R5.
+  {
+    index: 29,
+    enemyId: "hadal-glass-manta-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 6 },
+    target: 5,
+    hp: 8,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 30,
+    enemyId: "hadal-brine-needle-urchin-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 5 },
+    target: 4,
+    hp: 10,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 31,
+    enemyId: "hadal-basalt-lantern-leech-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 7 },
+    target: 5,
+    hp: 12,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 32,
+    enemyId: "hadal-sandglass-stalker-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 8 },
+    target: 5,
+    hp: 14,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 33,
+    enemyId: "hadal-kelp-censer-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 9 },
+    target: 5,
+    hp: 18,
+    handValueRange: { min: 1, max: 5 },
+  },
 ];
 
 export const FINAL_LEVEL_INDEX: number = LEVELS.length;
 
 // Round boundaries — the LAST level index of each round. Used by the
 // route's round indicator and the celebration trigger.
-export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23];
+export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33];
 
 export function findLevel(index: number): LevelConfig | undefined {
   return LEVELS.find((l) => l.index === index);
 }
 
 // Which round (1-indexed) does a given level belong to?
-export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 {
+export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 {
   if (levelIndex <= 6) return 1;
   if (levelIndex <= 12) return 2;
   if (levelIndex <= 18) return 3;
-  return 4;
+  if (levelIndex <= 23) return 4;
+  if (levelIndex <= 28) return 5;
+  return 6;
 }
 
-export function levelsInRound(round: 1 | 2 | 3 | 4): number {
+export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6): number {
   if (round === 1) return 6;
   if (round === 2) return 6;
   if (round === 3) return 6;
+  if (round === 4) return 5;
+  if (round === 5) return 5;
   return 5;
 }
 
@@ -280,7 +463,9 @@ export function localLevelIndex(levelIndex: number): number {
   if (levelIndex <= 6) return levelIndex;
   if (levelIndex <= 12) return levelIndex - 6;
   if (levelIndex <= 18) return levelIndex - 12;
-  return levelIndex - 18;
+  if (levelIndex <= 23) return levelIndex - 18;
+  if (levelIndex <= 28) return levelIndex - 23;
+  return levelIndex - 28;
 }
 
 // Backwards-compatibility shims for callers that already imported the

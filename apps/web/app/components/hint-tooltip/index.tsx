@@ -87,7 +87,7 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
     <button
       type="button"
       onClick={props.onDismiss}
-      className="flex w-full items-start gap-4 rounded-lg border border-warning-yellow/40 bg-warning-yellow/10 px-5 py-4 text-left shadow-lg animate-hint-slide-in cursor-pointer"
+      className="flex w-full items-start gap-4 rounded-lg border border-warning-yellow/40 bg-[color-mix(in_oklab,var(--color-warning-yellow)_10%,var(--color-canvas-white))] px-5 py-4 text-left shadow-lg animate-hint-slide-in cursor-pointer"
       data-test="hint-tooltip"
       aria-label="Hint — tap to dismiss"
     >

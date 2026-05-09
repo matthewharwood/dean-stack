@@ -13,6 +13,15 @@ export const CardPropsSchema = z.object({
   // `defineComponent` parse-then-pass means the production path skips the
   // parse and would receive raw `undefined`.
   variant: z.enum(["default", "target"]).optional(),
+  // How the value is shown on the card face.
+  //   "numeric"   — bold OpenRunde digit (R1–R4). The default.
+  //   "ten-frame" — 2×5 grid of dots; first `value` cells filled. Forces
+  //                 visual subitizing instead of numeral abstraction.
+  //                 Used in R5/R6 to match the kid's ten-frame math
+  //                 worksheets. Cap is 10 (clamped). Negative values
+  //                 render as 0 dots (defensive — none of our levels
+  //                 produce them today).
+  display: z.enum(["numeric", "ten-frame"]).optional(),
   // Behavior, separate from `variant`. A disabled card cannot be a drop
   // target and tells the drag system to fire "invalid drop" feedback on
   // the dragged card (red ring) instead of the standard "no target"

@@ -92,6 +92,7 @@ function findFirstEmptyEquationSlot(): SlotLocator | null {
 function findFirstEmptyOf(kind: "hand" | "equation"): SlotLocator | null {
   const slots = document.querySelectorAll<HTMLElement>(`[data-slot-kind="${kind}"]`);
   for (const slot of slots) {
+    if (slot.dataset.locked === "true") continue;
     if (slot.querySelector("[data-card-id]")) continue;
     const id = slot.dataset.slotId;
     if (id) return { kind, id };
@@ -127,6 +128,11 @@ function detectTargetSlot(x: number, y: number, source: SlotLocator): SlotLocato
   if (!(el instanceof HTMLElement)) return null;
   const slotEl = el.closest<HTMLElement>("[data-slot-id][data-slot-kind]");
   if (!slotEl) return null;
+  // Locked equation slots (find-missing-result static operand) refuse drops.
+  // Match the reducer's defense in applySwap so the kid never sees a card
+  // visibly snap into a locked slot only to bounce back on the next React
+  // commit.
+  if (slotEl.dataset.locked === "true") return null;
   const id = slotEl.dataset.slotId;
   const kind = slotEl.dataset.slotKind;
   if (!id || (kind !== "hand" && kind !== "equation")) return null;
@@ -329,12 +335,20 @@ export function DraggableCard({
   locator,
   cardId,
   value,
+  display,
   dragLocked,
   onSwap,
 }: {
   locator: SlotLocator;
   cardId: string;
   value: number;
+  // Forwarded to the inner Card. R5/R6 pass "ten-frame" so hand and
+  // equation operand cards render as a 2×5 grid; everywhere else
+  // defaults to numeric. Explicit `| undefined` matches our strict
+  // exactOptionalPropertyTypes setting — call sites can pass an
+  // intermediate `display` prop that may itself be undefined without
+  // having to spread-conditionally.
+  display?: "numeric" | "ten-frame" | undefined;
   dragLocked: boolean;
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
 }): ReactNode {
@@ -588,7 +602,7 @@ export function DraggableCard({
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
     >
-      <Card value={value} />
+      <Card value={value} display={display} />
     </div>
   );
 }
@@ -596,17 +610,27 @@ export function DraggableCard({
 export function SlotWrapper({
   kind,
   slotId,
+  locked = false,
   children,
 }: {
   kind: "hand" | "equation";
   slotId: string;
+  // Locked slots (find-missing-result static operand) ignore hover, refuse
+  // drops, and skip the magnetic-snap hover scale. The data attribute is
+  // read by drag.tsx's detectTargetSlot / findFirstEmptyOf helpers.
+  locked?: boolean;
   children: ReactNode;
 }): ReactNode {
   return (
     <div
       data-slot-kind={kind}
       data-slot-id={slotId}
-      className="group relative h-full w-full transition-transform duration-150 data-[hover=empty]:scale-[1.04] data-[hover=filled]:scale-[1.02]"
+      data-locked={locked ? "true" : undefined}
+      className={
+        locked
+          ? "group relative h-full w-full"
+          : "group relative h-full w-full transition-transform duration-150 data-[hover=empty]:scale-[1.04] data-[hover=filled]:scale-[1.02]"
+      }
     >
       {children}
     </div>

@@ -142,9 +142,9 @@ type FxRefs = {
   active: boolean;
   onComplete: () => void;
   done: boolean;
-  // The round JUST completed (1..4). Drives the round-transition text
+  // The round JUST completed (1..6). Drives the round-transition text
   // overlay ("Round 1 — Round 2"). Null when the FX is inactive.
-  fromRound: 1 | 2 | 3 | 4 | null;
+  fromRound: 1 | 2 | 3 | 4 | 5 | 6 | null;
 };
 
 function buildScene(app: Application, refs: FxRefs): () => void {
@@ -376,7 +376,9 @@ function buildScene(app: Application, refs: FxRefs): () => void {
   let roundTextContainer: Container | null = null;
   if (refs.fromRound !== null) {
     const fromN = refs.fromRound;
-    const toN = fromN < 4 ? fromN + 1 : null;
+    // 6 is the campaign cap. Anything below shows "ROUND N+1" as the
+    // teaser; the final boundary becomes "TRENCH CLEARED."
+    const toN = fromN < 6 ? fromN + 1 : null;
 
     roundTextContainer = new Container();
     roundTextContainer.alpha = 0;
@@ -473,9 +475,9 @@ export function RoundCompleteFx({
   onComplete,
 }: {
   active: boolean;
-  // The round JUST completed (1..4). Drives the round-transition text
+  // The round JUST completed (1..6). Drives the round-transition text
   // overlay. Null when the FX is inactive.
-  fromRound: 1 | 2 | 3 | 4 | null;
+  fromRound: 1 | 2 | 3 | 4 | 5 | 6 | null;
   onComplete: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

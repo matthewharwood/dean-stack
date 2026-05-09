@@ -42,7 +42,7 @@ export function RoundJumpPanel() {
       <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-gray">
         Jump to round
       </div>
-      <div className="grid grid-cols-4 gap-1 px-2 pb-2">
+      <div className="grid grid-cols-6 gap-1 px-2 pb-2">
         {rounds.map((round) => (
           <button
             key={round}
@@ -66,9 +66,11 @@ export function RoundJumpPanel() {
 // Short caption beneath each round number — mirrors the round structure
 // the kid sees in-game so the dev tool reads the same way as the
 // indicator. Update when round structure changes.
-function roundLabel(round: 1 | 2 | 3 | 4): string {
+function roundLabel(round: 1 | 2 | 3 | 4 | 5 | 6): string {
   if (round === 1) return "Add";
   if (round === 2) return "Sub";
   if (round === 3) return "Cmp";
-  return "Mix";
+  if (round === 4) return "Mix";
+  if (round === 5) return "+?=";
+  return "−?=";
 }

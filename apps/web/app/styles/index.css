@@ -175,6 +175,15 @@
      element naturally holds its final value without the animation shadow
      latching on. */
   --animate-panel-fade-in: panel-fade-in 300ms ease-out;
+
+  /* "Fill out the board!" prompt — fires when the kid taps the Evaluate
+     button while the equation still has empty kid-droppable slots. Single
+     keyframe handles the full 3s lifecycle: quick fade+scale-in (0–8%),
+     four gentle scale pulses across the body (15–80%), and a quick
+     fade-out (92–100%). Total ride 3000ms. The element unmounts after
+     the timer (driven by React state) — the keyframe just paints what
+     the kid sees while it's mounted. */
+  --animate-fill-prompt: fill-prompt 3000ms ease-out forwards;
 }
 
 /* Pan + breathing zoom: object-position drifts left → right while
@@ -488,6 +497,46 @@
   }
 }
 
+/* Fill-out-the-board prompt. Translation is on top of the X-centring
+   transform applied by Tailwind utilities at the call site; we keep the
+   entire transform set inside the keyframe to avoid losing the
+   translateX(-50%) when the animation runs. */
+@keyframes fill-prompt {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(0.92);
+  }
+
+  8% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  15%,
+  35%,
+  55%,
+  75% {
+    transform: translateX(-50%) translateY(0) scale(1.06);
+  }
+
+  25%,
+  45%,
+  65%,
+  85% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  92% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(0.96);
+  }
+}
+
 /* Reduced-motion: respect the system preference. Extended fingers
    should appear at their final state immediately. The kid's son's
    eight-year-old eyes can still count them — just statically. The
@@ -512,6 +561,31 @@
 
     to {
       opacity: 1;
+    }
+  }
+
+  /* Disabled-evaluate feedback. Reduce-motion users still get the verbal
+     feedback (the prompt mounts/unmounts via React) but no scale/translate
+     bounce and no shake. The prompt simply appears, holds for 3s, then
+     disappears with a clean opacity step. */
+  @keyframes fill-prompt {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translateX(-50%);
+    }
+
+    8%,
+    92% {
+      opacity: 1;
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes damage-shake {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate3d(0, 0, 1, 0deg);
     }
   }
 }

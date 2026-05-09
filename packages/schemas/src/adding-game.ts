@@ -38,10 +38,14 @@ export const OperatorSchema = z.enum(["add", "subtract", "multiply", "divide"]);
 export type Operator = z.infer<typeof OperatorSchema>;
 
 // One operand slot in the equation. cardId is null until the player drags a
-// hand card in; null again if they drag it back.
+// hand card in; null again if they drag it back. `locked` slots are pre-filled
+// by the dealer with a static value (rounds 5+) and refuse drag interactions
+// at both the UI level (drag.tsx) and the reducer level (applySwap).
+// `.default(false)` keeps tier-1 IDB rows re-parseable without a migration.
 export const EquationSlotSchema = z.object({
   id: z.string().min(1),
   cardId: z.string().nullable().default(null),
+  locked: z.boolean().default(false),
 });
 export type EquationSlot = z.infer<typeof EquationSlotSchema>;
 
@@ -53,11 +57,30 @@ export type EquationSlot = z.infer<typeof EquationSlotSchema>;
 export const ComparatorSchema = z.enum(["eq", "gt", "lt"]);
 export type Comparator = z.infer<typeof ComparatorSchema>;
 
+// Equation shape — drives layout AND evaluation semantics.
+//   "find-sum"             : operandSlots = [a, b], kid plays both. Win when
+//                            `a OP b cmp target.value`. Tier-1 default.
+//   "find-missing-result"  : operandSlots = [a, b, result], one of a/b is
+//                            locked + pre-filled with a static, the other
+//                            is kid-played, AND the result slot is kid-
+//                            played. Win when `a OP b == result.value`.
+//                            Damage = result.value (kid is rewarded for
+//                            picking bigger result cards). Rounds 5+.
+// `.default("find-sum")` keeps tier-1 IDB rows re-parseable without a
+// migration.
+export const EquationShapeSchema = z.enum(["find-sum", "find-missing-result"]);
+export type EquationShape = z.infer<typeof EquationShapeSchema>;
+
 export const EquationSchema = z.object({
+  shape: EquationShapeSchema.default("find-sum"),
   operandSlots: z.array(EquationSlotSchema).min(1),
   operator: OperatorSchema,
   comparator: ComparatorSchema.default("eq"),
-  target: CardSchema,
+  // For "find-sum": the displayed RHS goal card. For "find-missing-result":
+  // null — the kid's chosen result card lives in `operandSlots[2]` and the
+  // RHS is rendered from there. `.default(null)` keeps both shapes parseable
+  // from a single schema; deal.ts populates per-shape.
+  target: CardSchema.nullable().default(null),
 });
 export type Equation = z.infer<typeof EquationSchema>;
 
@@ -253,6 +276,14 @@ export const RoundSchema = z.object({
   // `.default(null)` so existing IDB rows from before this field was added
   // re-parse cleanly on hydrate — no migration bump needed.
   enemy: RoundEnemySchema.nullable().default(null),
+  // Count of LOSING evaluations the kid has racked up on this stage.
+  // Resets to 0 on every fresh deal (the dealer constructs a new Round).
+  // Drives two pieces of UX: the Top-region "mistakes" badge so the kid
+  // sees their own count, and — for find-missing-result rounds (R5/R6) —
+  // an auto-assist that fires on the 3rd wrong attempt by locking one
+  // correct card into its slot. `.default(0)` keeps existing IDB rows
+  // re-parseable without a migration.
+  wrongAttempts: z.int().min(0).default(0),
 });
 export type Round = z.infer<typeof RoundSchema>;
 
@@ -260,6 +291,16 @@ export type Round = z.infer<typeof RoundSchema>;
 
 export const GameStatusSchema = z.enum(["idle", "playing", "ended"]);
 export type GameStatus = z.infer<typeof GameStatusSchema>;
+
+// Per-template tally of how many times the kid has DEFEATED an enemy across
+// the run. Read by the EnemyAvatar to derive the poster variant (default →
+// _L1 → _L2) — first encounter shows the default poster, subsequent
+// encounters ramp the variant. Capped at the highest variant we ship; the
+// reducer in `enemy-encounters.ts` enforces the cap at write time, but the
+// schema only enforces non-negative so a stale IDB row from a future
+// build (more variants) re-parses cleanly here.
+export const EnemyEncountersSchema = z.record(z.string(), z.int().min(0)).default({});
+export type EnemyEncounters = z.infer<typeof EnemyEncountersSchema>;
 
 // IDB-persisted root. Singleton — `id` is the IDB key (matches the Settings
 // pattern). round is null when status is idle or ended.
@@ -270,6 +311,9 @@ export const AddingGameStateSchema = z.object({
   enemy: EnemySchema.default(ENEMY_DEFAULT),
   cards: CardCatalogSchema,
   round: RoundSchema.nullable().default(null),
+  // Defaults to {} so existing IDB rows from before this field was added
+  // re-parse cleanly on hydrate — no migration bump needed.
+  enemyEncounters: EnemyEncountersSchema,
 });
 export type AddingGameState = z.infer<typeof AddingGameStateSchema>;
 export const ADDING_GAME_DEFAULT: AddingGameState = AddingGameStateSchema.parse({});

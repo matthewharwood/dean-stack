@@ -12,5 +12,12 @@ export const EnemyAvatarPropsSchema = z.object({
   // ceilings, so the bar's denominator must be per-round. Null falls
   // back to the template's maxHp.
   maxHp: z.int().min(1).nullable().optional(),
+  // Times the kid has previously DEFEATED this enemy across the run.
+  // Drives the poster variant via `derivePosterUrl`: 0 → default, 1 → L1,
+  // 2+ → L2 (capped). The component stays pure — the route reads from the
+  // `enemyEncounters` map on the addingGame atom and passes the count in.
+  // Optional so callers (and stories) that don't care about progression
+  // can omit it; the component falls back to 0 (default poster).
+  encounters: z.int().min(0).optional(),
 });
 export type EnemyAvatarProps = z.infer<typeof EnemyAvatarPropsSchema>;
