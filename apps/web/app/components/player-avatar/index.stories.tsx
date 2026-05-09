@@ -1,7 +1,7 @@
 import type { PlayerTemplate } from "@dean-stack/schemas";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { PlayerAvatar } from "./index";
+import { PlayerAvatar } from ".";
 
 const bride: PlayerTemplate = {
   id: "hadal-player-mythical-lantern-bride-bathypel",

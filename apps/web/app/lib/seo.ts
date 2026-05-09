@@ -17,7 +17,7 @@ function absoluteUrl(pathOrUrl: string): string {
   return SITE + pathOrUrl.replace(LEADING_SLASHES, "");
 }
 
-export function canonicalUrl(path: string): string {
+function canonicalUrl(path: string): string {
   return absoluteUrl(path);
 }
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FilterSearch } from "./index";
+import { FilterSearch } from ".";
 
 const meta = {
   title: "Components/FilterSearch",

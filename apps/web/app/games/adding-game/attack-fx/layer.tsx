@@ -39,7 +39,7 @@ export function AttackFxLayer(): React.ReactElement {
       className="pointer-events-none fixed inset-0 z-30"
       data-test="attack-fx-layer"
     >
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      <canvas ref={canvasRef} className="block size-full" />
     </div>
   );
 }

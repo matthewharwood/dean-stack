@@ -100,7 +100,7 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
       <div className="flex min-w-0 flex-col gap-1.5 flex-1">
         {/* Emphasis — large, colored, uppercase punch line. The kid reads
             this even if they read nothing else. */}
-        <h3 className="font-openrunde text-2xl font-extrabold leading-tight text-slate-ink tracking-tight">
+        <h3 className="font-openrunde text-2xl font-semibold leading-tight text-slate-ink tracking-tight">
           {props.emphasis}
         </h3>
         {/* Failure chip — only when there's a failed result to show. */}
@@ -115,6 +115,7 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
         {/* Body — smaller, regular weight, with digit highlights and
             italic emphasis from the *asterisk* markers in the template. */}
         <p className="font-openrunde text-sm leading-snug text-slate-ink">
+          {/* eslint-disable-next-line react-doctor/no-render-in-render -- renderBody is a pure string→ReactNode helper (no hooks, no props), not a render function; extracting it to a component adds zero value. */}
           {renderBody(props.body)}
         </p>
         {/* Finger-counting visual — drawn hands extending the right

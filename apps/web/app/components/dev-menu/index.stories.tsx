@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { DevMenu } from "./index";
+import { DevMenu } from ".";
 
 const meta = {
   title: "Components/DevMenu",

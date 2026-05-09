@@ -112,7 +112,7 @@ export async function clearAllStorage(): Promise<void> {
   const cookies = document.cookie.split(";");
   for (const cookie of cookies) {
     const eq = cookie.indexOf("=");
-    const name = (eq > -1 ? cookie.slice(0, eq) : cookie).trim();
+    const name = (eq === -1 ? cookie : cookie.slice(0, eq)).trim();
     if (!name) continue;
     // biome-ignore lint/suspicious/noDocumentCookie: defensive cleanup; CookieStore not yet universal
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;

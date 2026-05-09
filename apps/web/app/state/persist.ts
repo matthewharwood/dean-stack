@@ -1,4 +1,4 @@
-import type { AddingGameState, Progress, Settings } from "@dean-stack/schemas";
+import type { AddingGameState, Progress, Settings, SoundSettings } from "@dean-stack/schemas";
 
 import { getDB } from "./db";
 import type { StoreName } from "./hydration";
@@ -44,7 +44,15 @@ export function persistAddingGame(value: AddingGameState): void {
   });
 }
 
-export type RemoteWriteMessage = { store: StoreName; key: string };
+export function persistSoundSettings(value: SoundSettings): void {
+  schedule(`sound-settings:${value.id}`, async () => {
+    const db = await getDB();
+    await db.put("sound-settings", value);
+    channel?.postMessage({ store: "soundSettings", key: value.id });
+  });
+}
+
+type RemoteWriteMessage = { store: StoreName; key: string };
 
 export function subscribeRemoteWrites(onChange: (msg: RemoteWriteMessage) => void): () => void {
   if (!channel) return () => undefined;

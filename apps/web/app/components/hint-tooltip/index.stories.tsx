@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { HintTooltip } from "./index";
+import { HintTooltip } from ".";
 
 const meta = {
   title: "Components/HintTooltip",

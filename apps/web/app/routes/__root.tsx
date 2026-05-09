@@ -1,4 +1,4 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Link, Outlet, Scripts } from "@tanstack/react-router";
 import { Provider } from "jotai";
 import { lazy, type ReactNode, Suspense, use } from "react";
 
@@ -103,10 +103,10 @@ function RootComponent(): ReactNode {
 export function NotFound(): ReactNode {
   return (
     <main className="flex flex-col items-center gap-4 min-h-screen justify-center font-openrunde">
-      <h1 className="text-3xl">404 — page not found</h1>
-      <a href="/" className="rounded-full bg-radiant-violet px-4 py-2 text-white shadow-subtle">
+      <h1 className="text-3xl">404: page not found</h1>
+      <Link to="/" className="rounded-full bg-radiant-violet px-4 py-2 text-white shadow-subtle">
         Go home
-      </a>
+      </Link>
     </main>
   );
 }
@@ -141,9 +141,9 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
         >
           Try again
         </button>
-        <a href="/" className="rounded-full bg-light-gray px-4 py-2 text-slate-ink shadow-subtle">
+        <Link to="/" className="rounded-full bg-light-gray px-4 py-2 text-slate-ink shadow-subtle">
           Go home
-        </a>
+        </Link>
       </div>
     </main>
   );

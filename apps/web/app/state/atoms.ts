@@ -5,12 +5,19 @@ import {
   ProgressSchema,
   SETTINGS_DEFAULT,
   SettingsSchema,
+  SOUND_SETTINGS_DEFAULT,
+  SoundSettingsSchema,
 } from "@dean-stack/schemas";
 import type { WritableAtom } from "jotai";
 
 import { atomWithIDB } from "~/lib/atom-with-idb";
 
-import { persistAddingGame, persistProgress, persistSettings } from "./persist";
+import {
+  persistAddingGame,
+  persistProgress,
+  persistSettings,
+  persistSoundSettings,
+} from "./persist";
 
 export const settingsAtom = atomWithIDB(
   SettingsSchema,
@@ -24,6 +31,13 @@ export const addingGameAtom = atomWithIDB(
   (snapshot) => snapshot.addingGame,
   persistAddingGame,
   ADDING_GAME_DEFAULT,
+);
+
+export const soundSettingsAtom = atomWithIDB(
+  SoundSettingsSchema,
+  (snapshot) => snapshot.soundSettings,
+  persistSoundSettings,
+  SOUND_SETTINGS_DEFAULT,
 );
 
 // Parameterized atoms — prefer the IDB key over a family library.

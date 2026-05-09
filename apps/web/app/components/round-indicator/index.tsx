@@ -29,7 +29,7 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
   return (
     <div
       ref={rootRef}
-      className="flex h-full w-full items-center justify-center px-6"
+      className="flex size-full items-center justify-center px-6"
       data-test="round-indicator"
       data-round={props.round}
     >

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { LevelCard } from "./index";
+import { LevelCard } from ".";
 
 const meta = {
   title: "Components/LevelCard",

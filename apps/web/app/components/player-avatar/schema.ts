@@ -23,4 +23,3 @@ export const PlayerAvatarPropsSchema = z.object({
   // the curve has one source of truth. Null when there's no pilot.
   xpThreshold: z.int().min(1).nullable(),
 });
-export type PlayerAvatarProps = z.infer<typeof PlayerAvatarPropsSchema>;

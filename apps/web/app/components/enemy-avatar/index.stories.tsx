@@ -1,7 +1,7 @@
 import type { EnemyTemplate } from "@dean-stack/schemas";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { EnemyAvatar } from "./index";
+import { EnemyAvatar } from ".";
 
 const wraith: EnemyTemplate = {
   id: "hadal-pressure-wraith",

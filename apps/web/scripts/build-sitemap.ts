@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     const route = htmlPathToRoute(file);
     if (route !== null) routes.add(route);
   }
-  const sorted = [...routes].sort();
+  const sorted = Array.from(routes).toSorted();
   const lastmod = new Date().toISOString().slice(0, 10);
   const urls = sorted
     .map((r) => {

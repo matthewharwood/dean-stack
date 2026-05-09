@@ -7,6 +7,9 @@ import {
   SETTINGS_DEFAULT,
   type Settings,
   SettingsSchema,
+  SOUND_SETTINGS_DEFAULT,
+  type SoundSettings,
+  SoundSettingsSchema,
 } from "@dean-stack/schemas";
 
 import { getDB } from "./db";
@@ -15,6 +18,7 @@ export type HydratedState = {
   progress: ReadonlyMap<string, Progress>;
   settings: Settings;
   addingGame: AddingGameState;
+  soundSettings: SoundSettings;
 };
 
 export type StoreName = keyof HydratedState;
@@ -34,15 +38,17 @@ export const idbHydrationPromise: Promise<HydratedState> = (async () => {
       progress: new Map(),
       settings: SETTINGS_DEFAULT,
       addingGame: ADDING_GAME_DEFAULT,
+      soundSettings: SOUND_SETTINGS_DEFAULT,
     };
     resolvedSnapshot = empty;
     return empty;
   }
   const db = await getDB();
-  const [rawProgress, rawSettings, rawAddingGame] = await Promise.all([
+  const [rawProgress, rawSettings, rawAddingGame, rawSoundSettings] = await Promise.all([
     db.getAll("progress"),
     db.get("settings", "settings"),
     db.get("adding-game", "adding-game"),
+    db.get("sound-settings", "sound-settings"),
   ]);
   const progress = new Map<string, Progress>();
   for (const raw of rawProgress) {
@@ -51,7 +57,8 @@ export const idbHydrationPromise: Promise<HydratedState> = (async () => {
   }
   const settings = SettingsSchema.parse(rawSettings ?? SETTINGS_DEFAULT);
   const addingGame = AddingGameStateSchema.parse(rawAddingGame ?? ADDING_GAME_DEFAULT);
-  const snapshot: HydratedState = { progress, settings, addingGame };
+  const soundSettings = SoundSettingsSchema.parse(rawSoundSettings ?? SOUND_SETTINGS_DEFAULT);
+  const snapshot: HydratedState = { progress, settings, addingGame, soundSettings };
   resolvedSnapshot = snapshot;
   return snapshot;
 })();

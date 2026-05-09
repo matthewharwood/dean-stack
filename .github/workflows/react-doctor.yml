@@ -15,16 +15,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # required for --diff against base
+          # Check out the PR head branch by NAME, not the merge SHA. Without
+          # this, GH Actions checks out a detached HEAD and react-doctor
+          # auto-detects "no feature branch" and falls back to a full-codebase
+          # scan, ignoring the explicit --diff arg and surfacing the
+          # pre-existing baseline as new failures.
+          ref: ${{ github.head_ref }}
+
+      # Create a LOCAL ref for the base branch. Checkout above only created
+      # `refs/remotes/origin/${base_ref}`; react-doctor's `--diff main` calls
+      # `git diff main`, which needs `refs/heads/main` to exist. Without this
+      # step, react-doctor fails with: "Diff base branch 'main' does not
+      # exist (run `git fetch` to update remote refs)."
+      - name: Create local ref for base branch
+        run: git branch ${{ github.base_ref }} origin/${{ github.base_ref }}
 
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
 
-      - uses: millionco/react-doctor@main
-        with:
-          # Use the PR's actual base branch so the diff works whether the
-          # repo's default branch is `main` or `master`.
-          diff: ${{ github.base_ref }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          fail-on: none
-          verbose: "true"
+      # Direct invocation, mirrors the local pre-push gate (`bun run check:fast`).
+      # We do NOT use the `millionco/react-doctor` wrapper action: it runs a
+      # second `--score` step on the FULL codebase under `pipefail`, and
+      # react-doctor exits non-zero whenever any issues exist anywhere.
+      # Result: every PR was failing on pre-existing issues outside the diff,
+      # ignoring the wrapper's own `fail-on: none` flag (which only applies
+      # to its first step). Direct invocation gates only on diff issues —
+      # exactly what the local gate enforces, so CI red ⇔ local red.
+      - name: react-doctor — diff scan
+        run: npx -y react-doctor@latest . --diff "${{ github.base_ref }}" --verbose

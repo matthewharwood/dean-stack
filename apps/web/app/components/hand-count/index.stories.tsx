@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { HandCount } from "./index";
+import { HandCount } from ".";
 
 const meta = {
   title: "Components/HandCount",

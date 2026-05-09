@@ -17,6 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # required for the react-doctor `--diff main` step at the tail of `bun run check`
+          # Check out the PR head branch by NAME, not the merge SHA.
+          # react-doctor's `--diff` auto-detection treats detached HEAD as
+          # "no feature branch" and falls back to a full-codebase scan,
+          # ignoring the explicit `--diff main` arg in the gate script.
+          ref: ${{ github.head_ref }}
+
+      # Create a LOCAL ref for the base branch. Checkout above only created
+      # `refs/remotes/origin/${base_ref}`; react-doctor's `--diff main` calls
+      # `git diff main`, which needs `refs/heads/main` to exist or it errors
+      # out: "Diff base branch 'main' does not exist."
+      - name: Create local ref for base branch
+        run: git branch ${{ github.base_ref }} origin/${{ github.base_ref }}
 
       - uses: actions/setup-node@v4
         with:

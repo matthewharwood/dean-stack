@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { LoreBio } from "./index";
+import { LoreBio } from ".";
 
 const meta = {
   title: "Components/LoreBio",
@@ -10,6 +10,7 @@ const meta = {
   decorators: [
     (Story) => (
       <div
+        // eslint-disable-next-line react-doctor/no-inline-exhaustive-style -- Storybook decorator: convention is a self-contained inline style on a one-off wrapper; not a runtime component.
         style={{
           width: 280,
           maxHeight: 380,

@@ -12,8 +12,8 @@
     "packages/*"
   ],
   "scripts": {
-    "check": "bash scripts/check-lockfile.sh && biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run typecheck test:unit && turbo run test:e2e --filter=@dean-stack/web",
-    "check:fast": "bash scripts/check-lockfile.sh && biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run typecheck test:unit && turbo run test:e2e:fast --filter=@dean-stack/web",
+    "check": "bash scripts/check-lockfile.sh && biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run typecheck test:unit && turbo run test:e2e --filter=@dean-stack/web && npx -y react-doctor@latest . --diff main",
+    "check:fast": "bash scripts/check-lockfile.sh && biome ci && stylelint --allow-empty-input --max-warnings 0 \"**/*.css\" && turbo run typecheck test:unit && turbo run test:e2e:fast --filter=@dean-stack/web && npx -y react-doctor@latest . --diff main",
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@dean-stack/web",
     "biome:watch": "biome check --write --watch .",

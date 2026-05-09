@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { DevMenu } from "~/components/dev-menu";
 
-import { RoundJumpPanel } from "./index";
+import { RoundJumpPanel } from ".";
 
 // The panel is meaningful only inside DevMenu (it consumes the close
 // context). The story mounts it through DevMenu so it's visible the

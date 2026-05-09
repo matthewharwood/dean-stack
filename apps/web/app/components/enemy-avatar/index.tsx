@@ -84,7 +84,7 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
     return (
       <div
         ref={rootRef}
-        className="grid h-full w-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
+        className="grid size-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
         data-test="enemy-avatar"
         data-state="empty"
       >
@@ -158,7 +158,7 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
             <img
               src={posterUrl}
               alt={enemy.name}
-              className="absolute inset-0 h-full w-full animate-ken-burns-pan object-cover"
+              className="absolute inset-0 size-full animate-ken-burns-pan object-cover"
               draggable={false}
               data-test="enemy-poster"
               data-poster-encounters={props.encounters ?? 0}
@@ -204,7 +204,7 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
           onClick={() => setFlipped((v) => !v)}
           aria-label={flipped ? "Show portrait" : "Show bio"}
           aria-pressed={flipped}
-          className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
+          className="absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
           data-test="enemy-bio-toggle"
         >
           <span aria-hidden className="flex items-center justify-center">

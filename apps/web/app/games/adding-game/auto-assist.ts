@@ -113,10 +113,17 @@ export function applyAutoAssist(state: AddingGameState): AddingGameState | null 
   let destSlotId: string;
   if (!operandSlot.locked) {
     destSlotId = operandSlot.id;
+    // Pre-index by value so the inner `bMatch` lookup is O(1) instead of
+    // re-scanning kidCards on every aCandidate. Same-value duplicates collapse
+    // to the first occurrence — matches the original `.find()` semantics.
+    const cardsByValue = new Map<number, CardEntry>();
+    for (const c of kidCards) {
+      if (!cardsByValue.has(c.value)) cardsByValue.set(c.value, c);
+    }
     for (const aCandidate of kidCards) {
       const expectedB = compute(aCandidate.value);
-      const bMatch = kidCards.find((c) => c.cardId !== aCandidate.cardId && c.value === expectedB);
-      if (bMatch) {
+      const bMatch = cardsByValue.get(expectedB);
+      if (bMatch && bMatch.cardId !== aCandidate.cardId) {
         sourceCard = aCandidate;
         break;
       }
@@ -164,15 +171,24 @@ export function applyAutoAssist(state: AddingGameState): AddingGameState | null 
 function evictUnlockedEquationCardsToHand(state: AddingGameState): AddingGameState {
   if (!state.round) return state;
   let working = state;
+  // Pre-collect the empty-hand slot ids so we don't re-scan the hand on every
+  // operand iteration. applySwap returns a new state where one of these slots
+  // is now filled, so we step the index forward as we consume them.
+  const emptyHandIds: string[] = [];
+  for (const h of working.player.hand) {
+    if (!h.cardId) emptyHandIds.push(h.id);
+  }
+  let nextEmptyIdx = 0;
   for (const slot of state.round.equation.operandSlots) {
     if (slot.locked) continue;
     if (!slot.cardId) continue;
-    const emptyHand = working.player.hand.find((h) => !h.cardId);
-    if (!emptyHand) break;
+    const emptyHandId = emptyHandIds[nextEmptyIdx];
+    if (!emptyHandId) break;
+    nextEmptyIdx += 1;
     working = applySwap(
       working,
       { kind: "equation", id: slot.id },
-      { kind: "hand", id: emptyHand.id },
+      { kind: "hand", id: emptyHandId },
     );
   }
   return working;

@@ -168,12 +168,10 @@ function clearSlotHover(loc: SlotLocator): void {
 }
 
 function resetCardStyles(el: HTMLElement): void {
-  el.style.transform = "";
-  el.style.transition = "";
-  el.style.zIndex = "";
-  el.style.touchAction = "";
-  el.style.willChange = "";
-  el.style.pointerEvents = "";
+  // Single CSSOM write batches all six property resets — measurable on the
+  // iPad target during rapid drag-and-release. cssText="" clears every
+  // inline style; the card's resting appearance comes back from class.
+  el.style.cssText = "";
 }
 
 // The transform values applied at the moment of release. anime.js animates
@@ -370,18 +368,18 @@ export function DraggableCard({
     const offsetFraction = (e.clientX - rect.left) / rect.width - 0.5;
     const pressTilt = clamp(offsetFraction * 20, -PRESS_TILT_MAX_DEG, PRESS_TILT_MAX_DEG);
 
-    el.style.zIndex = "50";
-    el.style.touchAction = "none";
-    el.style.transition = "none";
-    el.style.willChange = "transform";
-
-    // Instant grab. Skipping a press anime.js animation: the prior 130ms
+    // Single CSSOM write batches the four pre-grab style props with the
+    // initial transform. Layering them as separate `el.style.x = ...` writes
+    // forced the browser to reflow on each, audible as a perceived hitch on
+    // the iPad target during rapid grabs.
+    //
+    // Instant grab — skipping a press anime.js animation: the prior 130ms
     // ramp ran in parallel with the manual transform writes once the kid
     // started moving, and anime.js's value parser couldn't read its own
     // composite output reliably. An immediate write is more responsive
     // (kid feels grab the moment the finger lands) and removes the parse
     // conflict.
-    el.style.transform = `rotate(${pressTilt}deg) scale(${PRESS_SCALE})`;
+    el.style.cssText = `z-index: 50; touch-action: none; transition: none; will-change: transform; transform: rotate(${pressTilt}deg) scale(${PRESS_SCALE});`;
 
     // Cache source center once. Used to derive target deltas without
     // re-reading the source's rect on every hover transition.
@@ -628,8 +626,8 @@ export function SlotWrapper({
       data-locked={locked ? "true" : undefined}
       className={
         locked
-          ? "group relative h-full w-full"
-          : "group relative h-full w-full transition-transform duration-150 data-[hover=empty]:scale-[1.04] data-[hover=filled]:scale-[1.02]"
+          ? "group relative size-full"
+          : "group relative size-full transition-transform duration-150 data-[hover=empty]:scale-[1.04] data-[hover=filled]:scale-[1.02]"
       }
     >
       {children}

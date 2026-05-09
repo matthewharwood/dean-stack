@@ -15,4 +15,3 @@ export const HandCountPropsSchema = z.object({
   // the caption from a hint template).
   caption: z.string().nullable().default(null),
 });
-export type HandCountProps = z.infer<typeof HandCountPropsSchema>;

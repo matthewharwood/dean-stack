@@ -20,4 +20,3 @@ export const EnemyAvatarPropsSchema = z.object({
   // can omit it; the component falls back to 0 (default poster).
   encounters: z.int().min(0).optional(),
 });
-export type EnemyAvatarProps = z.infer<typeof EnemyAvatarPropsSchema>;
