@@ -1,5 +1,5 @@
 import type { Attack } from "@dean-stack/schemas";
-import { Application, Sprite, Texture } from "pixi.js";
+import { Application } from "pixi.js";
 
 import { runBeam } from "./kinds/beam";
 import { runBurst } from "./kinds/burst";
@@ -11,6 +11,7 @@ import { runSpark } from "./kinds/spark";
 import { runThrust } from "./kinds/thrust";
 import { runVortex } from "./kinds/vortex";
 import { runWave } from "./kinds/wave";
+import { resetSoftCircleCache } from "./textures";
 
 // Singleton Pixi runtime that owns the full-viewport overlay canvas. The
 // route mounts <AttackFxLayer/> once; that component calls `attach(canvas)`
@@ -28,7 +29,6 @@ import { runWave } from "./kinds/wave";
 
 let app: Application | null = null;
 let initPromise: Promise<Application> | null = null;
-let softCircleTexCache: Texture | null = null;
 
 async function attach(canvas: HTMLCanvasElement): Promise<void> {
   if (app || initPromise) return;
@@ -54,35 +54,7 @@ function detach(): void {
     app = null;
   }
   initPromise = null;
-  softCircleTexCache = null;
-}
-
-// Re-used soft-circle texture for every kind that wants a glow particle.
-// Generated once at module load (well, on first request) and shared.
-function softCircleTexture(): Texture {
-  if (softCircleTexCache) return softCircleTexCache;
-  if (typeof document === "undefined") return Texture.EMPTY;
-  const size = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return Texture.EMPTY;
-  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  gradient.addColorStop(0, "rgba(255,255,255,1)");
-  gradient.addColorStop(0.45, "rgba(255,255,255,0.6)");
-  gradient.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-  softCircleTexCache = Texture.from(canvas);
-  return softCircleTexCache;
-}
-
-// Convenience wrapper for kinds that want a tinted soft-circle sprite.
-export function tintedSoftCircle(color: string): Sprite {
-  const sprite = new Sprite(softCircleTexture());
-  sprite.anchor.set(0.5);
-  sprite.tint = color;
-  return sprite;
+  resetSoftCircleCache();
 }
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -90,6 +62,30 @@ type Rect = { x: number; y: number; width: number; height: number };
 function rectCenter(r: Rect): { x: number; y: number } {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
 }
+
+// Dispatch table — one branch per attack kind, indexed by `Attack["kind"]`.
+// Replaces a 10-case switch (cyclomatic 14). Adding a new attack kind: add
+// the runner to the schema's kind union AND register it here. TypeScript's
+// `Record<Kind, Runner>` will fail to compile if a kind goes unmapped.
+type AttackRunner = (ctx: {
+  app: Application;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  color: string;
+}) => Promise<void>;
+
+const KIND_RUNNERS: Record<Attack["kind"], AttackRunner> = {
+  slash: runSlash,
+  thrust: runThrust,
+  burst: runBurst,
+  beam: runBeam,
+  rain: runRain,
+  vortex: runVortex,
+  wave: runWave,
+  shatter: runShatter,
+  spark: runSpark,
+  echo: runEcho,
+};
 
 // Public dispatch. Resolves after the kind's animation completes (≤500ms
 // per dean-stack rules). Throws if the runtime isn't attached yet — the
@@ -101,36 +97,14 @@ async function runAttack(attack: Attack, fromRect: Rect, toRect: Rect): Promise<
   }
   const ready = app;
   if (!ready) return;
-
-  const from = rectCenter(fromRect);
-  const to = rectCenter(toRect);
-
-  const ctx = { app: ready, from, to, color: attack.color };
-
-  switch (attack.kind) {
-    case "slash":
-      return runSlash(ctx);
-    case "thrust":
-      return runThrust(ctx);
-    case "burst":
-      return runBurst(ctx);
-    case "beam":
-      return runBeam(ctx);
-    case "rain":
-      return runRain(ctx);
-    case "vortex":
-      return runVortex(ctx);
-    case "wave":
-      return runWave(ctx);
-    case "shatter":
-      return runShatter(ctx);
-    case "spark":
-      return runSpark(ctx);
-    case "echo":
-      return runEcho(ctx);
-    default:
-      return;
-  }
+  const runner = KIND_RUNNERS[attack.kind];
+  if (!runner) return;
+  return runner({
+    app: ready,
+    from: rectCenter(fromRect),
+    to: rectCenter(toRect),
+    color: attack.color,
+  });
 }
 
 export const attackFxRuntime = {

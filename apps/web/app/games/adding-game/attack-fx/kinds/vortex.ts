@@ -1,6 +1,6 @@
 import type { Ticker } from "pixi.js";
 
-import { tintedSoftCircle } from "../runtime";
+import { tintedSoftCircle } from "../textures";
 
 import { ATTACK_DURATION_MS, type AttackCtx, easeOutQuart } from "./types";
 

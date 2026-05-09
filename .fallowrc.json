@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignorePatterns": [
+    "turbo/generators/templates/**",
+    "turbo/generators/config.ts",
+    "**/*.gen.ts",
+    "tmp/**"
+  ],
+  "ignoreDependencies": [
+    "@dean-stack/biome-config",
+    "@dean-stack/tsconfig",
+    "@turbo/gen",
+    "babel-plugin-react-compiler",
+    "nitro"
+  ],
+  "ignoreExportsUsedInFile": true
+}
