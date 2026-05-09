@@ -117,6 +117,76 @@ Plus the official `eslint-plugin-react-hooks` v5+ rules (`react-hooks/exhaustive
 
 **Don't suppress the highlight by adding manual `useMemo` / `useCallback` / `React.memo`** — that's forbidden in dean-stack. Fix the cause. There is no `react-scan` skill: it has no version-specific deprecations, no opinionated patterns, no migration cliffs. Just look at the boxes.
 
+### Cascading `setState` → `useReducer` state machine
+
+When an effect dispatches 2+ `setState` calls in sequence, react-doctor's `no-cascading-set-state` rule fires (and `no-derived-useState` if any of those values were initialized from a prop). The canonical refactor is **one `useReducer` per logical transition**.
+
+```tsx
+// ❌ Cascading setters + derived useState — flagged by react-doctor
+function OperatorPill({ glyph }: { glyph: string }) {
+  const [displayed, setDisplayed] = useState(glyph);          // no-derived-useState
+  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+  useEffect(() => {
+    if (glyph === displayed) return;
+    setPhase("out");                                          // no-cascading-set-state
+    const t = setTimeout(() => {
+      setDisplayed(glyph);                                    // …
+      setPhase("in");                                         // …
+    }, 200);
+    return () => clearTimeout(t);
+  }, [glyph, displayed]);
+  return <span data-phase={phase}>{displayed}</span>;
+}
+```
+
+```tsx
+// ✅ Reducer state machine — one transition per dispatch, no rules fire
+type PillState = { phase: "idle" | "out" | "in"; shown: string };
+type PillAction = { type: "start-out" } | { type: "swap"; glyph: string } | { type: "settle" };
+
+function pillReducer(state: PillState, action: PillAction): PillState {
+  switch (action.type) {
+    case "start-out": return { phase: "out", shown: state.shown };
+    case "swap":      return { phase: "in",  shown: action.glyph };
+    case "settle":    return { phase: "idle", shown: state.shown };
+    default:          return state; // biome's useDefaultSwitchClause
+  }
+}
+
+function OperatorPill({ glyph }: { glyph: string }) {
+  const [{ phase, shown }, dispatch] = useReducer(pillReducer, { phase: "idle", shown: glyph });
+  useEffect(() => {
+    if (glyph === shown) return;
+    dispatch({ type: "start-out" });
+    const t = setTimeout(() => dispatch({ type: "swap", glyph }), 200);
+    return () => clearTimeout(t);
+  }, [glyph, shown]);
+  return <span data-phase={phase}>{shown}</span>;
+}
+```
+
+The same pattern (one `useReducer` per logical transition) handles the level-up effect in `PlayerAvatar` (4 cascading `setState` calls → one `dispatch({ type: "fire", from, to })` action). Always include a `default: return state` arm — biome's `useDefaultSwitchClause` requires it on every reducer.
+
+### Trigger-only `useEffect` deps → key-prop remount
+
+When an effect ONLY runs to reset state on prop change (no value-derivation), biome's `useExhaustiveDependencies` flags the dep as "more dependencies than necessary" because the body doesn't read the value. The architectural fix is to lift the reset to the parent via `key`:
+
+```tsx
+// ❌ Trigger-only dep — biome flags as "more dependencies than necessary"
+function PlayerAvatar({ player }: { player: Player }) {
+  const [flipped, setFlipped] = useState(false);
+  useEffect(() => {
+    setFlipped(false);  // body doesn't read player.id
+  }, [player.id]);      // biome: "playerId is unnecessary"
+}
+
+// ✅ Parent passes key; React remounts on change; useState defaults re-init
+<PlayerAvatar key={player.id} player={player} />
+// PlayerAvatar's body has NO pilot-change effect at all
+```
+
+Use `key={x ?? "fallback-string"}` so React doesn't crash on null. The remount is cheap because it's exactly the work the effect would have done anyway.
+
 ### When `useTransition` replaces a `useMemo` instinct
 ```tsx
 // Instead of memoizing an expensive derivation, mark the update non-urgent.

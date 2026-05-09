@@ -19,6 +19,11 @@ import {
   persistSoundSettings,
 } from "./persist";
 
+/**
+ * Future-API: settings UI is not wired yet, but the IDB store + persist + atom
+ * chain is in place so the day a settings panel mounts, it's a one-liner.
+ * @public
+ */
 export const settingsAtom = atomWithIDB(
   SettingsSchema,
   (snapshot) => snapshot.settings,

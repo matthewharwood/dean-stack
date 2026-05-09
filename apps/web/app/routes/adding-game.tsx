@@ -13,7 +13,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ArrowRight, Check } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 
 import { AttackButton } from "~/components/attack-button";
 import { Card } from "~/components/card";
@@ -197,25 +197,41 @@ const COMPARATOR_GLYPH: Record<Comparator, string> = {
 // for 280ms. Total ~480ms — the kid's eye catches the operator shift
 // before they start picking cards. CSS keyframes are owned by
 // `data-phase` so the animation is driven purely by attribute changes.
-function OperatorPill({ glyph }: { glyph: string }) {
-  // eslint-disable-next-line react-doctor/no-derived-useState -- intentional: `displayed` is captured at mount and only swapped after the 200ms fade-out animation completes; deriving inline would skip the animation entirely.
-  const [displayed, setDisplayed] = useState(glyph);
-  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+//
+// State is a single reducer (not two useStates + cascading setters):
+// the swap/fade-in/settle transitions are sequenced animation steps,
+// each one a discrete dispatch. useReducer makes the state machine
+// explicit and side-steps react-doctor's no-derived-useState +
+// no-cascading-set-state rules by construction.
+type PillState = { phase: "idle" | "out" | "in"; shown: string };
+type PillAction = { type: "start-out" } | { type: "swap"; glyph: string } | { type: "settle" };
 
-  // eslint-disable-next-line react-doctor/no-cascading-set-state -- the inner setDisplayed/setPhase pair fires inside one setTimeout callback so React batches them; the outer setPhase("out") is one render of its own. Intentional animation sequencing.
+function pillReducer(state: PillState, action: PillAction): PillState {
+  switch (action.type) {
+    case "start-out":
+      return { phase: "out", shown: state.shown };
+    case "swap":
+      return { phase: "in", shown: action.glyph };
+    case "settle":
+      return { phase: "idle", shown: state.shown };
+    default:
+      return state;
+  }
+}
+
+function OperatorPill({ glyph }: { glyph: string }) {
+  const [{ phase, shown }, dispatch] = useReducer(pillReducer, { phase: "idle", shown: glyph });
+
   useEffect(() => {
-    if (glyph === displayed) return;
-    setPhase("out");
-    const t1 = window.setTimeout(() => {
-      setDisplayed(glyph);
-      setPhase("in");
-    }, 200);
-    const t2 = window.setTimeout(() => setPhase("idle"), 200 + 280);
+    if (glyph === shown) return;
+    dispatch({ type: "start-out" });
+    const t1 = window.setTimeout(() => dispatch({ type: "swap", glyph }), 200);
+    const t2 = window.setTimeout(() => dispatch({ type: "settle" }), 200 + 280);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [glyph, displayed]);
+  }, [glyph, shown]);
 
   return (
     <span
@@ -223,7 +239,7 @@ function OperatorPill({ glyph }: { glyph: string }) {
       data-phase={phase}
       data-test="operator-pill"
     >
-      {displayed}
+      {shown}
     </span>
   );
 }
@@ -682,9 +698,218 @@ function resetToIdle(state: AddingGameState): AddingGameState {
   };
 }
 
+// ─── Custom hooks (extracted from AddingGame to keep the route component
+// under react-doctor's no-giant-component threshold) ─────────────────────
+
+// Round-complete celebration — fires when the player crosses ANY round
+// boundary or completes the final round. Owns its own ref + state so the
+// route component doesn't carry the bookkeeping.
+function useGameCelebration(
+  roundIndex: number | null | undefined,
+  gameStatus: AddingGameState["status"],
+): {
+  celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 } | null;
+  clear: () => void;
+} {
+  const [celebration, setCelebration] = useState<{ fromRound: 1 | 2 | 3 | 4 | 5 | 6 } | null>(null);
+  const prevLevelRef = useRef<number | null>(roundIndex ?? null);
+  useEffect(() => {
+    const curr = roundIndex ?? null;
+    const prev = prevLevelRef.current;
+    prevLevelRef.current = curr;
+    if (prev == null) return;
+    const isBoundary = ROUND_BOUNDARIES.includes(prev);
+    if (!isBoundary) return;
+    const advanced = curr != null && curr > prev;
+    const completed = prev === FINAL_LEVEL_INDEX && (curr == null || gameStatus === "ended");
+    if (advanced || completed) {
+      setCelebration({ fromRound: roundOf(prev) });
+    }
+  }, [roundIndex, gameStatus]);
+  useEffect(() => {
+    if (gameStatus === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
+      setCelebration({ fromRound: 6 });
+    }
+  }, [gameStatus]);
+  return { celebration, clear: () => setCelebration(null) };
+}
+
+// Hint banner state — owns the hint object, the recently-shown id, the
+// outcome-tracking ref, and the two effects (outcome→hint, pointerdown
+// dismissal). Returns the live hint + a stable dismiss callback.
+function useGameHints(game: AddingGameState): {
+  hint: Hint | null;
+  dismiss: () => void;
+} {
+  const [hint, setHint] = useState<Hint | null>(null);
+  const lastHintIdRef = useRef<string | null>(null);
+  const prevOutcomeRef = useRef<RoundOutcome | null>(null);
+
+  useEffect(() => {
+    const outcome = game.round?.outcome ?? null;
+    if (outcome === prevOutcomeRef.current) return;
+    prevOutcomeRef.current = outcome;
+    if (!outcome || outcome.won) {
+      setHint(null);
+      return;
+    }
+    const hints = generateHints(game);
+    const next = pickRandomHint(hints, lastHintIdRef.current);
+    if (!next) return;
+    lastHintIdRef.current = next.id;
+    setHint(next);
+  }, [game]);
+
+  useEffect(() => {
+    if (!hint) return;
+    const onPointerDown = (e: PointerEvent): void => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-card-id]")) {
+        setHint(null);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [hint]);
+
+  return { hint, dismiss: () => setHint(null) };
+}
+
+// Attack flow — owns the pending-attack lock, fires the Pixi attack
+// animation, and chains into Continue when it resolves. Returns a stable
+// `attackPending` flag and the `runAttack(attack | null)` handler the
+// route plugs into <ActionButton>.
+function useAttackFlow(
+  game: AddingGameState,
+  onContinue: () => void,
+): {
+  attackPending: boolean;
+  runAttack: (attack: Attack | null) => void;
+} {
+  const [attackPending, setAttackPending] = useState(false);
+  const fireAttackAnimation = async (attack: Attack): Promise<void> => {
+    if (typeof document === "undefined") return;
+    const fromEl = document.querySelector('[data-test="action-button"]');
+    const toEl = document.querySelector('[data-test="enemy-avatar"]');
+    const fromRect = fromEl?.getBoundingClientRect();
+    const toRect = toEl?.getBoundingClientRect();
+    if (!fromRect || !toRect) return;
+    spawnDamageProjectile({
+      text: `−${game.round?.outcome?.scoreEarned ?? 0}`,
+      from: fromEl as Element,
+      to: toEl as Element,
+    });
+    await attackFxRuntime.runAttack(
+      attack,
+      { x: fromRect.left, y: fromRect.top, width: fromRect.width, height: fromRect.height },
+      { x: toRect.left, y: toRect.top, width: toRect.width, height: toRect.height },
+    );
+  };
+  const runAttack = (attack: Attack | null): void => {
+    if (attackPending) return;
+    setAttackPending(true);
+    const finish = (): void => {
+      onContinue();
+      setAttackPending(false);
+    };
+    if (!attack) {
+      finish();
+      return;
+    }
+    void fireAttackAnimation(attack).then(finish, finish);
+  };
+  return { attackPending, runAttack };
+}
+
+// Pure state transition: apply the kid's evaluation, increment wrong-attempt
+// counters, and trigger the find-missing-result auto-assist on the EXACT
+// 2 → 3 / 5 → 6 wrongAttempts steps. Hoisted out of AddingGame so the
+// component body stays a thin orchestrator.
+function evaluateAndMaybeAssist(prev: AddingGameState): AddingGameState {
+  if (!prev.round) return prev;
+  const stillOutcome = evaluateRound(prev);
+  if (!stillOutcome) return prev;
+  if (stillOutcome.won) {
+    return { ...prev, round: { ...prev.round, phase: "evaluating", outcome: stillOutcome } };
+  }
+  const nextWrongAttempts = (prev.round.wrongAttempts ?? 0) + 1;
+  const withOutcome: AddingGameState = {
+    ...prev,
+    round: {
+      ...prev.round,
+      phase: "evaluating",
+      outcome: stillOutcome,
+      wrongAttempts: nextWrongAttempts,
+    },
+  };
+  const shouldAssist =
+    prev.round.equation.shape === "find-missing-result" &&
+    (nextWrongAttempts === 3 || nextWrongAttempts === 6);
+  if (!shouldAssist) return withOutcome;
+  return applyAutoAssist(withOutcome) ?? withOutcome;
+}
+
+// Pure state transition: kill enemy / advance level / re-deal. Returns
+// `null` when the call is a no-op (no win, no enemy). Hoisted from
+// AddingGame so the component body stays small.
+function continueAfterWin(state: AddingGameState): AddingGameState | null {
+  const round = state.round;
+  if (!round?.outcome?.won || !round.enemy) return null;
+  const damage = round.outcome.scoreEarned;
+  const newHp = round.enemy.hp - damage;
+  const xpGain = round.outcome.scoreEarned;
+  const defeatedTemplateId = round.enemy.templateId;
+  if (newHp <= 0) {
+    const nextLevelIndex = round.index + 1;
+    if (nextLevelIndex > FINAL_LEVEL_INDEX) {
+      const pilotId = state.player.selectedPilotId;
+      const pilotProgress = pilotId
+        ? {
+            ...state.player.pilotProgress,
+            [pilotId]: applyXpGain(progressFor(state.player.pilotProgress, pilotId), xpGain).next,
+          }
+        : state.player.pilotProgress;
+      return {
+        ...state,
+        status: "ended",
+        cards: {},
+        player: { ...state.player, hand: emptyHand(), pilotProgress },
+        round: null,
+        enemyEncounters: incrementEncounter(state.enemyEncounters, defeatedTemplateId),
+      };
+    }
+    const dealt = dealRound({ levelIndex: nextLevelIndex });
+    const pilotId = state.player.selectedPilotId;
+    const pilotProgress = pilotId
+      ? {
+          ...state.player.pilotProgress,
+          [pilotId]: applyXpGain(progressFor(state.player.pilotProgress, pilotId), xpGain).next,
+        }
+      : state.player.pilotProgress;
+    return {
+      ...state,
+      status: "playing",
+      cards: dealt.cards,
+      player: { ...state.player, hand: dealt.hand, pilotProgress },
+      round: dealt.round,
+      enemyEncounters: incrementEncounter(state.enemyEncounters, defeatedTemplateId),
+    };
+  }
+  // Same level, new equation/hand, preserve damaged enemy.
+  const dealt = dealRound({ levelIndex: round.index });
+  const damagedEnemy = { templateId: round.enemy.templateId, hp: newHp };
+  return {
+    ...state,
+    status: "playing",
+    cards: dealt.cards,
+    player: { ...state.player, hand: dealt.hand },
+    round: { ...dealt.round, enemy: damagedEnemy },
+  };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line react-doctor/no-giant-component -- known: AddingGame is the route's god-component (1183 lines / 499 logical). Splitting requires lifting celebration + intro state into atoms or threading 10+ props; tracked for a follow-up refactor PR.
 function AddingGame() {
   const game = useAtomValue(addingGameAtom);
   const setGame = useSetAtom(addingGameAtom);
@@ -701,86 +926,11 @@ function AddingGame() {
   // skips both — the round is already populated so the game UI shows.
   const [introPlaying, setIntroPlaying] = useState(false);
 
-  // Round-complete celebration — fires when the player crosses ANY round
-  // boundary (defeats the last enemy of round 1/2/3, or completes round 4).
-  // ROUND_BOUNDARIES holds the last level index of each round; if the
-  // previous level matched any of those AND we advanced past it, fire the
-  // celebration with the round number that was just completed. The
-  // celebration component renders the "Round N → Round N+1" text.
-  const [celebration, setCelebration] = useState<null | {
-    fromRound: 1 | 2 | 3 | 4 | 5 | 6;
-  }>(null);
-  const prevLevelRef = useRef<number | null>(game.round?.index ?? null);
-  useEffect(() => {
-    const curr = game.round?.index ?? null;
-    const prev = prevLevelRef.current;
-    prevLevelRef.current = curr;
-    if (prev == null) return;
-    const isBoundary = ROUND_BOUNDARIES.includes(prev);
-    if (!isBoundary) return;
-    const advanced = curr != null && curr > prev;
-    const completed = prev === FINAL_LEVEL_INDEX && (curr == null || game.status === "ended");
-    if (advanced || completed) {
-      setCelebration({ fromRound: roundOf(prev) });
-    }
-  }, [game.round?.index, game.status]);
-
-  useEffect(() => {
-    if (game.status === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
-      setCelebration({ fromRound: 6 });
-    }
-  }, [game.status]);
-
-  // Hint banner — appears in Top when an evaluation is wrong, dismisses
-  // on (a) 8s timeout, (b) tap, (c) any state change that nulls outcome
-  // (a drag, a Continue, a Play Again — `applySwap` already auto-resets
-  // `phase: matching` and `outcome: null` on every drag).
-  const [hint, setHint] = useState<Hint | null>(null);
-  // Avoid showing the same id back-to-back so consecutive losses see fresh
-  // framing. Stored across renders without triggering a re-render.
-  const lastHintIdRef = useRef<string | null>(null);
-  // Tracks the outcome-object identity from the previous run. The effect
-  // depends on `game` (per react-hooks exhaustive-deps), so it fires on
-  // every drag — but real "outcome changed" transitions are detected by
-  // ref equality here, and unchanged-outcome runs early-return cheap.
-  const prevOutcomeRef = useRef<RoundOutcome | null>(null);
-
-  useEffect(() => {
-    const outcome = game.round?.outcome ?? null;
-    if (outcome === prevOutcomeRef.current) return;
-    prevOutcomeRef.current = outcome;
-
-    if (!outcome || outcome.won) {
-      setHint(null);
-      return;
-    }
-    const hints = generateHints(game);
-    const next = pickRandomHint(hints, lastHintIdRef.current);
-    if (!next) return;
-    lastHintIdRef.current = next.id;
-    setHint(next);
-    // No auto-timeout: the hint stays until the kid touches a card OR taps
-    // the tooltip itself (handled separately below). Forcing a deliberate
-    // dismissal makes him notice the help instead of waiting it out.
-  }, [game]);
-
-  // Card-touch dismissal — while a hint is up, ANY pointerdown on a card
-  // (hand or equation) clears it. Drag/swap normally clears outcome which
-  // would also clear the hint, but the kid often presses a card before
-  // committing a swap; dismissing on press keeps the tooltip from
-  // hovering over the cards he's about to move.
-  useEffect(() => {
-    if (!hint) return;
-    const onPointerDown = (e: PointerEvent): void => {
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest("[data-card-id]")) {
-        setHint(null);
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [hint]);
+  const { celebration, clear: clearCelebration } = useGameCelebration(
+    game.round?.index,
+    game.status,
+  );
+  const { hint, dismiss: dismissHint } = useGameHints(game);
 
   // Begin: kid clicked "Begin" on splash. Mount the dive-in; the deal
   // happens in handleIntroComplete so the cards appear UNDER the intro
@@ -810,184 +960,23 @@ function AddingGame() {
     setGame((prev) => applySwap(prev, source, target));
   };
 
+  // Evaluate: delegate to the pure transition. Wraps with the setter
+  // shape; assist + wrong-attempt counter logic lives in
+  // evaluateAndMaybeAssist (above) so this stays a thin orchestrator.
   const handleEvaluate = (): void => {
-    setGame((prev) => {
-      if (!prev.round) return prev;
-      const stillOutcome = evaluateRound(prev);
-      if (!stillOutcome) return prev;
-
-      // Wins don't advance wrongAttempts. The setter only writes the
-      // outcome and the route's win-flow takes over from there.
-      if (stillOutcome.won) {
-        return {
-          ...prev,
-          round: { ...prev.round, phase: "evaluating", outcome: stillOutcome },
-        };
-      }
-
-      // Loss path. Increment the per-stage counter; the EXACT 2 → 3
-      // transition triggers the find-missing-result auto-assist (the
-      // assist scans the kid's hand + slots, places ONE correct card,
-      // and locks it). Subsequent losses keep the counter climbing
-      // but `applyAutoAssist` is gated by which slot is still unlocked
-      // — the second pass (count = 6th wrong) places the result; a
-      // third pass returns null because both kid-slots are locked.
-      const nextWrongAttempts = (prev.round.wrongAttempts ?? 0) + 1;
-      const withOutcome: AddingGameState = {
-        ...prev,
-        round: {
-          ...prev.round,
-          phase: "evaluating",
-          outcome: stillOutcome,
-          wrongAttempts: nextWrongAttempts,
-        },
-      };
-
-      // Auto-assist: only for find-missing-result, only on the EXACT
-      // 2 → 3 step (so we don't fire on every wrong attempt past 3).
-      // To open the second assist (placing the result card) without a
-      // separate UI trigger, fire again at 6 wrongs — same code path.
-      const shouldAssist =
-        prev.round.equation.shape === "find-missing-result" &&
-        (nextWrongAttempts === 3 || nextWrongAttempts === 6);
-      if (!shouldAssist) return withOutcome;
-
-      const assisted = applyAutoAssist(withOutcome);
-      // applyAutoAssist returns null when no action is possible (e.g. both
-      // kid-slots already locked). Fall back to the un-assisted state.
-      return assisted ?? withOutcome;
-    });
+    setGame((prev) => evaluateAndMaybeAssist(prev));
   };
 
-  // While an attack's Pixi animation is in flight (≤500ms), every attack
-  // button disables and Continue is gated. The kid picks ONE attack per
-  // win — committing to a choice is the whole point of the 3-up UI.
-  const [attackPending, setAttackPending] = useState(false);
-
-  // Resolve the bounding rects (action button + enemy avatar) at click
-  // time so the animation aims at the live layout. Falls back to viewport
-  // center if either element is gone — shouldn't happen in normal play
-  // but keeps the runtime from throwing on a hot reload mid-click.
-  const fireAttackAnimation = async (attack: Attack): Promise<void> => {
-    if (typeof document === "undefined") return;
-    const fromEl = document.querySelector('[data-test="action-button"]');
-    const toEl = document.querySelector('[data-test="enemy-avatar"]');
-    const fromRect = fromEl?.getBoundingClientRect();
-    const toRect = toEl?.getBoundingClientRect();
-    if (!fromRect || !toRect) return;
-    // Damage number flies in parallel with the Pixi animation. Both end
-    // around the same time (≈540ms vs ≤500ms); the kid sees one cohesive
-    // strike rather than two stacked beats.
-    spawnDamageProjectile({
-      text: `−${game.round?.outcome?.scoreEarned ?? 0}`,
-      from: fromEl as Element,
-      to: toEl as Element,
-    });
-    await attackFxRuntime.runAttack(
-      attack,
-      { x: fromRect.left, y: fromRect.top, width: fromRect.width, height: fromRect.height },
-      { x: toRect.left, y: toRect.top, width: toRect.width, height: toRect.height },
-    );
-  };
-
-  // Handle the attack tap: lock the row, run the FX, then advance state.
-  // `attack === null` is the legacy fallback path (no pilot selected) —
-  // skip the FX and continue straight through.
-  const handleAttack = (attack: Attack | null): void => {
-    if (attackPending) return;
-    setAttackPending(true);
-    const finish = (): void => {
-      handleContinue();
-      setAttackPending(false);
-    };
-    if (!attack) {
-      finish();
-      return;
-    }
-    void fireAttackAnimation(attack).then(finish, finish);
-  };
-
-  // Continue: only valid in "evaluating" phase with a winning outcome. Apply
-  // damage, decide whether the enemy died, then either advance levels, end
-  // the game, or re-deal within the current level. Compute the next state
-  // OUTSIDE the setter so dealRound's Math.random isn't subject to React's
-  // setter-may-call-twice semantics.
+  // Continue: kill enemy / advance level / re-deal. Logic lives in the
+  // pure continueAfterWin transition above. dealRound's Math.random is
+  // called inside the transition, but setGame is invoked once with the
+  // resolved state — React strict-mode-safe.
   const handleContinue = (): void => {
-    const round = game.round;
-    if (!round?.outcome?.won || !round.enemy) return;
-
-    const damage = round.outcome.scoreEarned;
-    const newHp = round.enemy.hp - damage;
-
-    if (newHp <= 0) {
-      // XP from this defeat = the equation's "win value":
-      //   - find-sum levels (R1–R4): the equation target.
-      //   - find-missing-result levels (R5–R6): the kid's chosen result
-      //     card (lives at operandSlots[2]) — same number that drives
-      //     `scoreEarned` in evaluate.ts.
-      const xpGain = round.outcome.scoreEarned;
-      const defeatedTemplateId = round.enemy.templateId;
-      const nextLevelIndex = round.index + 1;
-      if (nextLevelIndex > FINAL_LEVEL_INDEX) {
-        // Game cleared — set status:ended, drop round, blank the hand. The
-        // VictoryPanel will render. The gameStart effect deliberately
-        // bails on status:ended so it doesn't immediately re-deal.
-        setGame((prev) => {
-          const pilotId = prev.player.selectedPilotId;
-          const pilotProgress = pilotId
-            ? {
-                ...prev.player.pilotProgress,
-                [pilotId]: applyXpGain(progressFor(prev.player.pilotProgress, pilotId), xpGain)
-                  .next,
-              }
-            : prev.player.pilotProgress;
-          return {
-            ...prev,
-            status: "ended",
-            cards: {},
-            player: { ...prev.player, hand: emptyHand(), pilotProgress },
-            round: null,
-            enemyEncounters: incrementEncounter(prev.enemyEncounters, defeatedTemplateId),
-          };
-        });
-        return;
-      }
-      // Next enemy: dealRound seeds a fresh enemy at maxHp from the registry.
-      const dealt = dealRound({ levelIndex: nextLevelIndex });
-      setGame((prev) => {
-        const pilotId = prev.player.selectedPilotId;
-        const pilotProgress = pilotId
-          ? {
-              ...prev.player.pilotProgress,
-              [pilotId]: applyXpGain(progressFor(prev.player.pilotProgress, pilotId), xpGain).next,
-            }
-          : prev.player.pilotProgress;
-        return {
-          ...prev,
-          status: "playing",
-          cards: dealt.cards,
-          player: { ...prev.player, hand: dealt.hand, pilotProgress },
-          round: dealt.round,
-          enemyEncounters: incrementEncounter(prev.enemyEncounters, defeatedTemplateId),
-        };
-      });
-      return;
-    }
-
-    // Same level, new equation/hand, **preserve damaged enemy**. The dealt
-    // round comes back with a fresh-at-maxHp enemy from the registry; we
-    // override `enemy.hp` with the post-damage value so the avatar's HP bar
-    // reflects accumulated damage across cycles.
-    const dealt = dealRound({ levelIndex: round.index });
-    const damagedEnemy = { templateId: round.enemy.templateId, hp: newHp };
-    setGame((prev) => ({
-      ...prev,
-      status: "playing",
-      cards: dealt.cards,
-      player: { ...prev.player, hand: dealt.hand },
-      round: { ...dealt.round, enemy: damagedEnemy },
-    }));
+    const next = continueAfterWin(game);
+    if (next) setGame(() => next);
   };
+
+  const { attackPending, runAttack: handleAttack } = useAttackFlow(game, handleContinue);
 
   // Play Again from victory — wipe to idle AND fire the intro. The kid
   // sees the same descent as their first dive, then a fresh round 1.
@@ -1073,11 +1062,15 @@ function AddingGame() {
       <RoundCompleteFx
         active={celebration !== null}
         fromRound={celebration?.fromRound ?? null}
-        onComplete={() => setCelebration(null)}
+        onComplete={clearCelebration}
       />
       <GameBoard>
         <LeftCol>
           <EnemyAvatar
+            // Re-mount on enemy change. Drives the flip-back reset for the
+            // new enemy without an internal effect; same key-as-trigger
+            // pattern as PlayerAvatar above.
+            key={enemyTemplate?.id ?? "no-enemy"}
             enemy={enemyTemplate}
             hp={roundEnemy?.hp ?? null}
             maxHp={game.round ? (findLevel(game.round.index)?.hp ?? null) : null}
@@ -1149,7 +1142,7 @@ function AddingGame() {
                           // attached one. Most "count to N" hints carry
                           // hands; direction / encouragement hints don't.
                           hands={hint.hands ?? null}
-                          onDismiss={() => setHint(null)}
+                          onDismiss={dismissHint}
                         />
                       </div>
                     </div>
@@ -1172,6 +1165,12 @@ function AddingGame() {
         </GameMain>
         <RightCol>
           <PlayerAvatar
+            // Re-mount on pilot change. Drives the per-pilot state reset
+            // (flipped-back, level-up baseline) without an internal effect
+            // — React tears down + re-initializes useState/useRef defaults
+            // for the new pilot. Cleaner than a `[playerId]` effect, which
+            // biome's useExhaustiveDependencies flags as a trigger-only dep.
+            key={currentPlayer?.id ?? "no-pilot"}
             player={currentPlayer}
             profileIndex={currentPlayer && currentIndex >= 0 ? currentIndex + 1 : null}
             profileCount={currentPlayer ? PLAYER_REGISTRY.length : null}

@@ -77,9 +77,12 @@ function hasValidMissingResultPair(
 }
 
 function handValues(result: ReturnType<typeof dealRound>): number[] {
-  return result.hand
-    .map((slot) => (slot.cardId ? result.cards[slot.cardId]?.value : undefined))
-    .filter((v): v is number => v !== undefined);
+  // Single pass: map+filter collapsed into flatMap. `[]` skips empty slots /
+  // missing cards; `[value]` keeps real values. Equivalent semantics, one walk.
+  return result.hand.flatMap((slot) => {
+    const value = slot.cardId ? result.cards[slot.cardId]?.value : undefined;
+    return value === undefined ? [] : [value];
+  });
 }
 
 describe("dealRound — level 1 (round 1 opener, add target 6)", () => {

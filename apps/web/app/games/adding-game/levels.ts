@@ -467,8 +467,3 @@ export function localLevelIndex(levelIndex: number): number {
   if (levelIndex <= 28) return levelIndex - 23;
   return levelIndex - 28;
 }
-
-// Backwards-compatibility shims for callers that already imported the
-// old tier helpers. Tier == round in the new model.
-export const TIER_1_LAST_INDEX: number = 6;
-export const tierOf = roundOf;

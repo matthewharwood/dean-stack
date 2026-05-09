@@ -170,9 +170,10 @@ describe("applyAutoAssist", () => {
     expect(result?.cardId).toBeNull();
 
     // The wrong card (value 5) is back in some hand slot.
-    const handValues = next.player.hand
-      .map((h) => (h.cardId ? next.cards[h.cardId]?.value : null))
-      .filter((v): v is number => v !== null);
+    const handValues = next.player.hand.flatMap((h) => {
+      const value = h.cardId ? next.cards[h.cardId]?.value : null;
+      return value == null ? [] : [value];
+    });
     expect(handValues).toContain(5);
   });
 

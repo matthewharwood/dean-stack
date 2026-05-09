@@ -19,7 +19,7 @@ import type { Attack } from "@dean-stack/schemas";
 // The 3-tuple type is enforced by the PlayerTemplate schema, not here —
 // the `as` cast tightens this lookup-table definition into the tuple shape
 // that schema.parse expects.
-export const ATTACKS_BY_PLAYER_ID: Record<string, readonly [Attack, Attack, Attack]> = {
+const ATTACKS_BY_PLAYER_ID: Record<string, readonly [Attack, Attack, Attack]> = {
   // ── Common ─────────────────────────────────────────────────────────
   "hadal-player-common-mara-brasswake": [
     { id: "mara-1", name: "Lantern Spark", kind: "spark", color: "#f4e4c1", glyph: "✨" },

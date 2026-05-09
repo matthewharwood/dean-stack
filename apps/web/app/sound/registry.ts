@@ -7,7 +7,7 @@
 // fall back to the kind base via `playAttack()` when no per-character
 // variant is registered.
 
-export type SfxPolicy =
+type SfxPolicy =
   | "restart" // cancel current instance, start fresh — sharp UI feedback on rapid tap
   | "polyphony" // allow simultaneous instances — combat hits stack naturally
   | "loop"; // start once, loop until stopped — ambience beds

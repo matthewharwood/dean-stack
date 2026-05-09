@@ -55,7 +55,14 @@ export function useAnime<T extends Element>(
     }
     const a = animate(ref.current, params);
     return () => { a.cancel(); };
-    // deps deliberately decided per-call site; eslint-disable next-line react-hooks/exhaustive-deps
+    // KEEP — `deps` is the public parameter the caller owns. biome's
+    // useExhaustiveDependencies / eslint's react-hooks/exhaustive-deps
+    // can only verify dep arrays they can see statically; a parameter
+    // type-erased to DependencyList is opaque to either. This is one of
+    // the small set of legitimate API-design escapes (see CLAUDE.md
+    // "Disable-comment refactor table" — parameterized hooks are the
+    // documented exception).
+    // biome-ignore lint/correctness/useExhaustiveDependencies: API design — `deps` is a public parameter the caller owns.
   }, deps);
 }
 ```

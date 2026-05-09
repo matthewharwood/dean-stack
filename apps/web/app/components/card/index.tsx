@@ -8,6 +8,22 @@ import { CardPropsSchema } from "./schema";
 // defensive.
 const TEN_FRAME_TOTAL = 10;
 
+// Stable cell ids for the React key. The grid topology is fixed (2 rows ×
+// 5 cols) and cells never reorder, so deriving a constant tuple keyed by
+// row/col satisfies no-array-index-as-key without runtime allocation.
+const TEN_FRAME_CELL_IDS = [
+  "r0c0",
+  "r0c1",
+  "r0c2",
+  "r0c3",
+  "r0c4",
+  "r1c0",
+  "r1c1",
+  "r1c2",
+  "r1c3",
+  "r1c4",
+] as const;
+
 // Render the dots of a ten-frame. Classic math-ed visual:
 //   - 2×5 grid of square cells, all touching (no gap) so the grid lines
 //     read as a single continuous frame.
@@ -30,12 +46,11 @@ function TenFrameDots({ filled, color }: { filled: number; color: "ink" | "muted
         data-test="ten-frame"
         data-ten-frame-filled={clamped}
       >
-        {Array.from({ length: TEN_FRAME_TOTAL }, (_, i) => {
+        {TEN_FRAME_CELL_IDS.map((cellId, i) => {
           const isFilled = i < clamped;
           return (
             <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: cells are positional
-              key={i} // eslint-disable-line react-doctor/no-array-index-as-key -- ten-frame cells are positional in a fixed 2×5 grid; the array length is constant per render and cells never reorder.
+              key={cellId}
               className="flex size-4 items-center justify-center border border-medium-gray/70 bg-canvas-white"
               data-ten-frame-cell={isFilled ? "filled" : "empty"}
             >
