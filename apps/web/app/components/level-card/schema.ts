@@ -7,4 +7,3 @@ export const LevelCardPropsSchema = z.object({
   // by Zod beyond `typeof === "function"`, but the brand carries the TS type.
   onComplete: z.custom<() => void>((v) => typeof v === "function"),
 });
-export type LevelCardProps = z.infer<typeof LevelCardPropsSchema>;

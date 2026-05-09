@@ -34,4 +34,3 @@ export const HintTooltipPropsSchema = z.object({
     .nullable()
     .default(null),
 });
-export type HintTooltipProps = z.infer<typeof HintTooltipPropsSchema>;

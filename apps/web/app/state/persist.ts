@@ -52,7 +52,7 @@ export function persistSoundSettings(value: SoundSettings): void {
   });
 }
 
-export type RemoteWriteMessage = { store: StoreName; key: string };
+type RemoteWriteMessage = { store: StoreName; key: string };
 
 export function subscribeRemoteWrites(onChange: (msg: RemoteWriteMessage) => void): () => void {
   if (!channel) return () => undefined;

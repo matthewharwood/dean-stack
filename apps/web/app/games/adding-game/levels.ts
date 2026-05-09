@@ -34,7 +34,7 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 //     a baseline reference (highest plausible result for the level) used
 //     to size the hand range and surface in storybook fallbacks. The
 //     evaluator does NOT compare against it for this shape.
-export type StaticOperandConfig = {
+type StaticOperandConfig = {
   position: "first" | "second";
   value: number;
 };

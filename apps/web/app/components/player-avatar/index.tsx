@@ -94,6 +94,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
     prevLevelRef.current = props.progress?.level ?? null;
   }, [props.player?.id]);
 
+  // eslint-disable-next-line react-doctor/no-cascading-set-state -- four synchronous setters in this effect collapse to one batched render under React 19's automatic batching; the cascade is intentional.
   useEffect(() => {
     const curr = props.progress?.level ?? null;
     const prev = prevLevelRef.current;
@@ -117,7 +118,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
     return (
       <div
         ref={rootRef}
-        className="grid h-full w-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
+        className="grid size-full place-items-center rounded-lg border-2 border-dashed border-muted-gray/60 bg-canvas-white/40 p-4 text-center"
         data-test="player-avatar"
         data-state="empty"
       >
@@ -165,7 +166,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
             <img
               src={player.imageUrl}
               alt={player.name}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 size-full object-cover"
               draggable={false}
             />
           </div>
@@ -192,7 +193,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
             type="button"
             onClick={onCycle}
             aria-label={`Pilot ${profileIndex} — switch to next`}
-            className="absolute top-1.5 right-10 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
+            className="absolute top-1.5 right-10 z-10 flex size-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
             data-test="player-cycle-button"
           >
             <span className="font-openrunde text-xs font-bold leading-none tabular-nums">
@@ -206,7 +207,7 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
           onClick={() => setFlipped((v) => !v)}
           aria-label={flipped ? "Show portrait" : "Show bio"}
           aria-pressed={flipped}
-          className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
+          className="absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full border border-white/40 bg-black/55 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
           data-test="player-bio-toggle"
         >
           <span aria-hidden className="flex items-center justify-center">
@@ -233,12 +234,12 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
             {confetti.map((c, i) => (
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: stable for one burst
-                key={i}
+                key={i} // eslint-disable-line react-doctor/no-array-index-as-key -- confetti specs are positional and ephemeral; the burst array is regenerated per level-up, never reordered.
                 aria-hidden
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
               >
                 <span
-                  className="block h-2 w-2 animate-level-up-confetti rounded-lg shadow-md"
+                  className="block size-2 animate-level-up-confetti rounded-lg shadow-md"
                   style={
                     {
                       background: c.color,

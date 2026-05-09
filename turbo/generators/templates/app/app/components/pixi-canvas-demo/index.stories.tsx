@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { PixiCanvasDemo } from "./index";
+import { PixiCanvasDemo } from ".";
 
 const meta = {
   title: "Components/PixiCanvasDemo",

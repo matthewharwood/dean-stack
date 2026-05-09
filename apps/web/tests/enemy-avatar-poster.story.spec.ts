@@ -14,24 +14,46 @@ import { expect, test } from "./fixtures";
 
 const STORY_BASE = "/iframe.html?id=components-enemyavatar--";
 
-const cases: Array<{ id: string; suffix: string; encountersAttr: string }> = [
-  { id: "poster-default", suffix: ".png", encountersAttr: "0" },
-  { id: "poster-l-1", suffix: "_L1.png", encountersAttr: "1" },
-  { id: "poster-l-2", suffix: "_L2.png", encountersAttr: "2" },
-  { id: "poster-l-2-capped", suffix: "_L2.png", encountersAttr: "5" },
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Module-scope so each pattern is constructed once at file load, not on
+// every loop iteration / Playwright retry. Avoids the js-hoist-regexp warning.
+const cases: Array<{
+  id: string;
+  encountersAttr: string;
+  posterPattern: RegExp;
+}> = [
+  {
+    id: "poster-default",
+    encountersAttr: "0",
+    posterPattern: new RegExp(`hadal-glass-manta-echo${escapeRegex(".png")}$`),
+  },
+  {
+    id: "poster-l-1",
+    encountersAttr: "1",
+    posterPattern: new RegExp(`hadal-glass-manta-echo${escapeRegex("_L1.png")}$`),
+  },
+  {
+    id: "poster-l-2",
+    encountersAttr: "2",
+    posterPattern: new RegExp(`hadal-glass-manta-echo${escapeRegex("_L2.png")}$`),
+  },
+  {
+    id: "poster-l-2-capped",
+    encountersAttr: "5",
+    posterPattern: new RegExp(`hadal-glass-manta-echo${escapeRegex("_L2.png")}$`),
+  },
 ];
 
-for (const { id, suffix, encountersAttr } of cases) {
+for (const { id, encountersAttr, posterPattern } of cases) {
   test(`EnemyAvatar.${id} renders the right poster variant`, async ({ page }) => {
     await page.goto(`${STORY_BASE}${id}`);
     const img = page.getByTestId("enemy-poster");
     await expect(img).toBeVisible();
     const src = await img.getAttribute("src");
-    expect(src ?? "").toMatch(new RegExp(`hadal-glass-manta-echo${escapeRegex(suffix)}$`));
+    expect(src ?? "").toMatch(posterPattern);
     expect(await img.getAttribute("data-poster-encounters")).toBe(encountersAttr);
   });
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

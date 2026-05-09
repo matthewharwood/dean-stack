@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Suspense } from "react";
 
-import { AsyncGreeting } from "./index";
+import { AsyncGreeting } from ".";
 
 const meta = {
   title: "Components/AsyncGreeting",

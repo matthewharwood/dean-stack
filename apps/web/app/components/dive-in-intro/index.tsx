@@ -315,28 +315,32 @@ function buildScene(app: Application, refs: IntroRefs): () => void {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       if (!p) continue;
+      // Cache `p.sprite` once per iteration — this loop runs every frame
+      // for every particle (~hundreds), and each `p.sprite` access is a
+      // property chain on a Pixi Container.
+      const sprite = p.sprite;
       p.age += ticker.deltaMS;
       const dt = ticker.deltaMS / 16;
-      p.sprite.x += p.vx * dt + Math.sin((p.age + p.swayBase) * p.swaySpeed) * 0.4 * dt;
-      p.sprite.y += p.vy * dt;
+      sprite.x += p.vx * dt + Math.sin((p.age + p.swayBase) * p.swaySpeed) * 0.4 * dt;
+      sprite.y += p.vy * dt;
 
       let alpha = p.baseAlpha;
       if (p.age < p.fadeIn) alpha *= p.age / p.fadeIn;
 
       if (p.kind === "bubble") {
-        if (p.sprite.y < H * 0.2) alpha *= Math.max(0, p.sprite.y / (H * 0.2));
+        if (sprite.y < H * 0.2) alpha *= Math.max(0, sprite.y / (H * 0.2));
       } else {
-        if (p.sprite.y > H * 0.85) alpha *= Math.max(0, (H - p.sprite.y) / (H * 0.15));
+        if (sprite.y > H * 0.85) alpha *= Math.max(0, (H - sprite.y) / (H * 0.15));
       }
-      p.sprite.alpha = Math.max(0, alpha);
+      sprite.alpha = Math.max(0, alpha);
 
-      const offTop = p.kind === "bubble" && p.sprite.y < -20;
-      const offBottom = p.kind !== "bubble" && p.sprite.y > H + 20;
-      if (offTop || offBottom || (p.age > 1500 && p.sprite.alpha <= 0.005)) {
-        if (p.kind === "bubble") bubbleLayer.removeChild(p.sprite);
-        else if (p.kind === "snow") snowLayer.removeChild(p.sprite);
-        else glowLayer.removeChild(p.sprite);
-        p.sprite.destroy();
+      const offTop = p.kind === "bubble" && sprite.y < -20;
+      const offBottom = p.kind !== "bubble" && sprite.y > H + 20;
+      if (offTop || offBottom || (p.age > 1500 && sprite.alpha <= 0.005)) {
+        if (p.kind === "bubble") bubbleLayer.removeChild(sprite);
+        else if (p.kind === "snow") snowLayer.removeChild(sprite);
+        else glowLayer.removeChild(sprite);
+        sprite.destroy();
         particles.splice(i, 1);
       }
     }
@@ -387,7 +391,7 @@ export function DiveInIntro({ onComplete }: { onComplete: () => void }) {
   // styling resets.
   return (
     <div className="fixed inset-0 z-50" data-test="dive-in-intro">
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      <canvas ref={canvasRef} className="block size-full" />
       <button
         type="button"
         className="absolute inset-0 cursor-pointer border-0 bg-transparent p-0"

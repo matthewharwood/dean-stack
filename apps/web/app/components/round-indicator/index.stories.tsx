@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { RoundIndicator } from "./index";
+import { RoundIndicator } from ".";
 
 const meta = {
   title: "Components/RoundIndicator",

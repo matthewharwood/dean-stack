@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, type ReactNode, use, useEffect, useRef, useState } from "react";
 
 import { clearAllStorage } from "~/lib/clear-storage";
 
@@ -10,7 +10,7 @@ type DevMenuApi = { close: () => void };
 const DevMenuContext = createContext<DevMenuApi | null>(null);
 
 export function useDevMenu(): DevMenuApi {
-  const ctx = useContext(DevMenuContext);
+  const ctx = use(DevMenuContext);
   if (!ctx) throw new Error("useDevMenu: must be used inside <DevMenu>");
   return ctx;
 }
@@ -98,7 +98,7 @@ export function DevMenu({ children }: { children?: ReactNode }) {
           aria-expanded={open}
           aria-haspopup="menu"
           onClick={() => setOpen((v) => !v)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-light-gray bg-white/85 text-medium-gray shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-slate-ink active:scale-95"
+          className="flex size-10 items-center justify-center rounded-full border border-light-gray bg-white/85 text-medium-gray shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-slate-ink active:scale-95"
           data-test="dev-menu-button"
         >
           <GearIcon />

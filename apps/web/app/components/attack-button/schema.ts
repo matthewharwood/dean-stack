@@ -21,4 +21,3 @@ export const AttackButtonPropsSchema = z.object({
   // 500ms window.
   pending: z.boolean().default(false),
 });
-export type AttackButtonProps = z.infer<typeof AttackButtonPropsSchema>;

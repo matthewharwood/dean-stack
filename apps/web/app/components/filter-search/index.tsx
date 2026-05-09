@@ -26,8 +26,8 @@ export const FilterSearch = defineComponent(FilterSearchPropsSchema, (props) => 
         className="rounded-lg px-3 py-2 text-black"
       />
       <ul className="flex flex-col gap-1">
-        {visible.map((i) => (
-          <li key={i}>{i}</li>
+        {visible.map((item) => (
+          <li key={item}>{item}</li>
         ))}
       </ul>
     </div>

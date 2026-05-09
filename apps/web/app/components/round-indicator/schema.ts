@@ -20,4 +20,3 @@ export const RoundIndicatorPropsSchema = z.object({
   // Total levels in the current round — drives the progress dot count.
   tierLevelCount: z.int().min(1),
 });
-export type RoundIndicatorProps = z.infer<typeof RoundIndicatorPropsSchema>;

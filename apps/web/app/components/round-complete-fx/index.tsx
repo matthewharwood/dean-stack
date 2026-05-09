@@ -330,27 +330,31 @@ function buildScene(app: Application, refs: FxRefs): () => void {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       if (!p) continue;
+      // Cache the sprite once per iteration. Per-frame loop over all
+      // particles; each `p.sprite` access is a property chain on a Pixi
+      // Container, repeated 8+ times below.
+      const sprite = p.sprite;
       p.age += deltaMS;
       const dt = deltaMS / 16; // normalize to ~60fps step
-      p.sprite.x += p.vx * dt + Math.sin((p.age + p.swayBase) * p.swaySpeed) * 0.4 * dt;
-      p.sprite.y += p.vy * dt;
+      sprite.x += p.vx * dt + Math.sin((p.age + p.swayBase) * p.swaySpeed) * 0.4 * dt;
+      sprite.y += p.vy * dt;
 
       // Alpha envelope: fade-in over `fadeIn`, hold at baseAlpha, then
       // fade-out as the particle approaches the bottom 15% of the screen.
       const fadeBoundary = H * 0.85;
       let alpha = p.baseAlpha;
       if (p.age < p.fadeIn) alpha *= p.age / p.fadeIn;
-      if (p.sprite.y > fadeBoundary) {
-        alpha *= Math.max(0, (H - p.sprite.y) / (H - fadeBoundary));
+      if (sprite.y > fadeBoundary) {
+        alpha *= Math.max(0, (H - sprite.y) / (H - fadeBoundary));
       }
-      p.sprite.alpha = Math.max(0, alpha);
+      sprite.alpha = Math.max(0, alpha);
 
       // Cull off-screen.
-      if (p.sprite.y > H + 20 || (p.age > 1500 && p.sprite.alpha <= 0.01)) {
-        if (p.layer === "snow") snowLayer.removeChild(p.sprite);
-        else if (p.layer === "glow") glowLayer.removeChild(p.sprite);
-        else goldLayer.removeChild(p.sprite);
-        p.sprite.destroy();
+      if (sprite.y > H + 20 || (p.age > 1500 && sprite.alpha <= 0.01)) {
+        if (p.layer === "snow") snowLayer.removeChild(sprite);
+        else if (p.layer === "glow") glowLayer.removeChild(sprite);
+        else goldLayer.removeChild(sprite);
+        sprite.destroy();
         particles.splice(i, 1);
       }
     }
@@ -515,7 +519,7 @@ export function RoundCompleteFx({
       data-test="round-complete-fx"
       aria-hidden="true"
     >
-      <canvas ref={canvasRef} className="h-full w-full" />
+      <canvas ref={canvasRef} className="size-full" />
     </div>
   );
 }

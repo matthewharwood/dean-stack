@@ -7,11 +7,5 @@
 
 export { resolveAttackSfxId } from "./play-attack";
 export { _resetSfxPlayerForTests, getSfxPlayer } from "./player";
-export {
-  isRegistered,
-  type RegistryEntry,
-  SFX_REGISTRY,
-  type SfxEventId,
-  type SfxPolicy,
-} from "./registry";
+export { isRegistered, type RegistryEntry, SFX_REGISTRY, type SfxEventId } from "./registry";
 export { type SoundApi, useSound } from "./use-sound";

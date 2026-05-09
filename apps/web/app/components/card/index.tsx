@@ -24,7 +24,7 @@ function TenFrameDots({ filled, color }: { filled: number; color: "ink" | "muted
   const clamped = Math.max(0, Math.min(TEN_FRAME_TOTAL, filled));
   const dotClass = color === "ink" ? "bg-slate-ink" : "bg-medium-gray";
   return (
-    <div className="flex h-full w-full items-center justify-center">
+    <div className="flex size-full items-center justify-center">
       <div
         className="grid grid-cols-5 grid-rows-2 overflow-hidden rounded-[3px]"
         data-test="ten-frame"
@@ -35,7 +35,7 @@ function TenFrameDots({ filled, color }: { filled: number; color: "ink" | "muted
           return (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: cells are positional
-              key={i}
+              key={i} // eslint-disable-line react-doctor/no-array-index-as-key -- ten-frame cells are positional in a fixed 2×5 grid; the array length is constant per render and cells never reorder.
               className="flex size-4 items-center justify-center border border-medium-gray/70 bg-canvas-white"
               data-ten-frame-cell={isFilled ? "filled" : "empty"}
             >
@@ -58,7 +58,7 @@ function TenFrameDots({ filled, color }: { filled: number; color: "ink" | "muted
 function TenFrameWithNumeral({ value, color }: { value: number; color: "ink" | "muted" }) {
   const numeralClass = color === "ink" ? "text-slate-ink" : "text-medium-gray";
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5">
+    <div className="flex size-full flex-col items-center justify-center gap-1.5">
       <span className={`font-openrunde text-2xl font-bold leading-none ${numeralClass}`}>
         {value}
       </span>
@@ -77,14 +77,14 @@ export const Card = defineComponent(CardPropsSchema, (props) => {
     // pairs the digit with the 2×5 grid.
     return (
       <div
-        className="flex h-full w-full items-center justify-center rounded-[4px] border border-muted-gray bg-canvas-white p-1.5 shadow-inner"
+        className="flex size-full items-center justify-center rounded-[4px] border border-muted-gray bg-canvas-white p-1.5 shadow-inner"
         data-test="card"
         data-card-variant="target"
         data-card-display={display}
         data-card-value={props.value}
         data-card-disabled={disabled ? "true" : undefined}
       >
-        <div className="flex h-full w-full items-center justify-center rounded-[2px] border-2 border-dashed border-muted-gray/70">
+        <div className="flex size-full items-center justify-center rounded-[2px] border-2 border-dashed border-muted-gray/70">
           {display === "ten-frame" ? (
             <TenFrameWithNumeral value={props.value} color="muted" />
           ) : (
@@ -98,7 +98,7 @@ export const Card = defineComponent(CardPropsSchema, (props) => {
   }
   return (
     <div
-      className="flex h-full w-full items-center justify-center rounded-[4px] border border-light-gray bg-canvas-white shadow-sm"
+      className="flex size-full items-center justify-center rounded-[4px] border border-light-gray bg-canvas-white shadow-sm"
       data-test="card"
       data-card-variant="default"
       data-card-display={display}

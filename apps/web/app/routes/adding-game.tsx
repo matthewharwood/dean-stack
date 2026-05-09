@@ -198,9 +198,11 @@ const COMPARATOR_GLYPH: Record<Comparator, string> = {
 // before they start picking cards. CSS keyframes are owned by
 // `data-phase` so the animation is driven purely by attribute changes.
 function OperatorPill({ glyph }: { glyph: string }) {
+  // eslint-disable-next-line react-doctor/no-derived-useState -- intentional: `displayed` is captured at mount and only swapped after the 200ms fade-out animation completes; deriving inline would skip the animation entirely.
   const [displayed, setDisplayed] = useState(glyph);
   const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
 
+  // eslint-disable-next-line react-doctor/no-cascading-set-state -- the inner setDisplayed/setPhase pair fires inside one setTimeout callback so React batches them; the outer setPhase("out") is one render of its own. Intentional animation sequencing.
   useEffect(() => {
     if (glyph === displayed) return;
     setPhase("out");
@@ -217,7 +219,7 @@ function OperatorPill({ glyph }: { glyph: string }) {
 
   return (
     <span
-      className="flex h-14 w-14 shrink-0 select-none items-center justify-center rounded-full border-2 border-light-gray bg-canvas-white font-openrunde text-3xl font-bold text-slate-ink shadow-subtle data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
+      className="flex size-14 shrink-0 select-none items-center justify-center rounded-full border-2 border-light-gray bg-canvas-white font-openrunde text-3xl font-bold text-slate-ink shadow-subtle data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
       data-phase={phase}
       data-test="operator-pill"
     >
@@ -581,7 +583,7 @@ function Splash({ onBegin }: { onBegin: () => void }) {
         <p className="font-openrunde text-xs font-semibold uppercase tracking-[0.3em] text-muted-gray">
           The trench is waiting
         </p>
-        <h2 className="font-openrunde text-5xl font-bold text-slate-ink">Hadal Tide</h2>
+        <h2 className="font-openrunde text-5xl font-semibold text-slate-ink">Hadal Tide</h2>
         <p className="max-w-md text-base text-medium-gray">
           The echoes are confused. They've been counting in the dark for a long time. Help them
           remember.
@@ -636,7 +638,7 @@ function VictoryPanel({ onPlayAgain }: { onPlayAgain: () => void }) {
       className="flex h-full flex-col items-center justify-center gap-6 p-[18px] text-center"
       data-test="victory-panel"
     >
-      <h2 className="font-openrunde text-4xl font-bold text-slate-ink">The trench is calm.</h2>
+      <h2 className="font-openrunde text-4xl font-semibold text-slate-ink">The trench is calm.</h2>
       <p className="max-w-md text-lg text-medium-gray">
         You sent every wraith back to sleep. The Hadal Tide remembers your kindness.
       </p>
@@ -682,6 +684,7 @@ function resetToIdle(state: AddingGameState): AddingGameState {
 
 // ─── Component ────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-doctor/no-giant-component -- known: AddingGame is the route's god-component (1183 lines / 499 logical). Splitting requires lifting celebration + intro state into atoms or threading 10+ props; tracked for a follow-up refactor PR.
 function AddingGame() {
   const game = useAtomValue(addingGameAtom);
   const setGame = useSetAtom(addingGameAtom);
@@ -1084,7 +1087,7 @@ function AddingGame() {
         <GameMain>
           <Top>
             {game.round ? (
-              <div className="flex h-full w-full items-center justify-between px-3">
+              <div className="flex size-full items-center justify-between px-3">
                 <RoundIndicator
                   round={roundOf(game.round.index)}
                   levelIndex={game.round.index}

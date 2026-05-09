@@ -30,4 +30,3 @@ export const CardPropsSchema = z.object({
   // disabled is a card property, not derived from slot kind.
   disabled: z.boolean().optional(),
 });
-export type CardProps = z.infer<typeof CardPropsSchema>;

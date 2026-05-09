@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { Scoreboard } from "./index";
+import { Scoreboard } from ".";
 
 const meta = {
   title: "Components/Scoreboard",

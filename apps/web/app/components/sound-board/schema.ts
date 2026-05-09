@@ -5,5 +5,3 @@ export const SoundBoardPropsSchema = z.object({
   // (e.g. "combat-" or "ui-"). Undefined = show all.
   prefix: z.string().optional(),
 });
-
-export type SoundBoardProps = z.infer<typeof SoundBoardPropsSchema>;

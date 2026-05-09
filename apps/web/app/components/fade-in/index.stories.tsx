@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FadeIn } from "./index";
+import { FadeIn } from ".";
 
 const meta = {
   title: "Components/FadeIn",

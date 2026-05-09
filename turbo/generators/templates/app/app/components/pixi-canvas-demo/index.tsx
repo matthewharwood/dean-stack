@@ -42,7 +42,7 @@ export const PixiCanvasDemo = defineComponent(PixiCanvasDemoPropsSchema, (props)
         ref={canvasRef}
         width={props.width}
         height={props.height}
-        className="block w-full h-full"
+        className="block size-full"
       />
     </div>
   );

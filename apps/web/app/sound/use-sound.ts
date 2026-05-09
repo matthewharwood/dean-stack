@@ -59,9 +59,12 @@ function installUnlockListener(): void {
     window.removeEventListener("keydown", unlock);
     window.removeEventListener("touchstart", unlock);
   };
-  window.addEventListener("pointerdown", unlock, { once: true });
-  window.addEventListener("keydown", unlock, { once: true });
-  window.addEventListener("touchstart", unlock, { once: true });
+  // passive: true — none of these handlers call preventDefault(); declaring
+  // passive lets the browser scroll/scale immediately on first interaction
+  // without waiting to see if the listener will block.
+  window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+  window.addEventListener("keydown", unlock, { once: true, passive: true });
+  window.addEventListener("touchstart", unlock, { once: true, passive: true });
 }
 
 // useSound — the only React entry point to the SFX module.
