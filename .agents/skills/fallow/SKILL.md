@@ -380,3 +380,53 @@ For the full list with examples, see [references/gotchas.md](references/gotchas.
 6. **For false positives,** suggest inline suppression comments or config rule adjustments
 
 If `$ARGUMENTS` is provided, use it as the `--root` path or pass it as the target for the appropriate fallow command.
+
+## Dean-stack rules
+
+This project pins fallow as part of the gate. When working in this repo, follow these conventions — they are load-bearing and documented in CLAUDE.md.
+
+### Project config (`.fallowrc.json` at repo root)
+
+```jsonc
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignorePatterns": [
+    "turbo/generators/templates/**",  // template files become real apps via `bun gen:app`; fallow can't follow that
+    "turbo/generators/config.ts",      // runtime entry for `turbo gen run app`; not statically reachable
+    "**/*.gen.ts",                     // TanStack Router generated route tree
+    "tmp/**"                           // gitignored scratch directory
+  ],
+  "ignoreDependencies": [
+    "@dean-stack/biome-config",        // consumed via `extends` in biome.json
+    "@dean-stack/tsconfig",            // consumed via `extends` in tsconfig.json
+    "@turbo/gen",                      // consumed only by the ignored generator config
+    "babel-plugin-react-compiler",     // enabled internally by TanStack Start
+    "nitro"                            // driven internally by TanStack Start
+  ],
+  "ignoreExportsUsedInFile": true       // knip-compatible; suppress unused-export when also referenced in same file
+}
+```
+
+Each entry has a documented reason in CLAUDE.md's gate description. **Don't add to either ignore list without first proving the symbol is genuinely used and fallow simply can't see the consumer** (e.g., `extends`-style references, runtime-only entry points). Adding an actually-unused symbol here hides real dead code.
+
+### Dead-code gate vs health advisory — the dean-stack partition
+
+The default `fallow` invocation runs three things: dead-code, duplication, and complexity health. dean-stack treats them differently:
+
+- **`fallow dead-code --fail-on-issues`** — the gate. Runs at the end of `bun run check` and `bun run check:fast`, and via `.github/workflows/fallow.yml` on every PR. Owns: unused files / exports / types / dependencies, **circular dependencies**, boundary violations, unlisted dependencies. A failure here is structural breakage.
+- **Full `fallow` (with health)** — advisory. Runs in CI as a separate step and uploads the JSON report as an artifact. Complexity hotspots in dean-stack are largely intrinsic to the game's switch-heavy domain (10-attack-kind dispatchers, 5-policy SFX players, hint-decision trees) and refactoring them mechanically would dilute clarity. The "critical" complexity findings on the current baseline are reviewed manually, not gated.
+
+**Never run the full `fallow` (no subcommand) in `bun run check` / `check:fast` / a PR-blocking workflow** — that pulls in `health` and `dupes`, which are advisory. The gate is `fallow dead-code` only.
+
+### No-circular-imports rule
+
+dean-stack treats the `circular-dependencies` rule as load-bearing. When two modules need to reach into each other, **extract the shared symbol(s) into a leaf module** and have BOTH original modules depend on the leaf. Never resolve a cycle with `// fallow-ignore-next-line circular-dependency`.
+
+Worked example (committed): `apps/web/app/games/adding-game/attack-fx/runtime.ts` once exported `tintedSoftCircle` AND imported every `runX` from `attack-fx/kinds/*.ts`; the kinds re-imported `tintedSoftCircle` back from runtime — 7 cycles. The fix was moving `tintedSoftCircle` (and its texture cache) into a new `attack-fx/textures.ts` (a leaf). Now runtime depends on kinds + textures, and kinds depend on textures — no cycle.
+
+### Anti-patterns
+
+- **Don't run the full `fallow` (no subcommand) in a gate.** Use `fallow dead-code --fail-on-issues` for gate-blocking; the full run is exploratory only.
+- **Don't suppress `circular-dependency` with an inline comment.** Refactor to a leaf module instead. See "No-circular-imports rule" above.
+- **Don't add to `ignorePatterns` / `ignoreDependencies` to silence a real issue.** Each entry must have a documented "fallow can't see the consumer" reason; adding actually-unused entries hides dead code.
+- **Don't run `fallow fix --yes` without a prior `--dry-run` review.** Even auto-fixable removals can cascade (deleting a re-export breaks barrel consumers fallow couldn't see if `ignoreExportsUsedInFile` is misconfigured). Always preview first.

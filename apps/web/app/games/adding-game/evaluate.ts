@@ -1,4 +1,19 @@
-import type { AddingGameState, RoundOutcome } from "@dean-stack/schemas";
+import type { AddingGameState, Comparator, RoundOutcome } from "@dean-stack/schemas";
+
+// Hoisted helper so the win check reads as a switch over the small
+// comparator enum, not a nested ternary chain.
+function compare(computed: number, comparator: Comparator, expected: number): boolean {
+  switch (comparator) {
+    case "eq":
+      return computed === expected;
+    case "gt":
+      return computed > expected;
+    case "lt":
+      return computed < expected;
+    default:
+      return false;
+  }
+}
 
 // Pure evaluator. Empty operand slots count as 0 — confirmed in spec, lets the
 // player partially evaluate ("10 + 0 = 10" wins; target=0 with all empty also
@@ -74,12 +89,7 @@ export function evaluateRound(state: AddingGameState): RoundOutcome | null {
   // rows that pre-date the comparator field.
   const expected = equation.target?.value ?? 0;
   const comparator = equation.comparator ?? "eq";
-  const won =
-    comparator === "eq"
-      ? computed === expected
-      : comparator === "gt"
-        ? computed > expected
-        : computed < expected;
+  const won = compare(computed, comparator, expected);
   return {
     won,
     computedValue: computed,

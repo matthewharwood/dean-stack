@@ -4,6 +4,14 @@ import { defineComponent } from "~/lib/define-component";
 
 import { RoundIndicatorPropsSchema } from "./schema";
 
+// Tailwind class for one progress dot, indexed by state. Hoisted to a
+// helper so the JSX template doesn't carry a nested ternary.
+function dotClass(current: boolean, reached: boolean): string {
+  if (current) return "w-6 bg-radiant-violet";
+  if (reached) return "w-1.5 bg-radiant-violet/70";
+  return "w-1.5 bg-light-gray";
+}
+
 // Round indicator. Lives in the Top region. Renders the active round
 // number, a one-line status, and a row of progress dots showing how far
 // the kid is into the current tier.
@@ -53,13 +61,7 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
             return (
               <span
                 key={`r${props.round}-l${level}`}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  current
-                    ? "w-6 bg-radiant-violet"
-                    : reached
-                      ? "w-1.5 bg-radiant-violet/70"
-                      : "w-1.5 bg-light-gray"
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${dotClass(current, reached)}`}
               />
             );
           })}

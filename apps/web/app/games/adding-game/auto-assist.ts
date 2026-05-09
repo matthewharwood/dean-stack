@@ -2,6 +2,14 @@ import type { AddingGameState, EquationSlot } from "@dean-stack/schemas";
 
 import { applySwap, type SlotLocator } from "./swap";
 
+// First locked slot in a fixed pair, or null when neither is locked.
+// Hoisted helper so call sites don't read as a nested ternary.
+function firstLocked(a: EquationSlot, b: EquationSlot): EquationSlot | null {
+  if (a.locked) return a;
+  if (b.locked) return b;
+  return null;
+}
+
 // Auto-assist for find-missing-result rounds (R5/R6).
 //
 // When the kid loses 3+ evaluations on the same stage the route fires this
@@ -49,7 +57,7 @@ export function applyAutoAssist(state: AddingGameState): AddingGameState | null 
   // Identify which LHS slot holds the static (locked) and which is the
   // kid's operand (unlocked at deal time, possibly locked by a previous
   // assist).
-  const lockedLhs: EquationSlot | null = s0.locked ? s0 : s1.locked ? s1 : null;
+  const lockedLhs: EquationSlot | null = firstLocked(s0, s1);
   const operandSlot: EquationSlot | null = s0.locked ? s1 : s0;
   const resultSlot: EquationSlot = s2;
   if (!lockedLhs || !operandSlot) return null;
