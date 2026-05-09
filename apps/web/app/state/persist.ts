@@ -54,6 +54,12 @@ export function persistSoundSettings(value: SoundSettings): void {
 
 type RemoteWriteMessage = { store: StoreName; key: string };
 
+/**
+ * Future-API: the cross-tab BroadcastChannel write notifier. Pillar 3 keeps
+ * IDB as the source of truth across tabs/iframes; this is the subscription
+ * surface a future component would call to listen for remote writes.
+ * @public
+ */
 export function subscribeRemoteWrites(onChange: (msg: RemoteWriteMessage) => void): () => void {
   if (!channel) return () => undefined;
   const handler = (e: MessageEvent) => onChange(e.data as RemoteWriteMessage);

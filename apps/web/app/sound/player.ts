@@ -247,13 +247,6 @@ export function getSfxPlayer(): SfxPlayer {
   return singleton;
 }
 
-// Test-only — reset the singleton between tests so module-scoped state
-// doesn't bleed between specs.
-export function _resetSfxPlayerForTests(): void {
-  if (singleton) singleton.destroy();
-  singleton = null;
-}
-
 interface ImportMetaEnvLike {
   BASE_URL?: string;
 }

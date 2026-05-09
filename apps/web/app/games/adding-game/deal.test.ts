@@ -77,6 +77,7 @@ function hasValidMissingResultPair(
 }
 
 function handValues(result: ReturnType<typeof dealRound>): number[] {
+  // eslint-disable-next-line react-doctor/js-combine-iterations -- test helper; clarity over micro-perf, hand size is fixed at HAND_SIZE.
   return result.hand
     .map((slot) => (slot.cardId ? result.cards[slot.cardId]?.value : undefined))
     .filter((v): v is number => v !== undefined);

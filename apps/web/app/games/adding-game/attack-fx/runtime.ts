@@ -1,5 +1,5 @@
 import type { Attack } from "@dean-stack/schemas";
-import { Application, BlurFilter, Container, Sprite, Texture } from "pixi.js";
+import { Application, Sprite, Texture } from "pixi.js";
 
 import { runBeam } from "./kinds/beam";
 import { runBurst } from "./kinds/burst";
@@ -85,20 +85,7 @@ export function tintedSoftCircle(color: string): Sprite {
   return sprite;
 }
 
-// Kind-shared helper — exposed so individual kind files don't each
-// re-create the bloom layer. Adds a glow Container to the app.stage
-// with additive blend + BlurFilter, returns it so callers can add
-// children. Caller must `destroy()` it when their attack ends.
-export function makeGlowLayer(blurStrength = 6): Container {
-  if (!app) throw new Error("attack-fx: makeGlowLayer called before attach()");
-  const c = new Container();
-  c.blendMode = "add";
-  c.filters = [new BlurFilter({ strength: blurStrength, quality: 2, resolution: 1 })];
-  app.stage.addChild(c);
-  return c;
-}
-
-export type Rect = { x: number; y: number; width: number; height: number };
+type Rect = { x: number; y: number; width: number; height: number };
 
 function rectCenter(r: Rect): { x: number; y: number } {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -108,7 +95,7 @@ function rectCenter(r: Rect): { x: number; y: number } {
 // per dean-stack rules). Throws if the runtime isn't attached yet — the
 // route is responsible for mounting <AttackFxLayer/> before any attack
 // button can be tapped.
-export async function runAttack(attack: Attack, fromRect: Rect, toRect: Rect): Promise<void> {
+async function runAttack(attack: Attack, fromRect: Rect, toRect: Rect): Promise<void> {
   if (!app) {
     if (initPromise) await initPromise;
   }

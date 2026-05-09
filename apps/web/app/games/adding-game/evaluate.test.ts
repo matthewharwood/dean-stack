@@ -109,6 +109,7 @@ describe("evaluateRound — find-missing-result (R5)", () => {
   test("placing operand=3 and result=4 wins (1 + 3 = 4) with damage=4", () => {
     let state = makeR5State();
     // Inject controlled cards into hand by mutation — we know HAND_SIZE = 5.
+    // eslint-disable-next-line react-doctor/js-combine-iterations -- test setup; clarity over micro-perf, hand size is fixed at HAND_SIZE.
     const handIds = state.player.hand.map((s) => s.cardId).filter((id): id is string => !!id);
     expect(handIds.length).toBe(5);
     const operandCardId = handIds[0]!;
@@ -135,6 +136,7 @@ describe("evaluateRound — find-missing-result (R5)", () => {
 
   test("inconsistent operand/result loses (1 + 3 = 4 ≠ 5)", () => {
     let state = makeR5State();
+    // eslint-disable-next-line react-doctor/js-combine-iterations -- test setup; clarity over micro-perf, hand size is fixed at HAND_SIZE.
     const handIds = state.player.hand.map((s) => s.cardId).filter((id): id is string => !!id);
     const operandCardId = handIds[0]!;
     const resultCardId = handIds[1]!;
@@ -182,6 +184,7 @@ describe("evaluateRound — find-missing-result (R6, subtract)", () => {
 
   test("6 − 2 = 4 wins, damage = 4", () => {
     let state = makeR6State();
+    // eslint-disable-next-line react-doctor/js-combine-iterations -- test setup; clarity over micro-perf, hand size is fixed at HAND_SIZE.
     const handIds = state.player.hand.map((s) => s.cardId).filter((id): id is string => !!id);
     const operandCardId = handIds[0]!;
     const resultCardId = handIds[1]!;

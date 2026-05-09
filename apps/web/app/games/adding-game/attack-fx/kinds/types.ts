@@ -13,17 +13,9 @@ export type AttackCtx = {
 // All kinds resolve their Promise within ≤500ms — the user's hard cap.
 export const ATTACK_DURATION_MS = 500;
 
-// Useful tweenables — small, copy-pasteable helpers.
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
+// Useful tweenable — small, copy-pasteable helper. `lerp` and `easeOutBack`
+// once lived here too; deleted as unused. Re-add when an attack kind needs
+// them; until then they're dead weight.
 export function easeOutQuart(t: number): number {
   return 1 - (1 - t) ** 4;
-}
-
-export function easeOutBack(t: number, overshoot = 1.4): number {
-  const c1 = overshoot;
-  const c3 = c1 + 1;
-  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
 }

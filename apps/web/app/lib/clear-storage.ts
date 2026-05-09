@@ -111,6 +111,7 @@ export async function clearAllStorage(): Promise<void> {
   // to work everywhere we deploy. Suppress with intent.
   const cookies = document.cookie.split(";");
   for (const cookie of cookies) {
+    // eslint-disable-next-line react-doctor/js-set-map-lookups -- false positive: this is String#indexOf finding a single char in a single string, not Array#indexOf in a hot loop. There's no Set/Map equivalent for character search.
     const eq = cookie.indexOf("=");
     const name = (eq === -1 ? cookie : cookie.slice(0, eq)).trim();
     if (!name) continue;

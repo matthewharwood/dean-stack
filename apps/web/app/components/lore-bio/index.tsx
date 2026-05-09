@@ -15,13 +15,12 @@ type Block = { kind: "heading"; text: string } | { kind: "para"; text: string };
 // text in the same block (rare — most authors put the heading on its own
 // block, then a paragraph block underneath).
 function parseBio(bio: string): readonly Block[] {
-  const blocks = bio
-    .split(PARAGRAPH_SPLIT)
-    .map((block) => block.trim())
-    .filter((block) => block.length > 0);
-
+  // Single pass: split → trim → skip-empty → push. Replaces a `.split().map().filter()`
+  // chain that walked the array three times.
   const out: Block[] = [];
-  for (const block of blocks) {
+  for (const raw of bio.split(PARAGRAPH_SPLIT)) {
+    const block = raw.trim();
+    if (block.length === 0) continue;
     if (block.startsWith(HEADING_PREFIX)) {
       const lines = block.split("\n");
       const headingLine = lines[0] ?? "";
@@ -57,6 +56,7 @@ export const LoreBio = defineComponent(LoreBioPropsSchema, ({ bio }) => {
     if (block.kind === "heading") {
       rendered.push(
         <h3
+          // eslint-disable-next-line react-doctor/no-array-index-as-key -- bio blocks are derived from a positional split of the source string; the array length is fixed for one render and never reorders.
           key={`h-${i}`}
           className="mt-4 mb-1.5 border-b border-light-gray/80 pb-1 font-openrunde text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-gray first:mt-0"
         >
@@ -69,6 +69,7 @@ export const LoreBio = defineComponent(LoreBioPropsSchema, ({ bio }) => {
     paraSeen += 1;
     rendered.push(
       <p
+        // eslint-disable-next-line react-doctor/no-array-index-as-key -- bio blocks are derived from a positional split of the source string; the array length is fixed for one render and never reorders.
         key={`p-${i}`}
         className={
           isFirstPara
