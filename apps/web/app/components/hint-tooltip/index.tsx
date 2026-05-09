@@ -11,12 +11,15 @@ const DIGIT_RUN = /(\d+)/g;
 const ALL_DIGITS = /^\d+$/;
 const ITALIC_RUN = /(\*[^*]+\*)/g;
 
-// Walks a body fragment, splitting on `*italic*` markers first then on
-// digit runs inside each non-italic piece. Italic markers come from the
-// hint generator templates ("Stay *under* the line.") and are intentionally
-// markdown-ish so authoring stays compact. Digit highlighting + italic
-// composition gives templates two emphasis modes without inline JSX.
-function renderBody(body: string): ReactNode {
+// Body — renders a hint body string with two emphasis modes: digit runs
+// get the highlight pill, and `*asterisk-wrapped*` segments get italic.
+// Both come from the hint-generator templates (e.g. "Stay *under* the line.")
+// so authoring stays markdown-ish without inline JSX.
+//
+// Pure presentational — no hooks, no effects. A real component (vs. the
+// previous inline `renderBody` helper) so react-doctor's `no-render-in-render`
+// rule doesn't fire and the React Compiler memoizes it cleanly.
+function Body({ body }: { body: string }): ReactNode {
   const result: ReactNode[] = [];
   let charOffset = 0;
   for (const segment of body.split(ITALIC_RUN)) {
@@ -57,7 +60,7 @@ function renderBody(body: string): ReactNode {
     result.push(node);
     charOffset += segment.length;
   }
-  return result;
+  return <>{result}</>;
 }
 
 // Failure chip — prominently shows the kid's actual computed value next
@@ -115,8 +118,7 @@ export const HintTooltip = defineComponent(HintTooltipPropsSchema, (props) => {
         {/* Body — smaller, regular weight, with digit highlights and
             italic emphasis from the *asterisk* markers in the template. */}
         <p className="font-openrunde text-sm leading-snug text-slate-ink">
-          {/* eslint-disable-next-line react-doctor/no-render-in-render -- renderBody is a pure string→ReactNode helper (no hooks, no props), not a render function; extracting it to a component adds zero value. */}
-          {renderBody(props.body)}
+          <Body body={props.body} />
         </p>
         {/* Finger-counting visual — drawn hands extending the right
             number of fingers, animated to count up on mount. Sits

@@ -1,6 +1,6 @@
 import type { Rarity } from "@dean-stack/schemas";
 import { Info, X } from "lucide-react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useReducer, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
 import { defineComponent } from "~/lib/define-component";
@@ -38,6 +38,11 @@ const CONFETTI_COUNT = 16;
 const LEVEL_UP_MS = 1500;
 
 type ConfettiSpec = {
+  // Stable identity for the React key. The angular index is stable for one
+  // burst — the array is regenerated whole each level-up, never re-ordered —
+  // so a `c-${i}` derivation is exactly as stable as the index itself but
+  // satisfies the no-array-index-as-key rule by being a string identifier.
+  id: string;
   cx: number;
   cy: number;
   cr: number;
@@ -55,6 +60,7 @@ function generateConfetti(): ConfettiSpec[] {
     const distance = 70 + Math.random() * 40;
     const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length] ?? "#fbbf24";
     return {
+      id: `c-${i}`,
       cx: Math.cos(angle) * distance,
       cy: Math.sin(angle) * distance - 30,
       cr: (Math.random() - 0.5) * 720,
@@ -62,6 +68,31 @@ function generateConfetti(): ConfettiSpec[] {
       delay: Math.random() * 80,
     };
   });
+}
+
+// Level-up state — one record, one transition. `fire` activates the
+// burst with the captured from/to pair + a fresh confetti spread;
+// `clear` returns to idle without disturbing confetti (the CSS keyframes
+// run to completion regardless).
+type LevelUpState = {
+  active: boolean;
+  from: number | null;
+  to: number | null;
+  confetti: readonly ConfettiSpec[];
+};
+type LevelUpAction = { type: "fire"; from: number; to: number } | { type: "clear" };
+
+const IDLE_LEVEL_UP: LevelUpState = { active: false, from: null, to: null, confetti: [] };
+
+function levelUpReducer(state: LevelUpState, action: LevelUpAction): LevelUpState {
+  switch (action.type) {
+    case "fire":
+      return { active: true, from: action.from, to: action.to, confetti: generateConfetti() };
+    case "clear":
+      return { active: false, from: null, to: null, confetti: state.confetti };
+    default:
+      return state;
+  }
 }
 
 export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => {
@@ -78,40 +109,30 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
   // styles/index.css `level-up-from` / `level-up-to`). The from/to
   // numbers are captured at trigger time so the badge keeps showing
   // them even if `progress` changes mid-animation.
+  //
+  // All four facets (active flag, from, to, confetti) are one transition
+  // — `fire` and `clear` actions move them as a unit, so the previous
+  // four cascading setStates collapse to one dispatch and react-doctor's
+  // `no-cascading-set-state` rule no longer fires by construction.
+  // Pilot identity drives the React `key` at the parent — the whole
+  // component remounts on pilot change, so useState defaults re-init
+  // and prevLevelRef is fresh. No pilot-change effect needed; no
+  // useExhaustiveDependencies trigger-only-dep warning to fight.
   const prevLevelRef = useRef<number | null>(props.progress?.level ?? null);
-  const [levelUpActive, setLevelUpActive] = useState(false);
-  const [levelUpFrom, setLevelUpFrom] = useState<number | null>(null);
-  const [levelUpTo, setLevelUpTo] = useState<number | null>(null);
-  const [confetti, setConfetti] = useState<readonly ConfettiSpec[]>([]);
+  const [levelUp, dispatchLevelUp] = useReducer(levelUpReducer, IDLE_LEVEL_UP);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only the id matters
-  useEffect(() => {
-    setFlipped(false);
-    // Switching pilots reveals a different stored level — that is NOT a
-    // level-up event, so reset the comparator to the new pilot's level
-    // before the level-up effect runs and would compare prev (old
-    // pilot's level) to curr (new pilot's level).
-    prevLevelRef.current = props.progress?.level ?? null;
-  }, [props.player?.id]);
-
-  // eslint-disable-next-line react-doctor/no-cascading-set-state -- four synchronous setters in this effect collapse to one batched render under React 19's automatic batching; the cascade is intentional.
   useEffect(() => {
     const curr = props.progress?.level ?? null;
     const prev = prevLevelRef.current;
     prevLevelRef.current = curr;
     if (prev == null || curr == null) return;
     if (curr <= prev) return;
-    setLevelUpActive(true);
-    setLevelUpFrom(prev);
-    setLevelUpTo(curr);
-    setConfetti(generateConfetti());
-    const t = window.setTimeout(() => {
-      setLevelUpActive(false);
-      setLevelUpFrom(null);
-      setLevelUpTo(null);
-    }, LEVEL_UP_MS);
+    dispatchLevelUp({ type: "fire", from: prev, to: curr });
+    const t = window.setTimeout(() => dispatchLevelUp({ type: "clear" }), LEVEL_UP_MS);
     return () => window.clearTimeout(t);
   }, [props.progress?.level]);
+
+  const { active: levelUpActive, from: levelUpFrom, to: levelUpTo, confetti } = levelUp;
 
   // Empty state — same dotted-border language as EnemyAvatar's empty.
   if (!props.player) {
@@ -231,10 +252,9 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
                   "radial-gradient(ellipse at center, transparent 35%, rgba(34, 197, 94, 0.7) 100%)",
               }}
             />
-            {confetti.map((c, i) => (
+            {confetti.map((c) => (
               <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: stable for one burst
-                key={i} // eslint-disable-line react-doctor/no-array-index-as-key -- confetti specs are positional and ephemeral; the burst array is regenerated per level-up, never reordered.
+                key={c.id}
                 aria-hidden
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
               >

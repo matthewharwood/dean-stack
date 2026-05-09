@@ -21,7 +21,13 @@ export function useAnime<T extends Element>(
     return () => {
       a.cancel();
     };
-    // Per-call-site deps; the React Compiler audit relies on the caller passing the right list.
-    // biome-ignore lint/correctness/useExhaustiveDependencies: caller-controlled deps
+    // KEEP — this is a parameterized hook, not a runtime bug. The `deps`
+    // arg is the public API: callers control when the animation re-fires.
+    // useExhaustiveDependencies can only verify dep arrays it can see
+    // statically; a parameter type-erased to DependencyList is opaque to
+    // it. Refactoring to remove the parameter would break the call-site
+    // contract (replay-on-state-change). Documented at hook-author time
+    // — do not chase this disable.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: API design — `deps` is a public parameter the caller owns.
   }, deps);
 }

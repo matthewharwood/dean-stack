@@ -138,26 +138,30 @@ type Fixtures = {
   seededIDB: (seed: () => Promise<void>) => Promise<void>;
 };
 
+// IMPORTANT — name the second callback parameter `runFixture`, NOT
+// Playwright's docs-default `use`. `use` is a React 19 hook identifier
+// and triggers `react-hooks/rules-of-hooks` (react-doctor 0.1.3+ added
+// this rule). Playwright accepts any identifier; only position matters.
 export const test = base.extend<Fixtures>({
   freshIDB: [
-    async ({ page }, use) => {
+    async ({ page }, runFixture) => {
       // Wipe IDB (and storage) before the test runs.
       await page.addInitScript(async () => {
         const dbs = (await indexedDB.databases?.()) ?? [];
         await Promise.all(dbs.map((d) => d.name && indexedDB.deleteDatabase(d.name)));
       });
-      await use();
+      await runFixture();
     },
     { auto: true },
   ],
 
   // Seeded IDB — pass a seed callback that runs in the page context.
-  seededIDB: async ({ page }, use) => {
+  seededIDB: async ({ page }, runFixture) => {
     const seed = async (writer: () => Promise<void>) => {
       // The seed callback is serialized into addInitScript; it sees the real `indexedDB`.
       await page.addInitScript(`(async () => { (${writer.toString()})(); })();`);
     };
-    await use(seed);
+    await runFixture(seed);
   },
 });
 
@@ -172,7 +176,7 @@ The offline fixture is canonical to the PWA-offline contract — see `playwright
 import { test as base } from "./fixtures";
 
 export const test = base.extend({
-  offlineAfterInstall: async ({ page, context }, use) => {
+  offlineAfterInstall: async ({ page, context }, runFixture) => {
     // 1. Online to install SW.
     await page.goto("/");
     await page.waitForFunction(async () => {
@@ -187,7 +191,7 @@ export const test = base.extend({
       if (sameOrigin) await route.continue();
       else await route.abort();
     });
-    await use();
+    await runFixture();
   },
 });
 ```
@@ -198,12 +202,12 @@ import { test as base } from "./fixtures";
 
 export const test = base.extend({
   throttled: [
-    async ({ context }, use) => {
+    async ({ context }, runFixture) => {
       await context.route("**/*", async (route) => {
         await new Promise((r) => setTimeout(r, 200));
         await route.continue();
       });
-      await use();
+      await runFixture();
     },
     { auto: false },
   ],

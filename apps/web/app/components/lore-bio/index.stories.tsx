@@ -9,20 +9,7 @@ const meta = {
   parameters: { layout: "centered" },
   decorators: [
     (Story) => (
-      <div
-        // eslint-disable-next-line react-doctor/no-inline-exhaustive-style -- Storybook decorator: convention is a self-contained inline style on a one-off wrapper; not a runtime component.
-        style={{
-          width: 280,
-          maxHeight: 380,
-          overflowY: "auto",
-          padding: "12px 16px",
-          background: "var(--color-stone-100, #f5f5f4)",
-          color: "#1c1917",
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize: 13,
-          lineHeight: 1.55,
-        }}
-      >
+      <div className="w-[280px] max-h-[380px] overflow-y-auto px-4 py-3 bg-stone-100 text-[#1c1917] [font-family:Georgia,'Times_New_Roman',serif] text-[13px] leading-[1.55]">
         <Story />
       </div>
     ),

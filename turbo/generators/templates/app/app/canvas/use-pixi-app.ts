@@ -55,7 +55,10 @@ export function usePixiApp(
         if (app) app.destroy(true, { children: true, texture: true });
       };
     },
-    // biome-ignore lint/correctness/useExhaustiveDependencies: caller-controlled deps
+    // KEEP — same API-design escape as `useAnime`. `deps` is the
+    // public parameter the caller owns, opaque to biome's static dep
+    // verifier. See use-anime.ts for the full reasoning.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: API design — `deps` is a public parameter the caller owns.
     deps,
   );
 }

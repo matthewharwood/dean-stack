@@ -45,13 +45,10 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
   // template changes (round transition flips back to portrait so the new
   // enemy's art is visible by default).
   const [flipped, setFlipped] = useState(false);
-  // Reset the flip on enemy change — a new round shouldn't pre-flip the
-  // player into a bio they haven't asked for. Keyed on enemy id (a string)
-  // so React doesn't re-run on prop-object identity churn.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only the id matters
-  useEffect(() => {
-    setFlipped(false);
-  }, [props.enemy?.id]);
+  // Flip-back-to-portrait reset on enemy change is driven by the parent
+  // passing `key={enemy?.id}` — the whole component remounts and useState
+  // re-initializes, so we don't need a `[enemy?.id]` effect here (which
+  // biome's useExhaustiveDependencies flags as a trigger-only dep).
 
   // Damage pulse: when HP drops, briefly flash the avatar root via a
   // one-shot CSS animation. Implemented via a data attribute + setTimeout

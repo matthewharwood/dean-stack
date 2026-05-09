@@ -111,13 +111,25 @@ export async function clearAllStorage(): Promise<void> {
   // to work everywhere we deploy. Suppress with intent.
   const cookies = document.cookie.split(";");
   for (const cookie of cookies) {
-    // eslint-disable-next-line react-doctor/js-set-map-lookups -- false positive: this is String#indexOf finding a single char in a single string, not Array#indexOf in a hot loop. There's no Set/Map equivalent for character search.
-    const eq = cookie.indexOf("=");
-    const name = (eq === -1 ? cookie : cookie.slice(0, eq)).trim();
+    // String#split with limit 1 returns ["nameOnly"] for "name=value=more"
+    // — we only need the name part. Pure string ops; no indexOf, no array
+    // membership tests, so no js-set-map-lookups false-positive trigger.
+    const [namePart = ""] = cookie.split("=", 1);
+    const name = namePart.trim();
     if (!name) continue;
-    // biome-ignore lint/suspicious/noDocumentCookie: defensive cleanup; CookieStore not yet universal
+    // KEEP — `document.cookie` IS the right API here. CookieStore landed in
+    // iPad Safari 17.4 but isn't universal across our deploy targets, and
+    // the rule's preferred alternative doesn't exist on every browser we
+    // ship to. The app sets zero cookies of its own; this loop only fires
+    // if a dev tool / extension / Storybook iframe dropped one. Defensive.
+    // biome-ignore lint/suspicious/noDocumentCookie: API choice — only universal cookie-clear API.
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    // biome-ignore lint/suspicious/noDocumentCookie: defensive cleanup; CookieStore not yet universal
+    // KEEP — `document.cookie` IS the right API here. CookieStore landed in
+    // iPad Safari 17.4 but isn't universal across our deploy targets, and
+    // the rule's preferred alternative doesn't exist on every browser we
+    // ship to. The app sets zero cookies of its own; this loop only fires
+    // if a dev tool / extension / Storybook iframe dropped one. Defensive.
+    // biome-ignore lint/suspicious/noDocumentCookie: API choice — only universal cookie-clear API.
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${window.location.pathname}`;
   }
 }

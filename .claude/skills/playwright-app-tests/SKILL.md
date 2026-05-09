@@ -123,7 +123,9 @@ test("save writes a row to the progress object store", async ({ page }) => {
 import { expect, test as base } from "@playwright/test";
 
 const test = base.extend<{ seededPage: typeof base extends never ? never : Awaited<ReturnType<typeof base["page"]["fixture"]>> }>({
-  seededPage: async ({ page }, use) => {
+  // Note the parameter name is `runFixture`, NOT Playwright's docs-default
+  // `use` — see `playwright-conventions/SKILL.md` for the rationale.
+  seededPage: async ({ page }, runFixture) => {
     // addInitScript runs BEFORE the page's own scripts — perfect for seeding IDB
     // before the app awaits idbHydrationPromise at the root <Suspense>.
     await page.addInitScript(() => {
@@ -137,7 +139,7 @@ const test = base.extend<{ seededPage: typeof base extends never ? never : Await
         tx.objectStore("progress").put({ id: "maze-1", level: 1, completed: true });
       };
     });
-    await use(page);
+    await runFixture(page);
   },
 });
 
