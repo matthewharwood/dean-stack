@@ -20,11 +20,13 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
-      - uses: millionco/react-doctor@main
-        with:
-          # Use the PR's actual base branch so the diff works whether the
-          # repo's default branch is `main` or `master`.
-          diff: ${{ github.base_ref }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          fail-on: none
-          verbose: "true"
+      # Direct invocation, mirrors the local pre-push gate (`bun run check:fast`).
+      # We do NOT use the `millionco/react-doctor` wrapper action: it runs a
+      # second `--score` step on the FULL codebase under `pipefail`, and
+      # react-doctor exits non-zero whenever any issues exist anywhere.
+      # Result: every PR was failing on pre-existing issues outside the diff,
+      # ignoring the wrapper's own `fail-on: none` flag (which only applies
+      # to its first step). Direct invocation gates only on diff issues —
+      # exactly what the local gate enforces, so CI red ⇔ local red.
+      - name: react-doctor — diff scan
+        run: npx -y react-doctor@latest . --diff "${{ github.base_ref }}" --verbose
