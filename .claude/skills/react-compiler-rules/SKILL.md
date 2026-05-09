@@ -106,7 +106,7 @@ The render returns a `<div>`; the animation is set up inside `useEffect` and tor
   }
 }
 ```
-Plus the official `eslint-plugin-react-hooks` v5+ rules (`react-hooks/exhaustive-deps`, `react-hooks/react-compiler`) wherever they live in this repo's lint pipeline. A violation fails `bun run check` (see `biome` for the JS/TS lint surface).
+Biome's `useExhaustiveDependencies` (in `correctness`, on by default via `recommended: true` in `packages/biome-config/biome.json`, off for `**/tests/**`) is dean-stack's in-stack enforcement for the dep-array contract — same coverage as `eslint-plugin-react-hooks/exhaustive-deps`. The `react-hooks/react-compiler` ESLint rule is NOT wired (the only ESLint plugin in this stack is `eslint-plugin-sonarjs`, which deliberately holds no React-specific rules to avoid Biome overlap — see `eslint-plugin-sonarjs/SKILL.md`). React Compiler purity violations surface two ways: the Compiler bails out and skips memoization (silent — diagnose with `react-scan` in Storybook), or `react-doctor`'s scan flags the upstream pattern (`setState({ ...state })`, manual memoization, side-channel-in-render, etc.) on the diff at gate time.
 
 ### Diagnosing render issues — `react-scan`
 [`react-scan`](https://github.com/aidenybai/react-scan) is loaded automatically in dev via `apps/<name>/app/client.tsx` and `.storybook/preview.tsx` (gated by `import.meta.env.DEV` so it tree-shakes from prod). It outlines re-rendering components with a visual box. **Use it as the visual companion to this skill** — if the Compiler can't memoize a component, react-scan is what surfaces the failure. Common causes for an unexpected highlight:

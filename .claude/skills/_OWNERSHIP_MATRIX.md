@@ -45,8 +45,9 @@ The 17 techs in `potential_skills/` map onto a mix of **narrow** skills (one `SK
 | playwright-app-tests | sub | playwright | Playwright end-to-end tests pointed at the built/preview app: route workflows, IDB-seeded fixtures, BroadcastChannel verification. | playwright app test, e2e workflow, app-level test, route workflow test, idb seeded test, idb assertion |
 | playwright-pwa-offline | sub | playwright | The offline-deep-link contract: throttle network to offline, navigate to `/some/deep/route`, assert the router resolves it from cache without a server round-trip. | offline test, pwa offline test, deep link offline test, network offline, service worker test, navigation fallback test |
 | playwright-conventions | sub | playwright | Selectors (role-based first, then test-id, then text), fixtures, fresh-IDB-per-test, reduced-motion forcing, retry policy, and the load-bearing **ASK-FIRST** prompt rule for every test design decision. | playwright fixture, playwright selector, role selector, getByRole, test-id, fresh idb fixture, reduced motion playwright, ask first test |
+| eslint-plugin-sonarjs | narrow | — | Local-only second-opinion ESLint pass via `eslint-plugin-sonarjs`: cognitive-complexity, code-smell, bug-pattern rules layered on top of Biome. Owns `apps/<name>/eslint.sonar.config.mjs` (sonar-only flat config, NO Biome/eslint-recommended overlap), the calibrated rule policy with rationale comments (`pseudo-random` off, `void-use` off, `cognitive-complexity` ≥50, `no-nested-functions` off for tests), the `check:sonar` per-app turbo task, and `.github/workflows/sonarjs.yml`. Explicitly NOT SonarQube/SonarCloud — no `sonar-scanner`, no project token, no server. | sonar, sonarjs, eslint-plugin-sonarjs, cognitive-complexity, pseudo-random, no-nested-conditional, no-nested-functions, void-use, second-opinion lint, eslint.sonar.config.mjs |
 
-**Totals:** 17 techs + 1 cross-cutting authoring policy → 13 narrow skills + 5 router skills + 17 sub-skills = **35 skills**.
+**Totals:** 18 techs + 1 cross-cutting authoring policy → 14 narrow skills + 5 router skills + 17 sub-skills = **36 skills**.
 
 ---
 

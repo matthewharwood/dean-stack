@@ -46,6 +46,16 @@ export function tintedSoftCircle(color: string): Sprite {
 // Drop the cached texture so the next `tintedSoftCircle` rebuilds it.
 // Called from `runtime.detach()` when the AttackFxLayer unmounts —
 // keeps cache lifetime aligned with the Pixi app's lifetime.
+//
+// Why `destroy(true)` BEFORE nulling: `runtime.detach()` calls
+// `app.destroy(true, { children: true, texture: false })` — note
+// `texture: false`, which intentionally tells Pixi to leave its own
+// textures alone (Pixi can't know we're caching this one separately).
+// That means our cached `softCircleTexCache` GPU resource (VRAM-backed
+// canvas → Texture) is NOT freed by the app teardown. Without an explicit
+// `.destroy(true)` here, every attach/detach cycle leaks one canvas-
+// backed texture. Caught by CodeRabbit on PR #3.
 export function resetSoftCircleCache(): void {
+  softCircleTexCache?.destroy(true);
   softCircleTexCache = null;
 }
