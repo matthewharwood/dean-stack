@@ -77,11 +77,11 @@ The quality gate has two flavours, both with the same purity rule (any warning =
 
 - **`bun run check`** — the full gate. Builds every app and runs every Playwright project (storybook + app + app-offline). This is what CI runs and what verifies a release-quality state. The chain:
   ```
-  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  build  →  playwright test (storybook + app + app-offline)
+  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  build  →  playwright test (storybook + app + app-offline)  →  react-doctor --diff
   ```
 - **`bun run check:fast`** — the pre-push gate. Same chain, except the Playwright run is restricted to `--project=storybook`. The `app` and `app-offline` projects spin up `vite preview` against `dist/`, so without a fresh build they'd be re-validating yesterday's bytes — meaningless. They're CI's job. The `storybook` project drives `storybook dev` (HEAD-valid every run) so it's safe to gate locally:
   ```
-  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  playwright test --project=storybook
+  biome ci  →  stylelint --max-warnings 0  →  tsgo --noEmit  →  bun test  →  playwright test --project=storybook  →  react-doctor --diff
   ```
 
 **`bun run check:fast` runs automatically on `git push`.** A pre-push hook installed by `bash scripts/install-hooks.sh` (auto-run as the `prepare` script after every `bun install`) blocks the push if the gate is red. Override only intentionally: `git push --no-verify`. CI then runs the full `bun run check` on the PR.
@@ -94,6 +94,7 @@ The quality gate has two flavours, both with the same purity rule (any warning =
 - Zod runtime errors surfaced in the browser console during dev
 - Failing `bun test` cases
 - Failing Playwright tests (Storybook stories or application workflows)
+- **react-doctor issues on the diff** — runs `npx react-doctor . --diff` at the end of both `check` and `check:fast`. Catches issues outside Biome/Stylelint's scope: stale-closure setState patterns (`setState({ ...state, ... })` → `setState(prev => ({ ...prev, ... }))`), barrel-import tree-shaking misses, redundant Tailwind size axes (`h-N w-N` → `size-N`), heading weight at display sizes (`font-bold` on `<h3>` → `font-semibold`). The `--diff` mode only scans files changed vs main, so it stays fast and only flags YOUR work. CI also runs the same check via the `react-doctor.yml` workflow as a separate signal — but the local gate is the source of truth.
 
 `bun run dev` is **not** part of the gate — it runs Stylelint and Biome in watch mode in parallel with Vite for fast inner-loop feedback only. **Stylelint must error from the CLI watcher**, not just in the IDE — the IDE is not the source of truth and may not even be open.
 

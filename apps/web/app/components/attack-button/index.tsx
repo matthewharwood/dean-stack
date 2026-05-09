@@ -38,7 +38,7 @@ export const AttackButton = defineComponent(AttackButtonPropsSchema, (props) => 
     >
       <span
         aria-hidden="true"
-        className="absolute -top-3.5 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-white text-white shadow-md"
+        className="absolute -top-3.5 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-white text-white shadow-md"
         style={{ backgroundColor: attack.color }}
       >
         <Icon size={16} strokeWidth={2.25} />

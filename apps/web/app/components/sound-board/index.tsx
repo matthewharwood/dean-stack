@@ -61,7 +61,7 @@ export const SoundBoard = defineComponent(SoundBoardPropsSchema, (props) => {
             type="checkbox"
             checked={settings.enabled}
             onChange={(e) => {
-              setSettings({ ...settings, enabled: e.target.checked });
+              setSettings((prev) => ({ ...prev, enabled: e.target.checked }));
             }}
             data-test="sfx-enabled-toggle"
           />
@@ -76,7 +76,7 @@ export const SoundBoard = defineComponent(SoundBoardPropsSchema, (props) => {
             step={0.05}
             value={settings.masterVolume}
             onChange={(e) => {
-              setSettings({ ...settings, masterVolume: Number(e.target.value) });
+              setSettings((prev) => ({ ...prev, masterVolume: Number(e.target.value) }));
             }}
             className="flex-1"
             data-test="sfx-volume-slider"
@@ -97,7 +97,7 @@ export const SoundBoard = defineComponent(SoundBoardPropsSchema, (props) => {
 
       {orderedCategories.map((cat) => (
         <section key={cat} className="flex flex-col gap-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-gray">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-gray">
             {cat} ({grouped.get(cat)?.length ?? 0})
           </h3>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">

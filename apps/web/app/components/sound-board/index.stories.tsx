@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { SoundBoard } from "./index";
+import { SoundBoard } from ".";
 
 const meta = {
   title: "Components/SoundBoard",
