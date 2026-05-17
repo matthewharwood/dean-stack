@@ -7,4 +7,4 @@
 // no point re-exporting code that has zero current consumers.
 
 export { isRegistered, SFX_REGISTRY, type SfxEventId } from "./registry";
-export { useSound } from "./use-sound";
+export { type SoundApi, useSound } from "./use-sound";

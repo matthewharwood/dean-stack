@@ -65,7 +65,14 @@ class SfxPlayer {
 
   // Fire-and-forget. Returns a promise mostly for tests; production callers
   // shouldn't need to await — sound is a side effect.
-  async play(eventId: SfxEventId): Promise<void> {
+  //
+  // `options.volumeScale` (0..1) multiplies the per-event gain for this
+  // ONE call only. Used by the auto-play character-name effect to play
+  // the same MP3 the speaker button uses, but at 75% — so the kid
+  // doesn't get blasted every time a new pilot or enemy enters the
+  // board. Loop entries ignore the scale (they go through
+  // `startLoop`, which doesn't currently propagate per-instance gain).
+  async play(eventId: SfxEventId, options?: { volumeScale?: number }): Promise<void> {
     if (!this.enabled) return;
     if (typeof window === "undefined") return;
 
@@ -95,7 +102,75 @@ class SfxPlayer {
       this.enforcePolyphonyCap(eventId);
     }
 
-    this.spawnInstance(eventId, entry, buffer);
+    this.spawnInstance(eventId, entry, buffer, options?.volumeScale);
+  }
+
+  // Like `play()` but the returned Promise resolves when the sample
+  // FINISHES playing (i.e. the underlying source's `ended` event).
+  // Loops resolve immediately because they would otherwise never
+  // settle. Used by the attack flow so the enemy doesn't die until
+  // the attack sound has finished — preserving the "attack lands,
+  // THEN the world advances" beat.
+  async playUntilEnded(eventId: SfxEventId, options?: { volumeScale?: number }): Promise<void> {
+    if (!this.enabled) return;
+    if (typeof window === "undefined") return;
+
+    this.ensureContext();
+    if (!this.context || !this.masterGain) return;
+    if (this.context.state === "suspended" && this.unlocked) {
+      void this.context.resume();
+    }
+
+    const entry = SFX_REGISTRY[eventId];
+    if (!entry) return;
+
+    const buffer = await this.loadBuffer(eventId, entry);
+    if (!buffer) return;
+    if (!this.context || !this.masterGain) return;
+
+    if (entry.policy === "loop") {
+      // Loop entries don't have a natural end — fire and forget so the
+      // caller can keep moving. The route owns when to stop a loop.
+      this.startLoop(eventId, entry, buffer);
+      return;
+    }
+
+    if (entry.policy === "restart") {
+      this.stopActive(eventId);
+    } else if (entry.policy === "polyphony") {
+      this.enforcePolyphonyCap(eventId);
+    }
+
+    return new Promise<void>((resolve) => {
+      if (!this.context || !this.masterGain) {
+        resolve();
+        return;
+      }
+      const source = this.context.createBufferSource();
+      source.buffer = buffer;
+      const gain = this.context.createGain();
+      const scale =
+        options?.volumeScale === undefined ? 1 : Math.max(0, Math.min(1, options.volumeScale));
+      gain.gain.value = (entry.gain ?? 1) * scale;
+      source.connect(gain);
+      gain.connect(this.masterGain);
+
+      const instance: ActiveInstance = { source, gain };
+      const list = this.active.get(eventId) ?? [];
+      list.push(instance);
+      this.active.set(eventId, list);
+
+      source.onended = () => {
+        const current = this.active.get(eventId);
+        if (current) {
+          const idx = current.indexOf(instance);
+          if (idx >= 0) current.splice(idx, 1);
+        }
+        resolve();
+      };
+
+      source.start(0);
+    });
   }
 
   stop(eventId: SfxEventId): void {
@@ -162,12 +237,21 @@ class SfxPlayer {
     return promise;
   }
 
-  private spawnInstance(eventId: SfxEventId, entry: RegistryEntry, buffer: AudioBuffer): void {
+  private spawnInstance(
+    eventId: SfxEventId,
+    entry: RegistryEntry,
+    buffer: AudioBuffer,
+    volumeScale?: number,
+  ): void {
     if (!this.context || !this.masterGain) return;
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     const gain = this.context.createGain();
-    gain.gain.value = entry.gain ?? 1;
+    // Per-event default × per-call scale × (later) the master volume on
+    // this.masterGain. Clamp the scale defensively so callers passing
+    // garbage don't damage the kid's hearing.
+    const scale = volumeScale === undefined ? 1 : Math.max(0, Math.min(1, volumeScale));
+    gain.gain.value = (entry.gain ?? 1) * scale;
     source.connect(gain);
     gain.connect(this.masterGain);
 

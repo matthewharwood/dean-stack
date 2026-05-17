@@ -26,6 +26,8 @@ import { RoundCompleteFx } from "~/components/round-complete-fx";
 import { RoundIndicator } from "~/components/round-indicator";
 import { RoundJumpPanel } from "~/components/round-jump-panel";
 import { StepperCard } from "~/components/stepper-card";
+import { SwipeToEvaluate } from "~/components/swipe-to-evaluate";
+import { WaterCanvas } from "~/components/water-canvas";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
 import { attackFxRuntime } from "~/games/adding-game/attack-fx/runtime";
 import { applyAutoAssist } from "~/games/adding-game/auto-assist";
@@ -48,7 +50,8 @@ import { findPlayerTemplate, PLAYER_REGISTRY } from "~/games/adding-game/players
 import { applyStep, applySwap, type SlotLocator } from "~/games/adding-game/swap";
 import { applyXpGain, progressFor, xpThresholdForLevel } from "~/games/adding-game/xp";
 import { buildSeoLinks, buildSeoMeta } from "~/lib/seo";
-import { useSound } from "~/sound";
+import { isRegistered, type SoundApi, useSound } from "~/sound";
+import { playStepperBlip } from "~/sound/procedural";
 import { addingGameAtom } from "~/state/atoms";
 
 export const Route = createFileRoute("/adding-game")({
@@ -70,12 +73,24 @@ function GameBoard({ children }: RegionProps) {
   // glyph would otherwise trigger Safari's text-selection magnifier or copy
   // menu and eat the pointer events the drag system is listening for.
   //
-  // `water-bg` paints the slow oceanic wash behind everything; the panel
-  // surfaces below use `panel-glass` so the water shows through the gaps
-  // AND subtly through the panels themselves (cards stay opaque on top).
+  // Layering:
+  //   - `water-bg` class on the <main> is the static CSS fallback (kicks
+  //     in when WebGL is unavailable — headless tests, ancient devices —
+  //     so the kid still sees an oceanic palette).
+  //   - `<WaterCanvas />` mounts a Pixi shader on top of that fallback;
+  //     when it's running, the shader paints over the CSS gradient.
+  //   - Grid children sit above the canvas via `relative z-10`. The
+  //     panel surfaces use `panel-glass` so the water shows through the
+  //     gaps AND subtly through the panels themselves (cards stay
+  //     opaque on top).
   return (
-    <main className="water-bg grid h-dvh grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px] font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
-      {children}
+    <main className="water-bg relative h-dvh font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <WaterCanvas />
+      </div>
+      <div className="relative z-10 grid h-full grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px]">
+        {children}
+      </div>
     </main>
   );
 }
@@ -236,6 +251,56 @@ function pillReducer(state: PillState, action: PillAction): PillState {
   }
 }
 
+// Per-operator shape behind the glyph. Reinforces the operation
+// visually so the kid recognises "circle = plus, triangle = minus,
+// diamond = times" before they even read the symbol. Comparators
+// (=, >, <) fall through to the default circle so the swap animation
+// has a consistent silhouette to land on.
+type OperatorShapeKind = "circle" | "triangle" | "diamond";
+
+function pickOperatorShape(glyph: string): OperatorShapeKind {
+  if (glyph === "−") return "triangle";
+  if (glyph === "×") return "diamond";
+  return "circle"; // +, =, >, <, ÷, default
+}
+
+// SVG-based decorative shape. White fill + light-gray stroke matches
+// the existing pill aesthetic; the pulse animation runs on this
+// element only so the glyph text stays sharp. `aria-hidden` because
+// the glyph itself is the meaningful content.
+function OperatorShape({ kind }: { kind: OperatorShapeKind }) {
+  const path = (() => {
+    if (kind === "triangle") return <polygon points="50,8 92,86 8,86" />;
+    if (kind === "diamond") return <polygon points="50,5 95,50 50,95 5,50" />;
+    return <circle cx="50" cy="50" r="45" />;
+  })();
+  // Decorative-shape silhouette behind the glyph. The glyph text beside
+  // it is the meaningful content; `role="img"` + the static aria-label
+  // satisfies biome's noSvgWithoutTitle rule while keeping the SVG out
+  // of the meaningful a11y flow (the kid's screen reader hears the
+  // glyph from the adjacent text, not "circle operator background").
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="xMidYMid meet"
+      className="absolute inset-0 size-full animate-op-pulse drop-shadow-sm"
+      data-test="operator-shape"
+      data-shape={kind}
+      role="img"
+      aria-label="Operator background"
+    >
+      <g
+        fill="var(--color-canvas-white)"
+        stroke="var(--color-light-gray)"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      >
+        {path}
+      </g>
+    </svg>
+  );
+}
+
 function OperatorPill({ glyph }: { glyph: string }) {
   const [{ phase, shown }, dispatch] = useReducer(pillReducer, { phase: "idle", shown: glyph });
 
@@ -250,13 +315,27 @@ function OperatorPill({ glyph }: { glyph: string }) {
     };
   }, [glyph, shown]);
 
+  const shape = pickOperatorShape(shown);
+  // Triangle's visual centroid sits BELOW its geometric center (the
+  // centroid of an upward-pointing triangle is at y = 2/3 of its
+  // height). A glyph centered on the pill's geometric center reads
+  // as "floating high" inside the triangle silhouette. Nudging the
+  // glyph down a few px lands it on the centroid so the − sits in
+  // the visual middle of the triangle, not above it. Circle and
+  // diamond are radially symmetric — no offset needed.
+  const glyphOffsetClass = shape === "triangle" ? "translate-y-[6px]" : "";
   return (
     <span
-      className="flex size-14 shrink-0 select-none items-center justify-center rounded-full border-2 border-light-gray bg-canvas-white font-openrunde text-3xl font-bold text-slate-ink shadow-subtle data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
+      className="relative flex size-14 shrink-0 select-none items-center justify-center data-[phase=in]:animate-op-in data-[phase=out]:animate-op-out"
       data-phase={phase}
       data-test="operator-pill"
     >
-      {shown}
+      <OperatorShape kind={shape} />
+      <span
+        className={`relative font-openrunde text-3xl font-bold text-slate-ink ${glyphOffsetClass}`}
+      >
+        {shown}
+      </span>
     </span>
   );
 }
@@ -363,12 +442,11 @@ function EquationView({
   }
 
   // ── true-false-multiply (R12) ──────────────────────────────────────
-  // Layout: [a] × [b] = [c] [?], with a "a rows of b dots" array
-  // rendered beneath. All three LHS/RHS slots are locked + pre-filled
-  // (kid never moves them); the kid lands a True or False card in the
-  // verdict slot. The dot array is the load-bearing pedagogy — the kid
-  // hasn't seen multiplication before, so the equation row's numbers
-  // mean nothing until they count the dots and match the count to `c`.
+  // Layout: [a] × [b] = [c]  ┊  [?]. All three LHS/RHS slots are locked
+  // + pre-filled (kid never moves them); the kid lands a True or False
+  // card in the verdict slot. A short vertical dashed line sits between
+  // the claimed product card and the verdict slot, so the kid reads the
+  // row as "here is the equation… here is your verdict".
   if (equation.shape === "true-false-multiply") {
     const [aSlot, bSlot, cSlot] = equation.operandSlots;
     if (!aSlot || !bSlot || !cSlot) {
@@ -378,43 +456,41 @@ function EquationView({
     if (!verdictSlot) {
       throw new Error("EquationView: true-false-multiply needs a verdictSlot");
     }
-    const aCard = aSlot.cardId ? cards[aSlot.cardId] : undefined;
-    const bCard = bSlot.cardId ? cards[bSlot.cardId] : undefined;
-    const aValue = aCard && aCard.kind === "number" ? aCard.value : 0;
-    const bValue = bCard && bCard.kind === "number" ? bCard.value : 0;
     return (
       <div
-        className="flex flex-col items-center gap-3"
+        className="flex items-center justify-center gap-[28px]"
         data-test="equation"
         data-shape="true-false-multiply"
       >
-        <div className="flex items-center justify-center gap-[28px]">
-          <DropOrLockedSlot
-            slot={aSlot}
-            cards={cards}
-            dragLocked={dragLocked}
-            display="numeric"
-            onSwap={onSwap}
-          />
-          <OperatorPill glyph={OPERATOR_GLYPH.multiply} />
-          <DropOrLockedSlot
-            slot={bSlot}
-            cards={cards}
-            dragLocked={dragLocked}
-            display="numeric"
-            onSwap={onSwap}
-          />
-          <OperatorPill glyph="=" />
-          <DropOrLockedSlot
-            slot={cSlot}
-            cards={cards}
-            dragLocked={dragLocked}
-            display="numeric"
-            onSwap={onSwap}
-          />
-          <VerdictSlot slot={verdictSlot} cards={cards} dragLocked={dragLocked} onSwap={onSwap} />
-        </div>
-        <ProductDotArray rows={aValue} cols={bValue} />
+        <DropOrLockedSlot
+          slot={aSlot}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="numeric"
+          onSwap={onSwap}
+        />
+        <OperatorPill glyph={OPERATOR_GLYPH.multiply} />
+        <DropOrLockedSlot
+          slot={bSlot}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="numeric"
+          onSwap={onSwap}
+        />
+        <OperatorPill glyph="=" />
+        <DropOrLockedSlot
+          slot={cSlot}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="numeric"
+          onSwap={onSwap}
+        />
+        <div
+          className="h-[100px] border-l-2 border-dashed border-medium-gray/60"
+          data-test="verdict-separator"
+          aria-hidden
+        />
+        <VerdictSlot slot={verdictSlot} cards={cards} dragLocked={dragLocked} onSwap={onSwap} />
       </div>
     );
   }
@@ -610,44 +686,6 @@ function VerdictSlot({
   );
 }
 
-// `a × b` rendered as an `a` rows × `b` cols grid of dots. The whole
-// pedagogical conceit of R9 — the kid can count these to verify the
-// claimed product without knowing multiplication yet. Sized so that the
-// max R9 array (3×3 = 9 dots) fits comfortably under the equation row.
-const PRODUCT_DOT_CELL_PX = 20;
-function ProductDotArray({ rows, cols }: { rows: number; cols: number }) {
-  const safeRows = Math.max(0, Math.min(5, Math.floor(rows)));
-  const safeCols = Math.max(0, Math.min(5, Math.floor(cols)));
-  if (safeRows === 0 || safeCols === 0) return null;
-  const total = safeRows * safeCols;
-  return (
-    <div
-      className="rounded-md border border-light-gray bg-canvas-white p-2 shadow-subtle"
-      data-test="product-dot-array"
-      data-rows={safeRows}
-      data-cols={safeCols}
-    >
-      <div
-        className="grid gap-1"
-        style={{
-          gridTemplateRows: `repeat(${safeRows}, ${PRODUCT_DOT_CELL_PX}px)`,
-          gridTemplateColumns: `repeat(${safeCols}, ${PRODUCT_DOT_CELL_PX}px)`,
-        }}
-      >
-        {Array.from({ length: total }, (_, i) => {
-          const r = Math.floor(i / safeCols);
-          const c = i % safeCols;
-          return (
-            <span key={`r${r}c${c}`} className="flex items-center justify-center" data-product-dot>
-              <span className="size-3 rounded-full bg-slate-ink" />
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // Crossed-swords glyph for the post-win Attack button. Inline SVG (Lucide
 // "swords"-style) so we don't take an icon-package dependency for a single
 // glyph. `currentColor` lets the button's text color drive both blades.
@@ -736,15 +774,13 @@ function ActionButton({
     const t = window.setTimeout(() => setShake(false), 500);
     return () => window.clearTimeout(t);
   }, [shake]);
-  const handleEvaluateClick = (): void => {
-    if (canEvaluate) {
-      onEvaluate();
-      return;
-    }
+  // Disabled-grab feedback. The kid grabbed the swipe knob with the
+  // equation still unfilled — shake the entire action row briefly and
+  // re-mount the "Fill out the board!" prompt. Same affordance the
+  // old disabled-tap Evaluate button had; just plumbed through the
+  // swipe's `onDisabledAttempt` callback now.
+  const handleDisabledAttempt = (): void => {
     setShake(false);
-    // Force a fresh truthy → true transition on the next tick so the
-    // CSS animation re-fires (CSS only re-runs a keyframe when the
-    // animation rule transitions from absent to present).
     requestAnimationFrame(() => setShake(true));
     setPromptKey((k) => k + 1);
   };
@@ -819,22 +855,15 @@ function ActionButton({
           </button>
         )}
         {!won && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleEvaluateClick}
-              className={
-                canEvaluate
-                  ? "rounded-full bg-radiant-violet px-8 py-3 font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95 data-[shake=true]:animate-damage-shake"
-                  : "cursor-not-allowed rounded-full bg-muted-gray/60 px-8 py-3 font-bold text-white/85 shadow-subtle data-[shake=true]:animate-damage-shake"
-              }
-              data-test="evaluate-button"
-              data-can-evaluate={canEvaluate ? "true" : "false"}
-              data-shake={shake ? "true" : undefined}
-              aria-disabled={!canEvaluate}
-            >
-              Evaluate
-            </button>
+          <div
+            className="relative w-full max-w-[480px] data-[shake=true]:animate-damage-shake"
+            data-shake={shake ? "true" : undefined}
+          >
+            <SwipeToEvaluate
+              canCommit={canEvaluate}
+              onCommit={onEvaluate}
+              onDisabledAttempt={handleDisabledAttempt}
+            />
             {promptKey > 0 ? <FillPrompt key={promptKey} onDone={() => setPromptKey(0)} /> : null}
           </div>
         )}
@@ -1043,6 +1072,7 @@ function useGameHints(game: AddingGameState): {
 // route plugs into <ActionButton>.
 function useAttackFlow(
   game: AddingGameState,
+  sfx: SoundApi,
   onContinue: () => void,
 ): {
   attackPending: boolean;
@@ -1061,11 +1091,20 @@ function useAttackFlow(
       from: fromEl as Element,
       to: toEl as Element,
     });
-    await attackFxRuntime.runAttack(
-      attack,
-      { x: fromRect.left, y: fromRect.top, width: fromRect.width, height: fromRect.height },
-      { x: toRect.left, y: toRect.top, width: toRect.width, height: toRect.height },
-    );
+    // Run the Pixi VFX AND the attack sound concurrently, then await
+    // BOTH before resolving. The enemy doesn't die / the level
+    // doesn't advance until the sound has fully played — preserves
+    // the "attack lands, THEN the world reacts" beat. If the sound
+    // is unregistered, playAttackUntilEnded resolves immediately so
+    // the animation pacing is unaffected.
+    await Promise.all([
+      attackFxRuntime.runAttack(
+        attack,
+        { x: fromRect.left, y: fromRect.top, width: fromRect.width, height: fromRect.height },
+        { x: toRect.left, y: toRect.top, width: toRect.width, height: toRect.height },
+      ),
+      sfx.playAttackUntilEnded(attack),
+    ]);
   };
   const runAttack = (attack: Attack | null): void => {
     if (attackPending) return;
@@ -1201,6 +1240,12 @@ function useGameStepper(
   setGame: (updater: (prev: AddingGameState) => AddingGameState) => void,
 ): (delta: number) => void {
   return (delta: number) => {
+    // Fire the procedural stepper blip before mutating state — the
+    // blip is purely audible feedback for the tap and shouldn't wait
+    // on the reducer. Skip when delta == 0 (defensive; reducer also
+    // no-ops at the clamp edge so the kid won't hear a sound if the
+    // value didn't actually move).
+    if (delta !== 0) playStepperBlip(delta > 0 ? "up" : "down");
     setGame((prev) => {
       if (!prev.round || prev.round.equation.shape !== "stepper-sum") return prev;
       const stepperSlot = prev.round.equation.operandSlots[2];
@@ -1212,12 +1257,41 @@ function useGameStepper(
   };
 }
 
+// Auto-play pilot name pronunciation at 75% volume — fires once when
+// the active pilot id changes (kid taps the cycle button, or the
+// initial roster[0] default lands). The reduced volume keeps the
+// announcement from startling the kid as pilots rotate.
+//
+// Enemy name auto-play was REMOVED intentionally: the kid read the
+// new-enemy announcement as "the enemy speaks as it dies", which felt
+// upsetting / scary. The speaker button beside each enemy name still
+// lets the kid trigger the pronunciation deliberately when they want
+// it. Pilot announcements stay because the kid initiates the change.
+const AUTOPLAY_NAME_VOLUME = 0.75;
+
+function useAutoplayCharacterNames(state: AddingGameState, sfx: SoundApi): void {
+  const prevPilotIdRef = useRef<string | null>(null);
+
+  const pilotId = state.player.selectedPilotId;
+  useEffect(() => {
+    if (pilotId && pilotId !== prevPilotIdRef.current) {
+      const pilot = findPlayerTemplate(pilotId);
+      const id = pilot?.nameSoundId;
+      if (id && isRegistered(id)) {
+        sfx.play(id, { volumeScale: AUTOPLAY_NAME_VOLUME });
+      }
+    }
+    prevPilotIdRef.current = pilotId;
+  }, [pilotId, sfx]);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 
 function AddingGame() {
   const game = useAtomValue(addingGameAtom);
   const setGame = useSetAtom(addingGameAtom);
   const sfx = useSound();
+  useAutoplayCharacterNames(game, sfx);
 
   // The dive-in intro is a STATE, not a default. Three explicit phases:
   //   - splash       (status idle, round null, intro not playing)
@@ -1278,7 +1352,7 @@ function AddingGame() {
     if (next) setGame(() => next);
   };
 
-  const { attackPending, runAttack: handleAttack } = useAttackFlow(game, handleContinue);
+  const { attackPending, runAttack: handleAttack } = useAttackFlow(game, sfx, handleContinue);
 
   // Play Again from victory — wipe to idle AND fire the intro. The kid
   // sees the same descent as their first dive, then a fresh round 1.

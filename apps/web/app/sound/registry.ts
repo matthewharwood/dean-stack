@@ -315,6 +315,50 @@ const SFX_REGISTRY_LITERAL = {
     path: "sfx/pronounce/bathypel-lantern-bride.mp3",
     policy: "restart",
   },
+
+  // ─── Second batch of enemy pronunciations (same voice id) ──────────
+  // Added when the bestiary grew past the initial 11 enemies. Same
+  // `restart` policy as the rest of the pronunciation pool.
+  "pronounce-spark-shrimp-drone-echo": {
+    path: "sfx/pronounce/spark-shrimp-drone-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-tide-oracle-echo": {
+    path: "sfx/pronounce/crystal-tide-oracle-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-brineblade-reaver-echo": {
+    path: "sfx/pronounce/brineblade-reaver-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-void-spore-sentinel-echo": {
+    path: "sfx/pronounce/void-spore-sentinel-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-starcurrent-seraph-echo": {
+    path: "sfx/pronounce/starcurrent-seraph-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-chitin-scout-echo": {
+    path: "sfx/pronounce/chitin-scout-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-warpcoral-prism-echo": {
+    path: "sfx/pronounce/warpcoral-prism-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-plasma-reef-lancer-echo": {
+    path: "sfx/pronounce/plasma-reef-lancer-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-orbital-siege-urchin-echo": {
+    path: "sfx/pronounce/orbital-siege-urchin-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-abyssal-fleetmind-echo": {
+    path: "sfx/pronounce/abyssal-fleetmind-echo.mp3",
+    policy: "restart",
+  },
 } as const;
 
 export type SfxEventId = keyof typeof SFX_REGISTRY_LITERAL;

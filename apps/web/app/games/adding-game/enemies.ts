@@ -250,6 +250,7 @@ The smoke smells like a kitchen you have never been in. Like bread. Almost like 
   EnemyTemplateSchema.parse({
     id: "hadal-spark-shrimp-drone-echo",
     name: "Spark Shrimp Drone Echo",
+    nameSoundId: "pronounce-spark-shrimp-drone-echo",
     type: "current",
     rarity: "common",
     maxHp: 18,
@@ -269,6 +270,7 @@ Give it a true number and the sparks line up in neat rows. The drone salutes wit
   EnemyTemplateSchema.parse({
     id: "hadal-crystal-tide-oracle-echo",
     name: "Crystal Tide Oracle Echo",
+    nameSoundId: "pronounce-crystal-tide-oracle-echo",
     type: "crystal",
     rarity: "uncommon",
     maxHp: 22,
@@ -288,6 +290,7 @@ Show it the number that is true right now. The crown stops rattling. One bright 
   EnemyTemplateSchema.parse({
     id: "hadal-brineblade-reaver-echo",
     name: "Brineblade Reaver Echo",
+    nameSoundId: "pronounce-brineblade-reaver-echo",
     type: "brine",
     rarity: "rare",
     maxHp: 26,
@@ -307,6 +310,7 @@ Give it the right answer. The blades fold away one by one, and the Reaver finall
   EnemyTemplateSchema.parse({
     id: "hadal-void-spore-sentinel-echo",
     name: "Void Spore Sentinel Echo",
+    nameSoundId: "pronounce-void-spore-sentinel-echo",
     type: "spore",
     rarity: "epic",
     maxHp: 30,
@@ -326,6 +330,7 @@ Answer true and the eye closes halfway. The sentinel remembers one tiny patch of
   EnemyTemplateSchema.parse({
     id: "hadal-starcurrent-seraph-echo",
     name: "Starcurrent Seraph Echo",
+    nameSoundId: "pronounce-starcurrent-seraph-echo",
     type: "astral current",
     rarity: "legendary",
     maxHp: 36,
@@ -346,6 +351,7 @@ Bring the true number. The crown burns bright, then bows just a little. Not a bi
   EnemyTemplateSchema.parse({
     id: "hadal-chitin-scout-echo",
     name: "Chitin Scout Echo",
+    nameSoundId: "pronounce-chitin-scout-echo",
     type: "chitin",
     rarity: "common",
     maxHp: 12,
@@ -365,6 +371,7 @@ Give it the number it was carrying. The scout tucks the message under its shell 
   EnemyTemplateSchema.parse({
     id: "hadal-warpcoral-prism-echo",
     name: "Warpcoral Prism Echo",
+    nameSoundId: "pronounce-warpcoral-prism-echo",
     type: "coral",
     rarity: "uncommon",
     maxHp: 18,
@@ -384,6 +391,7 @@ Solve the number and the door points the right direction. For a blink, you can s
   EnemyTemplateSchema.parse({
     id: "hadal-plasma-reef-lancer-echo",
     name: "Plasma Reef Lancer Echo",
+    nameSoundId: "pronounce-plasma-reef-lancer-echo",
     type: "plasma",
     rarity: "rare",
     maxHp: 24,
@@ -403,6 +411,7 @@ Give it a true equation. The horn cools from blue to gold, and the Lancer rememb
   EnemyTemplateSchema.parse({
     id: "hadal-orbital-siege-urchin-echo",
     name: "Orbital Siege Urchin Echo",
+    nameSoundId: "pronounce-orbital-siege-urchin-echo",
     type: "gravity",
     rarity: "epic",
     maxHp: 30,
@@ -422,6 +431,7 @@ Find the true answer and the stones stop spinning so hard. One by one, they sett
   EnemyTemplateSchema.parse({
     id: "hadal-abyssal-fleetmind-echo",
     name: "Abyssal Fleetmind Echo",
+    nameSoundId: "pronounce-abyssal-fleetmind-echo",
     type: "pressure",
     rarity: "mythic",
     maxHp: 36,
