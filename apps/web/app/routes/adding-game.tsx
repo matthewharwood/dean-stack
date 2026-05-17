@@ -69,8 +69,12 @@ function GameBoard({ children }: RegionProps) {
   // `select-none` + iOS callout suppression: a long-press on a number / "+"
   // glyph would otherwise trigger Safari's text-selection magnifier or copy
   // menu and eat the pointer events the drag system is listening for.
+  //
+  // `water-bg` paints the slow oceanic wash behind everything; the panel
+  // surfaces below use `panel-glass` so the water shows through the gaps
+  // AND subtly through the panels themselves (cards stay opaque on top).
   return (
-    <main className="grid h-dvh grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px] font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
+    <main className="water-bg grid h-dvh grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px] font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
       {children}
     </main>
   );
@@ -80,7 +84,7 @@ function LeftCol({ children }: RegionProps) {
   return (
     <section
       aria-label="Left panel"
-      className="relative grid grid-rows-[1fr] rounded-lg bg-light-gray p-3 animate-panel-fade-in"
+      className="panel-glass relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in"
     >
       {children}
     </section>
@@ -95,7 +99,7 @@ function Top({ children }: RegionProps) {
   return (
     <section
       aria-label="Top center panel"
-      className="relative h-[200px] shrink-0 rounded-lg bg-light-gray"
+      className="panel-glass relative h-[200px] shrink-0 rounded-lg"
     >
       {children}
     </section>
@@ -106,7 +110,7 @@ function Center({ children }: RegionProps) {
   return (
     <section
       aria-label="Middle center panel"
-      className="relative min-h-0 flex-1 rounded-lg bg-light-gray"
+      className="panel-glass relative min-h-0 flex-1 rounded-lg"
     >
       {children}
     </section>
@@ -117,7 +121,7 @@ function Bottom({ children }: RegionProps) {
   return (
     <section
       aria-label="Bottom center panel"
-      className="relative h-[200px] shrink-0 rounded-lg bg-light-gray"
+      className="panel-glass relative h-[200px] shrink-0 rounded-lg"
     >
       <div className="grid h-full grid-cols-5 gap-[18px] p-[18px]">{children}</div>
     </section>
@@ -128,7 +132,7 @@ function RightCol({ children }: RegionProps) {
   return (
     <section
       aria-label="Right panel"
-      className="relative grid grid-rows-[1fr] rounded-lg bg-light-gray p-3 animate-panel-fade-in"
+      className="panel-glass relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in"
     >
       {children}
     </section>

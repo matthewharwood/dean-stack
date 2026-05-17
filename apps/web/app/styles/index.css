@@ -190,6 +190,14 @@
      the timer (driven by React state) — the keyframe just paints what
      the kid sees while it's mounted. */
   --animate-fill-prompt: fill-prompt 3000ms ease-out forwards;
+
+  /* Slow oceanic wash. Diagonal motion (top-left → bottom-right) with
+     `alternate` direction so the gradient flows out and back like a
+     beach wave. 80s one-way ⇒ 160s full round-trip — slow enough to
+     feel ambient, never distracting. `ease-in-out` smooths the
+     direction reversals. Only paired with `.water-bg` below; nothing
+     else uses it. */
+  --animate-water-wash: water-wash 80s ease-in-out infinite alternate;
 }
 
 /* Pan + breathing zoom: object-position drifts left → right while
@@ -563,6 +571,53 @@
   }
 }
 
+/* Ocean wash for the game board. Two stacked diagonal gradients:
+   the base is a pale blue-grey wash (the deep ocean colour the kid
+   sees through the gaps between panels), and the sheen is a thin
+   white highlight band that drifts slowly across — the "sun glint"
+   on the water surface. Both share the same animation but with
+   different `background-size` values so the sheen parallaxes past
+   the base. `alternate` direction makes the wash flow forward and
+   back, like surf on a beach. Background tiles are sized large
+   enough that the kid only ever sees the smooth middle of the
+   gradient — no visible repeats at the edges. */
+.water-bg {
+  background:
+    linear-gradient(135deg, transparent 30%, rgb(255 255 255 / 28%) 50%, transparent 70%),
+    linear-gradient(135deg, #dde7ec 0%, #c5d8e1 40%, #d4e2ea 60%, #c8d9e2 100%);
+  background-size:
+    320% 320%,
+    220% 220%;
+  background-position:
+    0% 0%,
+    0% 0%;
+  background-repeat: no-repeat;
+  animation: var(--animate-water-wash);
+}
+
+@keyframes water-wash {
+  0% {
+    background-position: 0% 0%, 0% 0%;
+  }
+
+  100% {
+    background-position: 100% 100%, 80% 80%;
+  }
+}
+
+/* Liquid-glass panel surface. Pairs with `.water-bg` on the parent —
+   the panel is translucent enough that the moving water shows through
+   AND blurred enough that the panel reads as a frosted-glass slab
+   sitting on the water, not as a cut-out window. The thin
+   white-ish ring is the glass edge highlight. Cards inside these
+   panels remain fully opaque (their bg-canvas-white wins on top of
+   the glass). */
+.panel-glass {
+  background-color: color-mix(in oklab, var(--color-light-gray) 65%, transparent);
+  backdrop-filter: blur(8px) saturate(1.05);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%);
+}
+
 /* Reduced-motion: respect the system preference. Extended fingers
    should appear at their final state immediately. The kid's son's
    eight-year-old eyes can still count them — just statically. The
@@ -613,6 +668,14 @@
     100% {
       transform: translate3d(0, 0, 0) rotate3d(0, 0, 1, 0deg);
     }
+  }
+
+  /* Pause the ocean wash for reduced-motion users — the gradient still
+     paints the static base + sheen, but no slow drift. The kid still
+     sees the oceanic palette behind the glass panels; just nothing
+     moves. */
+  .water-bg {
+    animation: none;
   }
 }
 
