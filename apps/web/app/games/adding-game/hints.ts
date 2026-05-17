@@ -74,6 +74,9 @@ export function generateHints(state: AddingGameState): Hint[] {
   if (round.equation.shape === "find-missing-result") {
     return generateFindMissingResultHints(state);
   }
+  if (round.equation.shape === "stepper-sum") {
+    return generateStepperSumHints(state);
+  }
   if (round.equation.shape === "true-false-multiply") {
     return generateTrueFalseMultiplyHints(state);
   }
@@ -535,10 +538,107 @@ function generateTrueFalseMultiplyHints(state: AddingGameState): Hint[] {
 }
 
 // "3 + 3 + 3" for repeatedAddString(3, 3); "4" for repeatedAddString(4, 1).
-// Caps at ~6 terms defensively (R9 caps factors at 3, so this is fine).
+// Caps at ~6 terms defensively (R12 caps factors at 3, so this is fine).
 function repeatedAddString(addend: number, times: number): string {
   if (times <= 0) return "0";
   if (times === 1) return String(addend);
   const capped = Math.min(times, 6);
   return Array.from({ length: capped }, () => String(addend)).join(" + ");
+}
+
+// "one more time" for 1, "N more times" for 2+. Hoisted to dodge
+// sonarjs's no-nested-template-literals on the stepper-sum direction
+// hints.
+function formatTapsPhrase(taps: number): string {
+  if (taps === 1) return "one more time";
+  return `${taps} more times`;
+}
+
+// ─── stepper-sum (R9–R11) hints ──────────────────────────────────────────
+// The kid sees `a OP b = ?` with a stepper card. They've already solved
+// a OR b in their head (find-missing-result territory) — the new
+// mechanic here is the tap rhythm. Hints frame the gap as a direction
+// + a count: "tap + 3 more times", "tap − until you hit 7", etc.
+//
+// All hint ids start with "sum-" so the recently-shown filter keeps
+// them in their own pool.
+function generateStepperSumHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+  const a = cardValueOf(state, eq.operandSlots[0]?.cardId);
+  const b = cardValueOf(state, eq.operandSlots[1]?.cardId);
+  const stepperValue = cardValueOf(state, eq.operandSlots[2]?.cardId);
+  const real = eq.operator === "subtract" ? a - b : a + b;
+  const gap = real - stepperValue;
+  const tooLow = gap > 0;
+  const tooHigh = gap < 0;
+  const opGlyph = eq.operator === "subtract" ? "−" : "+";
+
+  const hints: Hint[] = [];
+
+  // Always-on grounding: re-state the equation. Helps the kid re-anchor
+  // after a wrong answer.
+  hints.push({
+    id: "sum-meaning",
+    emphasis: `${a} ${opGlyph} ${b} is the answer.`,
+    body: `Work out *${a} ${opGlyph} ${b}* in your head, then tap the card up or down to match.`,
+  });
+
+  // Direction nudge: which way to tap. Surfaces the gap as a concrete
+  // number of taps. Caps at 10 taps for the body copy to stay reasonable
+  // (R11 worst case = 20, but if the kid is off by 15+ they need the
+  // direction more than a precise count).
+  if (tooLow) {
+    const tapsPhrase = formatTapsPhrase(Math.min(10, gap));
+    hints.push({
+      id: "sum-tap-up",
+      emphasis: "Tap the + side!",
+      body: `Your card is *${stepperValue}*; the answer is bigger. Tap the top of the card ${tapsPhrase}.`,
+      ...(real >= 0 && real <= HANDS_MAX
+        ? { hands: { count: real, caption: `Land on ${real}` } }
+        : {}),
+    });
+  } else if (tooHigh) {
+    const tapsPhrase = formatTapsPhrase(Math.min(10, -gap));
+    hints.push({
+      id: "sum-tap-down",
+      emphasis: "Tap the − side!",
+      body: `Your card is *${stepperValue}*; the answer is smaller. Tap the bottom of the card ${tapsPhrase}.`,
+      ...(real >= 0 && real <= HANDS_MAX
+        ? { hands: { count: real, caption: `Land on ${real}` } }
+        : {}),
+    });
+  }
+
+  // Operator-specific framing.
+  if (eq.operator === "add") {
+    hints.push({
+      id: "sum-add-counting",
+      emphasis: `Start at ${a}, then add ${b}.`,
+      body: `Hold up *${a} fingers*, then count ${b} more. That's your target.`,
+      ...(real >= 0 && real <= HANDS_MAX
+        ? { hands: { count: real, caption: `Count to ${real}` } }
+        : {}),
+    });
+  } else {
+    hints.push({
+      id: "sum-sub-counting",
+      emphasis: `Start at ${a}, then take away ${b}.`,
+      body: `Hold up *${a} fingers*. Put ${b} of them down. What's left is the answer.`,
+      ...(real >= 0 && real <= HANDS_MAX
+        ? { hands: { count: real, caption: `Count down to ${real}` } }
+        : {}),
+    });
+  }
+
+  // Encouragement — fills out the rotation so consecutive losses don't
+  // repeat.
+  hints.push({
+    id: "sum-encouragement",
+    emphasis: "Take your time.",
+    body: `Tap the top to go up, the bottom to go down. The card waits for you.`,
+  });
+
+  return hints;
 }

@@ -7,7 +7,7 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 // for find-sum levels; for find-missing-result levels, damage = the kid's
 // chosen result card.
 //
-// NINE ROUNDS structure (the kid's progression):
+// TWELVE ROUNDS structure (the kid's progression):
 //   Round 1 — addition only, equality.   The "spirits" learning to count.
 //   Round 2 — subtraction only, equality. The same six echoes, but now
 //             the kid needs the inverse operation.
@@ -23,14 +23,24 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 //   Round 6 — same five tier-2 echoes again. find-missing-result +
 //             subtract. Encounter 3 → posters flip to the _L2 variant
 //             (the cap). HP scales another notch.
-//   Round 7 — same five tier-2 echoes a fourth time. find-missing-result
-//             + add, but value cap raised to 20. Same SHAPE as R5; what's
-//             new is the magnitude — the kid now mentally counts up from
-//             a larger static into the teens. Posters stay at _L2.
-//   Round 8 — same five tier-2 echoes a fifth time. find-missing-result
-//             + subtract with the 1..20 cap. Mirrors R6 with a larger
-//             static, forcing count-down from the high teens. Posters
-//             stay at _L2 (the cap).
+//   Round 7 — five star-siege echoes begin a new poster arc. Same SHAPE
+//             as R5, but the value cap rises to 20 so the kid counts up
+//             from a larger static into the teens.
+//   Round 8 — the star-siege echoes return for _L1. Subtraction mirrors
+//             R6 with a larger static, forcing count-down from the high
+//             teens.
+//   Round 9 — the star-siege echoes return for _L2. stepper-sum + add
+//             (answers 1..10) introduces the no-drag tap mechanic.
+//   Round 10 — five final swarm echoes begin their poster arc.
+//              stepper-sum + subtract (answers 1..10).
+//   Round 11 — the final swarm echoes return for _L1. stepper-sum + MIX
+//              of add/subtract (answers 1..20). `mixedOperator: true`
+//              flips the dealer's per-round coin; the kid reads the
+//              operator pill and steps in the right direction.
+//   Round 12 — the final swarm echoes return for _L2.
+//              true-false-multiply introduces multiplication at the end
+//              of the campaign as the brand-new concept that warrants
+//              its own mechanic.
 //
 // Round 5/6 fields:
 //   - equationShape: "find-missing-result"
@@ -61,6 +71,12 @@ export type LevelConfig = {
   // marks the slot locked.
   staticOperand?: StaticOperandConfig;
   target: number;
+  // Only meaningful when equationShape === "stepper-sum". When true,
+  // the dealer flips a coin per round to choose add vs subtract,
+  // overriding `operator`. R11 ("mix") sets this true; R9 (pure add)
+  // and R10 (pure subtract) leave it false / unset and the dealer
+  // honors `operator` directly.
+  mixedOperator?: boolean;
   // HP for THIS encounter. Overrides EnemyTemplate.maxHp because the
   // same enemy returns at different difficulty across rounds; the
   // template's maxHp is a baseline for storybook / fallback.
@@ -436,17 +452,15 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 5 },
   },
   // ── ROUND 7 — find-missing-result + add, values to 20 ───────────────
-  // The five tier-2 echoes return for their fourth encounter. Same shape
-  // as R5 (`static + ? = ?` / `? + static = ?`) but every kid-played
-  // card is in [1, 20] instead of [1, 5]. Static ramps to 14 so the kid
-  // is still mostly computing into the teens, not stuck at the ceiling.
-  // Per-turn damage = kid's chosen result ∈ [static+1, 20]; HP is tuned
-  // to keep turns-per-enemy in the 2–4 range. Posters stay at _L2 (the
-  // visual cap was already hit in R6); the difficulty signal is the
-  // magnitude jump, not the art.
+  // Five star-siege echoes begin their poster arc. Same shape as R5
+  // (`static + ? = ?` / `? + static = ?`) but every kid-played card is in
+  // [1, 20] instead of [1, 5]. Static ramps to 14 so the kid is still
+  // mostly computing into the teens, not stuck at the ceiling. Per-turn
+  // damage = kid's chosen result ∈ [static+1, 20]; HP is tuned to keep
+  // turns-per-enemy in the 2–4 range.
   {
     index: 34,
-    enemyId: "hadal-glass-manta-echo",
+    enemyId: "hadal-spark-shrimp-drone-echo",
     operator: "add",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -457,7 +471,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 35,
-    enemyId: "hadal-brine-needle-urchin-echo",
+    enemyId: "hadal-crystal-tide-oracle-echo",
     operator: "add",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -468,7 +482,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 36,
-    enemyId: "hadal-basalt-lantern-leech-echo",
+    enemyId: "hadal-brineblade-reaver-echo",
     operator: "add",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -479,7 +493,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 37,
-    enemyId: "hadal-sandglass-stalker-echo",
+    enemyId: "hadal-void-spore-sentinel-echo",
     operator: "add",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -490,7 +504,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 38,
-    enemyId: "hadal-kelp-censer-echo",
+    enemyId: "hadal-starcurrent-seraph-echo",
     operator: "add",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -500,15 +514,16 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 20 },
   },
   // ── ROUND 8 — find-missing-result + subtract, values to 20 ──────────
-  // Fifth (and capped) encounter for the five tier-2 echoes. Mirrors R6
-  // (`static − ? = ?`, position always "first" so the static is the
-  // minuend) but with the 1..20 cap. Statics ramp 10 → 19 so the kid is
-  // counting down from the high teens by the last level. Per-turn damage
-  // = kid's chosen result ∈ [1, static−1]; HP is calibrated against the
-  // expected per-turn damage so turns-per-enemy stays in the 2–4 range.
+  // Second encounter for the star-siege echoes, so posters flip to _L1.
+  // Mirrors R6 (`static − ? = ?`, position always "first" so the static
+  // is the minuend) but with the 1..20 cap. Statics ramp 10 → 19 so the
+  // kid is counting down from the high teens by the last level. Per-turn
+  // damage = kid's chosen result ∈ [1, static−1]; HP is calibrated
+  // against the expected per-turn damage so turns-per-enemy stays in the
+  // 2–4 range.
   {
     index: 39,
-    enemyId: "hadal-glass-manta-echo",
+    enemyId: "hadal-spark-shrimp-drone-echo",
     operator: "subtract",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -519,7 +534,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 40,
-    enemyId: "hadal-brine-needle-urchin-echo",
+    enemyId: "hadal-crystal-tide-oracle-echo",
     operator: "subtract",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -530,7 +545,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 41,
-    enemyId: "hadal-basalt-lantern-leech-echo",
+    enemyId: "hadal-brineblade-reaver-echo",
     operator: "subtract",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -541,7 +556,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 42,
-    enemyId: "hadal-sandglass-stalker-echo",
+    enemyId: "hadal-void-spore-sentinel-echo",
     operator: "subtract",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -552,7 +567,7 @@ export const LEVELS: readonly LevelConfig[] = [
   },
   {
     index: 43,
-    enemyId: "hadal-kelp-censer-echo",
+    enemyId: "hadal-starcurrent-seraph-echo",
     operator: "subtract",
     comparator: "eq",
     equationShape: "find-missing-result",
@@ -561,12 +576,195 @@ export const LEVELS: readonly LevelConfig[] = [
     hp: 32,
     handValueRange: { min: 1, max: 20 },
   },
-  // ── ROUND 9 — true-false-multiply (multiplication intro) ────────────
-  // The five tier-2 echoes return for their SIXTH (and capped) encounter
-  // — posters were already capped at _L2 in R6, so the visual signal is
-  // identical; the difficulty signal is the brand-new mechanic.
+  // ── ROUND 9 — stepper-sum (addition, answer 1..10) ──────────────────
+  // The kid has been doing find-missing-result with drag for R5–R8.
+  // R9 introduces the stepper mechanic: a single card holds the answer,
+  // and the kid bumps it up or down via the top/bottom halves of the
+  // card until it matches. No hand, no drag — the math is the same
+  // ("a + b = ?") but the locus of control is the kid's tap rhythm,
+  // not card selection.
   //
-  // The kid has NEVER seen multiplication. R9 introduces it as a
+  // Operand range: handValueRange = [0, 10]; the dealer constrains
+  // a + b ∈ [1, level.target]. Stepper starts ±1–3 from the answer
+  // so the kid decides each round whether to tap + or −.
+  //
+  // Damage on win = stepper.value (same reward shape as R5–R8). This is
+  // the third encounter for the star-siege echoes, so posters flip to _L2.
+  // The difficulty signal is now both the evolved poster and the new
+  // mechanic.
+  {
+    index: 44,
+    enemyId: "hadal-spark-shrimp-drone-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 6,
+    hp: 8,
+    handValueRange: { min: 0, max: 6 },
+  },
+  {
+    index: 45,
+    enemyId: "hadal-crystal-tide-oracle-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 8,
+    hp: 12,
+    handValueRange: { min: 0, max: 8 },
+  },
+  {
+    index: 46,
+    enemyId: "hadal-brineblade-reaver-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 18,
+    handValueRange: { min: 0, max: 10 },
+  },
+  {
+    index: 47,
+    enemyId: "hadal-void-spore-sentinel-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 24,
+    handValueRange: { min: 0, max: 10 },
+  },
+  {
+    index: 48,
+    enemyId: "hadal-starcurrent-seraph-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 30,
+    handValueRange: { min: 0, max: 10 },
+  },
+  // ── ROUND 10 — stepper-sum (subtraction, answer 1..10) ──────────────
+  // Same mechanic as R9, inverse operator. The kid taps − more often
+  // here because the answer is usually smaller than the minuend. Five
+  // final swarm echoes begin their poster arc.
+  {
+    index: 49,
+    enemyId: "hadal-chitin-scout-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 6,
+    hp: 8,
+    handValueRange: { min: 0, max: 10 },
+  },
+  {
+    index: 50,
+    enemyId: "hadal-warpcoral-prism-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 8,
+    hp: 12,
+    handValueRange: { min: 0, max: 12 },
+  },
+  {
+    index: 51,
+    enemyId: "hadal-plasma-reef-lancer-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 18,
+    handValueRange: { min: 0, max: 15 },
+  },
+  {
+    index: 52,
+    enemyId: "hadal-orbital-siege-urchin-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 24,
+    handValueRange: { min: 0, max: 18 },
+  },
+  {
+    index: 53,
+    enemyId: "hadal-abyssal-fleetmind-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    target: 10,
+    hp: 30,
+    handValueRange: { min: 0, max: 20 },
+  },
+  // ── ROUND 11 — stepper-sum (mixed add/subtract, answer 1..20) ───────
+  // Second encounter for the final swarm echoes, so posters flip to _L1.
+  // `mixedOperator: true` flips the dealer's per-round coin between add
+  // and subtract — the kid has to read the operator pill each round AND
+  // choose direction on the stepper. Answer cap doubles to 20 so the
+  // stepper interaction has weight without becoming tedious.
+  {
+    index: 54,
+    enemyId: "hadal-chitin-scout-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    mixedOperator: true,
+    target: 12,
+    hp: 14,
+    handValueRange: { min: 0, max: 12 },
+  },
+  {
+    index: 55,
+    enemyId: "hadal-warpcoral-prism-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    mixedOperator: true,
+    target: 15,
+    hp: 18,
+    handValueRange: { min: 0, max: 15 },
+  },
+  {
+    index: 56,
+    enemyId: "hadal-plasma-reef-lancer-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    mixedOperator: true,
+    target: 18,
+    hp: 24,
+    handValueRange: { min: 0, max: 18 },
+  },
+  {
+    index: 57,
+    enemyId: "hadal-orbital-siege-urchin-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    mixedOperator: true,
+    target: 20,
+    hp: 30,
+    handValueRange: { min: 0, max: 20 },
+  },
+  {
+    index: 58,
+    enemyId: "hadal-abyssal-fleetmind-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "stepper-sum",
+    mixedOperator: true,
+    target: 20,
+    hp: 36,
+    handValueRange: { min: 0, max: 20 },
+  },
+  // ── ROUND 12 — true-false-multiply (multiplication intro) ───────────
+  // Third encounter for the final swarm echoes, so posters flip to _L2.
+  // Same content as the previous R9 multiplication round — moved to R12
+  // so the stepper sequence (R9–R11) lands first as a bridge between
+  // drag-based math (R5–R8) and the brand-new multiplication mechanic
+  // here.
+  //
+  // The kid has NEVER seen multiplication. R12 introduces it as a
   // true/false judgment: the dealer puts a complete `a × b = c` on the
   // board (sometimes true, sometimes off by ±1), and the kid drags a
   // True or False card onto a verdict slot. The equation view ALWAYS
@@ -579,8 +777,8 @@ export const LEVELS: readonly LevelConfig[] = [
   // = level.target, calibrated for ~2–4 turns per enemy at flat damage
   // (no per-card agency in this shape, so the reward is flat per level).
   {
-    index: 44,
-    enemyId: "hadal-glass-manta-echo",
+    index: 59,
+    enemyId: "hadal-chitin-scout-echo",
     operator: "multiply",
     comparator: "eq",
     equationShape: "true-false-multiply",
@@ -589,8 +787,8 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 3 },
   },
   {
-    index: 45,
-    enemyId: "hadal-brine-needle-urchin-echo",
+    index: 60,
+    enemyId: "hadal-warpcoral-prism-echo",
     operator: "multiply",
     comparator: "eq",
     equationShape: "true-false-multiply",
@@ -599,8 +797,8 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 3 },
   },
   {
-    index: 46,
-    enemyId: "hadal-basalt-lantern-leech-echo",
+    index: 61,
+    enemyId: "hadal-plasma-reef-lancer-echo",
     operator: "multiply",
     comparator: "eq",
     equationShape: "true-false-multiply",
@@ -609,8 +807,8 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 3 },
   },
   {
-    index: 47,
-    enemyId: "hadal-sandglass-stalker-echo",
+    index: 62,
+    enemyId: "hadal-orbital-siege-urchin-echo",
     operator: "multiply",
     comparator: "eq",
     equationShape: "true-false-multiply",
@@ -619,8 +817,8 @@ export const LEVELS: readonly LevelConfig[] = [
     handValueRange: { min: 1, max: 3 },
   },
   {
-    index: 48,
-    enemyId: "hadal-kelp-censer-echo",
+    index: 63,
+    enemyId: "hadal-abyssal-fleetmind-echo",
     operator: "multiply",
     comparator: "eq",
     equationShape: "true-false-multiply",
@@ -634,14 +832,14 @@ export const FINAL_LEVEL_INDEX: number = LEVELS.length;
 
 // Round boundaries — the LAST level index of each round. Used by the
 // route's round indicator and the celebration trigger.
-export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33, 38, 43, 48];
+export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33, 38, 43, 48, 53, 58, 63];
 
 export function findLevel(index: number): LevelConfig | undefined {
   return LEVELS.find((l) => l.index === index);
 }
 
 // Which round (1-indexed) does a given level belong to?
-export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 {
+export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 {
   if (levelIndex <= 6) return 1;
   if (levelIndex <= 12) return 2;
   if (levelIndex <= 18) return 3;
@@ -650,18 +848,16 @@ export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 {
   if (levelIndex <= 33) return 6;
   if (levelIndex <= 38) return 7;
   if (levelIndex <= 43) return 8;
-  return 9;
+  if (levelIndex <= 48) return 9;
+  if (levelIndex <= 53) return 10;
+  if (levelIndex <= 58) return 11;
+  return 12;
 }
 
-export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): number {
+export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12): number {
   if (round === 1) return 6;
   if (round === 2) return 6;
   if (round === 3) return 6;
-  if (round === 4) return 5;
-  if (round === 5) return 5;
-  if (round === 6) return 5;
-  if (round === 7) return 5;
-  if (round === 8) return 5;
   return 5;
 }
 
@@ -675,5 +871,8 @@ export function localLevelIndex(levelIndex: number): number {
   if (levelIndex <= 33) return levelIndex - 28;
   if (levelIndex <= 38) return levelIndex - 33;
   if (levelIndex <= 43) return levelIndex - 38;
-  return levelIndex - 43;
+  if (levelIndex <= 48) return levelIndex - 43;
+  if (levelIndex <= 53) return levelIndex - 48;
+  if (levelIndex <= 58) return levelIndex - 53;
+  return levelIndex - 58;
 }

@@ -1,4 +1,11 @@
-import type { AddingGameState, Equation, EquationSlot, HandSlot } from "@dean-stack/schemas";
+import {
+  type AddingGameState,
+  type CardCatalog,
+  type Equation,
+  type EquationSlot,
+  type HandSlot,
+  isNumberCard,
+} from "@dean-stack/schemas";
 
 // Source-of-truth for "where is a card in the layout". Drag handlers carry
 // these around; pure swap logic transforms state by these locators alone.
@@ -110,6 +117,44 @@ export function applySwap(
     round: {
       ...state.round,
       equation: nextEquation,
+      phase: "matching",
+      outcome: null,
+    },
+  };
+}
+
+// R9–R11 stepper action. Increment / decrement the value on the
+// catalog's stepper card (referenced by `cardId`) by `delta`. Clamps
+// to [0, max] so the kid can't push the value negative or past the
+// level's plausible answer range. Same invalidation semantics as
+// applySwap: any change resets `phase` to "matching" and clears the
+// round's outcome, so the kid can keep tapping without a separate
+// "try again" affordance.
+//
+// Returns state unchanged when:
+//   - no round is active
+//   - the cardId doesn't resolve to a NumberCard (defensive)
+//   - the resulting value would equal the current value (no-op clamp)
+export function applyStep(
+  state: AddingGameState,
+  cardId: string,
+  delta: number,
+  max: number,
+): AddingGameState {
+  if (!state.round) return state;
+  const card = state.cards[cardId];
+  if (!card || !isNumberCard(card)) return state;
+  const nextValue = Math.max(0, Math.min(max, card.value + delta));
+  if (nextValue === card.value) return state;
+  const nextCards: CardCatalog = {
+    ...state.cards,
+    [cardId]: { ...card, value: nextValue },
+  };
+  return {
+    ...state,
+    cards: nextCards,
+    round: {
+      ...state.round,
       phase: "matching",
       outcome: null,
     },

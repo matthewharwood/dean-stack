@@ -246,6 +246,198 @@ You know the Pressure Wraith? This one is its other half. Same sad story. But th
 
 The smoke smells like a kitchen you have never been in. Like bread. Almost like a voice calling you inside. Give it the right number, in the right order. For ONE long breath the smoke goes up the way smoke is supposed to. And way up high somewhere, a window opens. Whoa.`,
   }),
+  // ── Tier 3 ──────────────────────────────────────────────────────────
+  EnemyTemplateSchema.parse({
+    id: "hadal-spark-shrimp-drone-echo",
+    name: "Spark Shrimp Drone Echo",
+    type: "current",
+    rarity: "common",
+    maxHp: 18,
+    imageUrl: `${BASE}enemies/hadal-spark-shrimp-drone-echo.png`,
+    bio: `## Was
+
+A tiny shrimp scout with feelers like antennae! It zipped through the trench and tapped rocks to hear if anything was hiding inside. Tap tap tap. Zap zap zap!
+
+## Is
+
+Now its shell hums like a little engine. It wants to fly in a perfect pattern, but the pattern got scrambled. It keeps bumping into its own spark trail.
+
+## To Settle It
+
+Give it a true number and the sparks line up in neat rows. The drone salutes with one little claw, then zooms away.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-crystal-tide-oracle-echo",
+    name: "Crystal Tide Oracle Echo",
+    type: "crystal",
+    rarity: "uncommon",
+    maxHp: 22,
+    imageUrl: `${BASE}enemies/hadal-crystal-tide-oracle-echo.png`,
+    bio: `## Was
+
+This oracle grew inside a coral crystal. It watched currents bend around the glassy points and guessed where every bubble would go next. It was right a LOT.
+
+## Is
+
+Its crystal crown is brighter now, but the guesses come too fast. Future numbers flash all over its face and make it dizzy.
+
+## To Settle It
+
+Show it the number that is true right now. The crown stops rattling. One bright point winks like it knew you could do it.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-brineblade-reaver-echo",
+    name: "Brineblade Reaver Echo",
+    type: "brine",
+    rarity: "rare",
+    maxHp: 26,
+    imageUrl: `${BASE}enemies/hadal-brineblade-reaver-echo.png`,
+    bio: `## Was
+
+A crabby old guard with blade arms made from salt! It stood beside a warm vent and sliced big bubbles into small bubbles. Very serious bubble work.
+
+## Is
+
+Now the blades are too sharp and too many. It keeps chopping the same wave in half, then chopping the halves again, like it forgot when to stop.
+
+## To Settle It
+
+Give it the right answer. The blades fold away one by one, and the Reaver finally lets one whole bubble float past.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-void-spore-sentinel-echo",
+    name: "Void Spore Sentinel Echo",
+    type: "spore",
+    rarity: "epic",
+    maxHp: 30,
+    imageUrl: `${BASE}enemies/hadal-void-spore-sentinel-echo.png`,
+    bio: `## Was
+
+This sentinel was a floating seed with armor plates. It guarded a dark garden where the plants did not need sun. They needed quiet.
+
+## Is
+
+The seed grew battle fins and a sleepy purple eye. It still guards the garden, but it forgot the garden is gone. So it guards EVERYTHING. Even pebbles.
+
+## To Settle It
+
+Answer true and the eye closes halfway. The sentinel remembers one tiny patch of quiet and lets you pass through it.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-starcurrent-seraph-echo",
+    name: "Starcurrent Seraph Echo",
+    type: "astral current",
+    rarity: "legendary",
+    maxHp: 36,
+    imageUrl: `${BASE}enemies/hadal-starcurrent-seraph-echo.png`,
+    bio: `## Was
+
+Once it was a giant ribbon creature that followed falling stars into the sea. Every star made a path. Every path had a number. It remembered them all.
+
+## Is
+
+Now it wears a shining crown of current and acts like the deep ocean is its throne room. It is beautiful. It is bossy. It is extremely hard to impress.
+
+## To Settle It
+
+Bring the true number. The crown burns bright, then bows just a little. Not a big bow. A boss bow.`,
+  }),
+  // ── Tier 4 ──────────────────────────────────────────────────────────
+  EnemyTemplateSchema.parse({
+    id: "hadal-chitin-scout-echo",
+    name: "Chitin Scout Echo",
+    type: "chitin",
+    rarity: "common",
+    maxHp: 12,
+    imageUrl: `${BASE}enemies/hadal-chitin-scout-echo.png`,
+    bio: `## Was
+
+A quick little shell bug that ran messages across the trench floor. Its legs clicked out a code. Click-click. Pause. Click!
+
+## Is
+
+The code is stuck on repeat. It dashes forward, stops, turns around, and forgets why it was in such a hurry.
+
+## To Settle It
+
+Give it the number it was carrying. The scout tucks the message under its shell and scurries off like it has somewhere important to be.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-warpcoral-prism-echo",
+    name: "Warpcoral Prism Echo",
+    type: "coral",
+    rarity: "uncommon",
+    maxHp: 18,
+    imageUrl: `${BASE}enemies/hadal-warpcoral-prism-echo.png`,
+    bio: `## Was
+
+This coral grew in a perfect triangle. Little fish used to swim through it and pop out facing a new way. It was a door, but only for brave fish.
+
+## Is
+
+Now the prism bends light, sound, and numbers. It keeps making doorways to places that are only two inches away. Fancy! Not useful.
+
+## To Settle It
+
+Solve the number and the door points the right direction. For a blink, you can see a safe path through the glow.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-plasma-reef-lancer-echo",
+    name: "Plasma Reef Lancer Echo",
+    type: "plasma",
+    rarity: "rare",
+    maxHp: 24,
+    imageUrl: `${BASE}enemies/hadal-plasma-reef-lancer-echo.png`,
+    bio: `## Was
+
+A long reef fish with one bright horn. It poked hot bubbles before they popped. That made the vent field safe for smaller swimmers.
+
+## Is
+
+The horn is all blue fire now. It charges at any number that looks wobbly. It means to help, but YIKES, that is a lot of poking.
+
+## To Settle It
+
+Give it a true equation. The horn cools from blue to gold, and the Lancer remembers how to wait before charging.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-orbital-siege-urchin-echo",
+    name: "Orbital Siege Urchin Echo",
+    type: "gravity",
+    rarity: "epic",
+    maxHp: 30,
+    imageUrl: `${BASE}enemies/hadal-orbital-siege-urchin-echo.png`,
+    bio: `## Was
+
+An urchin that collected tiny stones in rings around its body. It never touched them. They just floated there, spinning like a toy planet set.
+
+## Is
+
+Now the rings are heavy and mean. Each stone waits for the urchin to say GO. The urchin keeps thinking every answer is GO.
+
+## To Settle It
+
+Find the true answer and the stones stop spinning so hard. One by one, they settle into a calm circle.`,
+  }),
+  EnemyTemplateSchema.parse({
+    id: "hadal-abyssal-fleetmind-echo",
+    name: "Abyssal Fleetmind Echo",
+    type: "pressure",
+    rarity: "mythic",
+    maxHp: 36,
+    imageUrl: `${BASE}enemies/hadal-abyssal-fleetmind-echo.png`,
+    bio: `## Was
+
+It was not one creature. It was a whole school moving like one big thought. Left together. Right together. Down together. Perfect.
+
+## Is
+
+Now the thought is huge and dark and wearing a crown of broken little fins. It tries to command the whole trench at once. That is too many things!
+
+## To Settle It
+
+Give it the final true number. The big thought becomes many small thoughts again, and the trench gets quiet enough to hear your own bubbles.`,
+  }),
 ];
 
 export function findEnemyTemplate(id: string): EnemyTemplate | undefined {

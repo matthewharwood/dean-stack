@@ -25,6 +25,7 @@ import { PlayerAvatar } from "~/components/player-avatar";
 import { RoundCompleteFx } from "~/components/round-complete-fx";
 import { RoundIndicator } from "~/components/round-indicator";
 import { RoundJumpPanel } from "~/components/round-jump-panel";
+import { StepperCard } from "~/components/stepper-card";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
 import { attackFxRuntime } from "~/games/adding-game/attack-fx/runtime";
 import { applyAutoAssist } from "~/games/adding-game/auto-assist";
@@ -44,9 +45,10 @@ import {
   roundOf,
 } from "~/games/adding-game/levels";
 import { findPlayerTemplate, PLAYER_REGISTRY } from "~/games/adding-game/players";
-import { applySwap, type SlotLocator } from "~/games/adding-game/swap";
+import { applyStep, applySwap, type SlotLocator } from "~/games/adding-game/swap";
 import { applyXpGain, progressFor, xpThresholdForLevel } from "~/games/adding-game/xp";
 import { buildSeoLinks, buildSeoMeta } from "~/lib/seo";
+import { useSound } from "~/sound";
 import { addingGameAtom } from "~/state/atoms";
 
 export const Route = createFileRoute("/adding-game")({
@@ -292,6 +294,7 @@ function EquationView({
   dragLocked,
   failedComputed,
   onSwap,
+  onStep,
 }: {
   equation: EquationData;
   cards: CardCatalog;
@@ -301,8 +304,61 @@ function EquationView({
   // or won — the chip stays invisible in all of those cases.
   failedComputed: number | null;
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
+  // R9–R11 stepper-sum only — fired when the kid taps the top or bottom
+  // half of the stepper card. `delta` is +1 or −1. Ignored by other
+  // shapes.
+  onStep: (delta: number) => void;
 }) {
-  // ── true-false-multiply (R9) ───────────────────────────────────────
+  // ── stepper-sum (R9–R11) ───────────────────────────────────────────
+  // Layout matches find-missing-result: [a] op [b] = [stepper]. All
+  // three slots are locked + pre-filled; the kid never drags. The
+  // result slot renders a StepperCard whose top/bottom halves fire
+  // onStep(+1) / onStep(−1). The kid taps up or down until the numeral
+  // matches a OP b, then hits Evaluate.
+  if (equation.shape === "stepper-sum") {
+    const [aSlot, bSlot, sSlot] = equation.operandSlots;
+    if (!aSlot || !bSlot || !sSlot) {
+      throw new Error("EquationView: stepper-sum needs 3 operandSlots");
+    }
+    const sCard = sSlot.cardId ? cards[sSlot.cardId] : undefined;
+    const stepperValue = sCard && sCard.kind === "number" ? sCard.value : 0;
+    return (
+      <div
+        className="flex items-center justify-center gap-[28px]"
+        data-test="equation"
+        data-shape="stepper-sum"
+      >
+        <DropOrLockedSlot
+          slot={aSlot}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="numeric"
+          onSwap={onSwap}
+        />
+        <OperatorPillWithResult
+          glyph={OPERATOR_GLYPH[equation.operator]}
+          failedComputed={failedComputed}
+        />
+        <DropOrLockedSlot
+          slot={bSlot}
+          cards={cards}
+          dragLocked={dragLocked}
+          display="numeric"
+          onSwap={onSwap}
+        />
+        <OperatorPill glyph="=" />
+        <div className="h-[140px] w-[100px] shrink-0" data-test="equation-slot">
+          <StepperCard
+            value={stepperValue}
+            onIncrement={() => onStep(1)}
+            onDecrement={() => onStep(-1)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── true-false-multiply (R12) ──────────────────────────────────────
   // Layout: [a] × [b] = [c] [?], with a "a rows of b dots" array
   // rendered beneath. All three LHS/RHS slots are locked + pre-filled
   // (kid never moves them); the kid lands a True or False card in the
@@ -907,11 +963,11 @@ function useGameCelebration(
   roundIndex: number | null | undefined,
   gameStatus: AddingGameState["status"],
 ): {
-  celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 } | null;
+  celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 } | null;
   clear: () => void;
 } {
   const [celebration, setCelebration] = useState<{
-    fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+    fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   } | null>(null);
   const prevLevelRef = useRef<number | null>(roundIndex ?? null);
   useEffect(() => {
@@ -929,7 +985,7 @@ function useGameCelebration(
   }, [roundIndex, gameStatus]);
   useEffect(() => {
     if (gameStatus === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
-      setCelebration({ fromRound: 9 });
+      setCelebration({ fromRound: 12 });
     }
   }, [gameStatus]);
   return { celebration, clear: () => setCelebration(null) };
@@ -1109,11 +1165,55 @@ function continueAfterWin(state: AddingGameState): AddingGameState | null {
   };
 }
 
+// Evaluate handler hook. Delegates to the pure evaluateAndMaybeAssist
+// transition, then plays the win/loss SFX after the state update lands.
+// `restart` policy on both registry entries cancels any in-flight
+// previous play so a rapid second tap re-fires the sound cleanly.
+// Extracted from AddingGame to keep the route's body under react-
+// doctor's giant-component threshold.
+function useEvaluateHandler(
+  setGame: (updater: (prev: AddingGameState) => AddingGameState) => void,
+  sfx: ReturnType<typeof useSound>,
+): () => void {
+  return () => {
+    setGame((prev) => {
+      const next = evaluateAndMaybeAssist(prev);
+      const outcome = next.round?.outcome;
+      if (outcome) sfx.play(outcome.won ? "event-evaluate-correct" : "event-evaluate-wrong");
+      return next;
+    });
+  };
+}
+
+// R9–R11 stepper hook. Wraps the `applyStep` reducer with the routing
+// concerns the route shouldn't carry inline: resolve the current
+// round's stepper card id, clamp the bump to the level's plausible
+// answer ceiling (target + 3 — same offset the dealer uses for "near
+// the answer" starts so the kid can over-tap a little without the
+// value getting stuck), and no-op for non-stepper rounds. Mirrors the
+// useGameCelebration / useGameHints pattern that keeps AddingGame's
+// body small.
+function useGameStepper(
+  setGame: (updater: (prev: AddingGameState) => AddingGameState) => void,
+): (delta: number) => void {
+  return (delta: number) => {
+    setGame((prev) => {
+      if (!prev.round || prev.round.equation.shape !== "stepper-sum") return prev;
+      const stepperSlot = prev.round.equation.operandSlots[2];
+      if (!stepperSlot?.cardId) return prev;
+      const level = findLevel(prev.round.index);
+      const max = (level?.target ?? 20) + 3;
+      return applyStep(prev, stepperSlot.cardId, delta, max);
+    });
+  };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 
 function AddingGame() {
   const game = useAtomValue(addingGameAtom);
   const setGame = useSetAtom(addingGameAtom);
+  const sfx = useSound();
 
   // The dive-in intro is a STATE, not a default. Three explicit phases:
   //   - splash       (status idle, round null, intro not playing)
@@ -1161,12 +1261,9 @@ function AddingGame() {
     setGame((prev) => applySwap(prev, source, target));
   };
 
-  // Evaluate: delegate to the pure transition. Wraps with the setter
-  // shape; assist + wrong-attempt counter logic lives in
-  // evaluateAndMaybeAssist (above) so this stays a thin orchestrator.
-  const handleEvaluate = (): void => {
-    setGame((prev) => evaluateAndMaybeAssist(prev));
-  };
+  const handleStep = useGameStepper(setGame);
+
+  const handleEvaluate = useEvaluateHandler(setGame, sfx);
 
   // Continue: kill enemy / advance level / re-deal. Logic lives in the
   // pure continueAfterWin transition above. dealRound's Math.random is
@@ -1289,6 +1386,7 @@ function AddingGame() {
                   levelIndex={game.round.index}
                   localLevel={localLevelIndex(game.round.index)}
                   tierLevelCount={levelsInRound(roundOf(game.round.index))}
+                  totalLevels={FINAL_LEVEL_INDEX}
                 />
                 <MistakesBadge count={game.round.wrongAttempts ?? 0} />
               </div>
@@ -1313,6 +1411,7 @@ function AddingGame() {
                       : null
                   }
                   onSwap={handleSwap}
+                  onStep={handleStep}
                 />
                 {/* Action area — relative wrapper so the hint can overlay
                     the button without affecting layout. The hint covers
@@ -1324,12 +1423,15 @@ function AddingGame() {
                     outcome={game.round.outcome}
                     attacks={currentPlayer?.attacks ?? null}
                     canEvaluate={
-                      // R9: only the verdict slot needs a card; operandSlots
-                      // are all locked + pre-filled at deal time. Everywhere
-                      // else: every droppable operand slot must be full.
+                      // R12 true-false-multiply: only the verdict slot needs
+                      // a card; operandSlots are pre-filled. R9–R11 stepper-
+                      // sum: stepper card always has a value, so always
+                      // evaluable. Everywhere else: every droppable operand
+                      // slot must be full.
                       game.round.equation.shape === "true-false-multiply"
                         ? game.round.equation.verdictSlot?.cardId != null
-                        : game.round.equation.operandSlots.every((s) => s.cardId !== null)
+                        : game.round.equation.shape === "stepper-sum" ||
+                          game.round.equation.operandSlots.every((s) => s.cardId !== null)
                     }
                     onEvaluate={handleEvaluate}
                     onAttack={handleAttack}

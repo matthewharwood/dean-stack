@@ -127,12 +127,13 @@ describe("generateHints", () => {
     expect(ids).not.toContain("fmr-add-count-up");
   });
 
-  test("every true-false-multiply level (R9) produces tfm-prefixed hints on a wrong answer", () => {
-    // R9 levels (44..48). Different shape from R5–R8 — the kid drags a
-    // verdict card, not a number. Hints must teach multiplication from
-    // scratch (never assume he knows it), so every id is "tfm-…" and the
-    // pool is large enough to keep rotation fresh on consecutive losses.
-    for (let level = 44; level <= 48; level++) {
+  test("every true-false-multiply level (R12) produces tfm-prefixed hints on a wrong answer", () => {
+    // R12 levels (59..63). Different shape from R5–R11 — the kid drags
+    // a verdict card, not a number. Hints must teach multiplication
+    // from scratch (never assume he knows it), so every id is "tfm-…"
+    // and the pool is large enough to keep rotation fresh on
+    // consecutive losses.
+    for (let level = 59; level <= 63; level++) {
       // computed=1 (truth=true) but kid said expectedValue=0 (false) →
       // wrong-answer outcome that the hint generator can speak to.
       const state = makeStateWithOutcome({ levelIndex: level, computed: 1, expected: 0 });
@@ -140,6 +141,24 @@ describe("generateHints", () => {
       expect(hints.length).toBeGreaterThanOrEqual(3);
       for (const id of hints.map((h) => h.id)) {
         expect(id.startsWith("tfm-")).toBe(true);
+      }
+    }
+  });
+
+  test("every stepper-sum level (R9–R11) produces sum-prefixed hints on a wrong answer", () => {
+    // R9–R11 levels (44..58). The kid taps +/− on a stepper card;
+    // hints frame the gap as a direction + a count ("tap + 3 more
+    // times"). Every id is "sum-…" so the rotation filter keeps the
+    // pool separate from the find-* hint pools.
+    for (let level = 44; level <= 58; level++) {
+      // expected = stepperValue 0; computed = real answer (small). Off
+      // by a small amount in either direction so direction hints
+      // trigger.
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 5, expected: 0 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(3);
+      for (const id of hints.map((h) => h.id)) {
+        expect(id.startsWith("sum-")).toBe(true);
       }
     }
   });

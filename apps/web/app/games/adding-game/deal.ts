@@ -64,7 +64,13 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
   const shape = level.equationShape ?? "find-sum";
   const tStamp = Date.now();
 
-  // R9 short-circuit: true-false-multiply has its own hand (T+F cards
+  // R9–R11 short-circuit: stepper-sum has NO hand (kid never drags) and
+  // a pre-filled locked equation with a kid-mutated stepper card.
+  if (shape === "stepper-sum") {
+    return dealStepperSumRound(level, levelIndex, tStamp, pickInt, random);
+  }
+
+  // R12 short-circuit: true-false-multiply has its own hand (T+F cards
   // only) and a pre-filled locked equation. Return early; the find-sum
   // / find-missing-result hand-dealer below doesn't apply.
   if (shape === "true-false-multiply") {
@@ -458,4 +464,169 @@ function distractorProduct(real: number, random: () => number): number {
   if (real <= 1) return real + 1;
   if (real >= 10) return real - 1;
   return wantsMinus ? real - 1 : real + 1;
+}
+
+// R9–R11 dealer — stepper-sum.
+//
+// Layout produced:
+//   hand: 5 empty slots — the kid never drags in this mode.
+//   equation: operandSlots = [a, b, stepper], ALL locked + pre-filled.
+//     a and b are dealer-chosen number cards within `handValueRange`
+//     and constrained so `a OP b` lands in `[1, level.target]`.
+//     `stepper` is a NumberCard whose value starts at a random offset
+//     ±1–3 from the true answer (clamped to ≥ 0). The kid bumps it up
+//     or down via the top/bottom halves of the card.
+//   verdictSlot: null.
+//
+// Operator: `level.operator`. R11 uses a separate mix branch (50/50
+// add/subtract per round). For mix, the dealer flips a coin per round
+// — the level config still declares an operator (we pick `"add"` as
+// the placeholder default for the mix level), but the dealer overrides
+// it. To express that cleanly the level config gains a `mixedOperator`
+// flag we read here.
+//
+// Damage on win = stepper.value, same reward shape as find-missing-
+// result — bigger answers hit harder so the kid is incentivized to
+// land precisely.
+function dealStepperSumRound(
+  level: LevelConfig,
+  levelIndex: number,
+  tStamp: number,
+  pickInt: (min: number, max: number) => number,
+  random: () => number,
+): DealtRound {
+  // R11 mix: coin-flip the operator per round. R9/R10 use the level's
+  // declared operator unchanged.
+  const operator = pickStepperOperator(level, random);
+
+  const [a, b, realAnswer] = pickStepperAB(level, operator, pickInt);
+  const startValue = pickStepperStart(realAnswer, level.target, random, pickInt);
+
+  const cards: CardCatalog = {};
+  const aId = `card:r${levelIndex}:t${tStamp}:a`;
+  const bId = `card:r${levelIndex}:t${tStamp}:b`;
+  const stepperId = `card:r${levelIndex}:t${tStamp}:stepper`;
+  cards[aId] = { id: aId, kind: "number", value: a };
+  cards[bId] = { id: bId, kind: "number", value: b };
+  cards[stepperId] = { id: stepperId, kind: "number", value: startValue };
+
+  // Empty hand — kid has no cards to drag in stepper rounds.
+  const hand: HandSlot[] = Array.from({ length: HAND_SIZE }, (_, i) => ({
+    id: `hand:${i}`,
+    cardId: null,
+  }));
+
+  const equation: Equation = {
+    shape: "stepper-sum",
+    operator,
+    comparator: "eq",
+    operandSlots: [
+      { id: "eq:a", cardId: aId, locked: true },
+      { id: "eq:b", cardId: bId, locked: true },
+      { id: "eq:stepper", cardId: stepperId, locked: true },
+    ],
+    target: null,
+    verdictSlot: null,
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
+}
+
+// Pick (a, b, a OP b) for a stepper round. Constraints:
+//   - a, b ∈ level.handValueRange
+//   - real answer ∈ [1, level.target]
+// Throws when no valid pair exists (covered by levels-coverage test).
+function pickStepperAB(
+  level: LevelConfig,
+  operator: "add" | "subtract" | "multiply" | "divide",
+  pickInt: (min: number, max: number) => number,
+): [number, number, number] {
+  const { min, max } = level.handValueRange;
+  const target = level.target;
+  if (operator === "add") {
+    // a + b in [1, target], both in [min, max].
+    const aMin = Math.max(min, 1 - max);
+    const aMax = Math.min(max, target - min);
+    if (aMax < aMin) throw failStepper(level);
+    const a = pickInt(aMin, aMax);
+    const bMin = Math.max(min, 1 - a);
+    const bMax = Math.min(max, target - a);
+    if (bMax < bMin) throw failStepper(level);
+    const b = pickInt(bMin, bMax);
+    return [a, b, a + b];
+  }
+  if (operator === "subtract") {
+    // a - b in [1, target], both in [min, max], so a > b.
+    const aMin = Math.max(min + 1, 1 + min);
+    const aMax = max;
+    if (aMax < aMin) throw failStepper(level);
+    const a = pickInt(aMin, aMax);
+    const bMin = Math.max(min, a - target);
+    const bMax = Math.min(max, a - 1);
+    if (bMax < bMin) throw failStepper(level);
+    const b = pickInt(bMin, bMax);
+    return [a, b, a - b];
+  }
+  throw new Error(
+    `dealStepperSumRound: unsupported operator (${operator}) for level ${level.index}`,
+  );
+}
+
+// Pick a start value for the stepper card. ±1–3 from the true answer,
+// random sign, but NEVER equal to the answer (so the kid always has to
+// move it), NEVER below 0, and NEVER above max+3 (kid won't have to
+// step down forever). When the true answer is ≤ 0 (shouldn't happen
+// for stepper-sum) we fall back to 0.
+function pickStepperStart(
+  real: number,
+  max: number,
+  random: () => number,
+  pickInt: (min: number, max: number) => number,
+): number {
+  if (real <= 0) return 0;
+  const lowMin = Math.max(0, real - 3);
+  const lowMax = Math.max(0, real - 1);
+  const highMin = real + 1;
+  const highMax = Math.min(max + 3, real + 3);
+  const canGoLow = lowMax >= lowMin;
+  const canGoHigh = highMax >= highMin;
+  // 50/50 high vs low when both are available; fall through when one
+  // side is empty (e.g., real === 1 → low side is empty, must go high).
+  const goHigh = canGoHigh && (!canGoLow || random() < 0.5);
+  if (goHigh) return pickInt(highMin, highMax);
+  if (canGoLow) return pickInt(lowMin, lowMax);
+  return 0;
+}
+
+// Hoisted to dodge sonarjs's nested-ternary rule on the call site.
+// R11 mix flips a coin per round; R9 / R10 honor the level's declared
+// operator.
+function pickStepperOperator(
+  level: LevelConfig,
+  random: () => number,
+): "add" | "subtract" | "multiply" | "divide" {
+  if (!level.mixedOperator) return level.operator;
+  return random() < 0.5 ? "add" : "subtract";
+}
+
+function failStepper(level: LevelConfig): Error {
+  return new Error(
+    `dealStepperSumRound: cannot generate (a, b) for level ${level.index} ` +
+      `(${level.operator}, target=${level.target}, ` +
+      `range=[${level.handValueRange.min},${level.handValueRange.max}])`,
+  );
 }

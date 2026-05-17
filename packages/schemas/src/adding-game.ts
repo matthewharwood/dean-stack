@@ -104,17 +104,27 @@ export type Comparator = z.infer<typeof ComparatorSchema>;
 //                            played. Win when `a OP b == result.value`.
 //                            Damage = result.value (kid is rewarded for
 //                            picking bigger result cards). Rounds 5+.
+//   "stepper-sum"          : operandSlots = [a, b, stepper], ALL locked +
+//                            pre-filled. No drag. The kid mutates the
+//                            `stepper` card's value with +/- taps on the
+//                            card itself (top half = +, bottom half = -).
+//                            Win when `a OP b == stepper.value`. Damage
+//                            = stepper.value. Stepper starts at a random
+//                            value near the true answer (±1–3) so the
+//                            kid decides each round whether to tap + or
+//                            −. R9–R11.
 //   "true-false-multiply"  : operandSlots = [a, b, c], ALL locked + pre-
 //                            filled. `verdictSlot` is a separate droppable
 //                            slot that holds the kid's True/False verdict
 //                            card. Win when the verdict matches whether
 //                            `a × b == c`. Damage = the equation's target
-//                            (set by the level config). R9 only.
+//                            (set by the level config). R12.
 // `.default("find-sum")` keeps tier-1 IDB rows re-parseable without a
 // migration.
 export const EquationShapeSchema = z.enum([
   "find-sum",
   "find-missing-result",
+  "stepper-sum",
   "true-false-multiply",
 ]);
 export type EquationShape = z.infer<typeof EquationShapeSchema>;

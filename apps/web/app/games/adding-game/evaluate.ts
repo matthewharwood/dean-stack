@@ -123,8 +123,13 @@ export function evaluateRound(state: AddingGameState): RoundOutcome | null {
       break;
   }
 
-  // ── find-missing-result ─────────────────────────────────────────────
-  if (equation.shape === "find-missing-result") {
+  // ── find-missing-result (R5–R8) + stepper-sum (R9–R11) ──────────────
+  // Same evaluation contract for both: `a OP b` must equal the kid's
+  // result-slot value (operandSlots[2]). The only difference is HOW
+  // the value got there — drag for find-missing-result, +/- taps for
+  // stepper-sum — which the evaluator doesn't care about. Damage =
+  // result.value in both cases, rewarding bigger answers.
+  if (equation.shape === "find-missing-result" || equation.shape === "stepper-sum") {
     const result = slotValue(2);
     const won = computed === result;
     return {

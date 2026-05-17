@@ -4,21 +4,34 @@ import { defineComponent } from "~/lib/define-component";
 
 import { RoundIndicatorPropsSchema } from "./schema";
 
-// Tailwind class for one progress dot, indexed by state. Hoisted to a
-// helper so the JSX template doesn't carry a nested ternary.
-function dotClass(current: boolean, reached: boolean): string {
-  if (current) return "w-6 bg-radiant-violet";
-  if (reached) return "w-1.5 bg-radiant-violet/70";
-  return "w-1.5 bg-light-gray";
+// Round indicator. Lives in the Top region. Renders a segmented
+// progress strip — one vertical bar per level in the whole campaign
+// (totalLevels) — with the kid's completed bars filled in oceanic
+// blue and an animated wave traveling across the filled segments.
+// A centered "Round N / 12" badge overlays the strip.
+//
+// Why a per-level strip (not per-round dots)? Higher resolution: the
+// kid sees not just "round 5" but "level 26 of 63" — every successful
+// equation lights one more bar. The wave makes the progress feel
+// alive without competing with the play area.
+//
+// Tier-up: when `round` flips N → N+1, the centered badge plays the
+// tier-up animation (lift + glow + scale) to mark the milestone.
+
+// Tailwind class for one progress bar, indexed by state.
+function barClass(filled: boolean, current: boolean): string {
+  if (current)
+    return "bg-gradient-to-b from-sky-300 to-blue-700 animate-round-bar-wave shadow-[0_0_4px_rgba(59,130,246,0.4)]";
+  if (filled) return "bg-gradient-to-b from-sky-300 to-blue-700 animate-round-bar-wave";
+  return "bg-light-gray/70";
 }
 
-// Round indicator. Lives in the Top region. Renders the active round
-// number, a one-line status, and a row of progress dots showing how far
-// the kid is into the current tier.
-//
-// Tier-up: when `round` flips 1 → 2, a brief CSS animation (lift + glow
-// + scale) plays on the whole indicator to mark the milestone. Triggered
-// via a data attribute toggled by a useEffect tracking previous round.
+// Build a stable id per bar so React doesn't reuse keys across mounts.
+// 63 entries by default; we generate `totalLevels` from the schema.
+function barId(round: number, idx: number): string {
+  return `r${round}-b${idx}`;
+}
+
 export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const prevRoundRef = useRef(props.round);
@@ -32,39 +45,58 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
     return () => window.clearTimeout(t);
   }, [props.round]);
 
-  const localLevel = props.localLevel;
+  const { round, levelIndex, totalLevels } = props;
+  // Wave traverses the strip at ~one cycle per animation period. Per-
+  // bar delay = (i / totalLevels) * period. With period 2400ms and
+  // 63 bars that's ~38ms per bar — perceptually smooth.
+  const WAVE_PERIOD_MS = 2400;
+  const bars = Array.from({ length: totalLevels }, (_, i) => i + 1);
 
   return (
     <div
       ref={rootRef}
-      className="flex size-full items-center justify-center px-6"
+      className="relative size-full overflow-hidden"
       data-test="round-indicator"
-      data-round={props.round}
+      data-round={round}
+      data-level-index={levelIndex}
+      data-total-levels={totalLevels}
     >
-      <div
-        className={`flex flex-col items-center gap-1.5 ${tierUp ? "animate-tier-up" : ""}`}
-        data-tier-up={tierUp ? "true" : undefined}
-      >
-        <div className="flex items-baseline gap-3">
-          <span className="font-openrunde text-xs font-semibold uppercase tracking-[0.2em] text-muted-gray">
-            Round
-          </span>
-          <span className="font-openrunde text-3xl font-bold text-slate-ink">{props.round}</span>
-          <span className="font-openrunde text-xs text-muted-gray">
-            of <span className="font-bold text-medium-gray">9</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          {Array.from({ length: props.tierLevelCount }, (_, i) => i + 1).map((level) => {
-            const reached = level <= localLevel;
-            const current = level === localLevel;
-            return (
-              <span
-                key={`r${props.round}-l${level}`}
-                className={`h-1.5 rounded-full transition-all duration-300 ${dotClass(current, reached)}`}
-              />
-            );
-          })}
+      {/* Segmented bar strip. One bar per level. Gap is 1px so the
+          strip reads as continuous water rather than discrete blocks. */}
+      <div className="flex h-full w-full items-stretch gap-px px-2 py-3">
+        {bars.map((level, i) => {
+          const filled = level <= levelIndex;
+          const current = level === levelIndex;
+          // Stagger the wave: each bar's animation starts a bit later
+          // than the previous, so the brightness/scale pulse travels
+          // left-to-right. We compute the delay in ms inline (CSS var
+          // would also work; inline is simpler for ~63 items).
+          const delayMs = Math.round((i / totalLevels) * WAVE_PERIOD_MS);
+          return (
+            <span
+              key={barId(round, i)}
+              className={`flex-1 origin-bottom rounded-[2px] ${barClass(filled, current)}`}
+              style={{ animationDelay: `${delayMs}ms` }}
+              data-test="round-indicator-bar"
+              data-bar-level={level}
+              data-bar-filled={filled ? "true" : "false"}
+              data-bar-current={current ? "true" : undefined}
+            />
+          );
+        })}
+      </div>
+      {/* Centered round badge. Absolute over the bar strip with a
+          subtle white scrim so the text stays legible no matter which
+          bar sits behind it. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          className={`rounded-md border border-light-gray/80 bg-canvas-white/85 px-5 py-2 text-center font-openrunde shadow-subtle backdrop-blur-sm ${tierUp ? "animate-tier-up" : ""}`}
+          data-tier-up={tierUp ? "true" : undefined}
+        >
+          <div className="text-xs italic tracking-wide text-muted-gray">Round</div>
+          <div className="text-lg font-bold leading-tight text-slate-ink">
+            {round} <span className="text-muted-gray">/</span> 12
+          </div>
         </div>
       </div>
     </div>

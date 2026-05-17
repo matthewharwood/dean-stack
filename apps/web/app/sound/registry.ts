@@ -55,6 +55,21 @@ const SFX_REGISTRY_LITERAL = {
   "ui-dive-in-skip": { path: "sfx/ui/T2-CIN-03-dive-in-skip.mp3", policy: "restart" },
   "ui-evaluate-miss": { path: "sfx/ui/T1-CMB-12-player-damage-miss.mp3", policy: "restart" },
 
+  // ─── Evaluate outcome (ElevenLabs-generated, ~0.5s each) ───────────
+  // Fires on the Evaluate button click — `evaluate-correct` on a win
+  // outcome, `evaluate-wrong` on a loss. `restart` policy so back-to-
+  // back evaluations (kid mashing) cancel the previous play instead of
+  // stacking. These are the "small reward / try again" cues, deliberately
+  // gentle so the loss sound never feels like a scold.
+  "event-evaluate-correct": {
+    path: "sfx/event/evaluate-correct.mp3",
+    policy: "restart",
+  },
+  "event-evaluate-wrong": {
+    path: "sfx/event/evaluate-wrong.mp3",
+    policy: "restart",
+  },
+
   // ─── Foley (card interactions) ─────────────────────────────────────
   "foley-card-pickup": { path: "sfx/foley/T1-FOL-01-card-pickup.mp3", policy: "restart" },
   "foley-card-drop-snap": { path: "sfx/foley/T1-FOL-02-card-drop-snap.mp3", policy: "polyphony" },

@@ -141,7 +141,7 @@ describe("dealRound — every level produces a solvable hand", () => {
           );
           expect(ok).toBe(true);
         } else if (shape === "true-false-multiply") {
-          // R9 invariant: hand always contains exactly one TRUE and one
+          // R12 invariant: hand always contains exactly one TRUE and one
           // FALSE verdict card; remaining 3 slots are empty. The kid only
           // needs T or F — the dealer doesn't plant a numeric pair.
           const verdicts = result.hand.flatMap((slot) => {
@@ -150,6 +150,40 @@ describe("dealRound — every level produces a solvable hand", () => {
             return c && c.kind === "verdict" ? [c.verdict] : [];
           });
           expect(verdicts.sort()).toEqual([false, true]);
+        } else if (shape === "stepper-sum") {
+          // R9–R11 invariant: hand is COMPLETELY empty (the kid taps
+          // the stepper card, never drags). The equation has 3 locked
+          // operandSlots with NumberCards, AND the stepper card's
+          // value is within [0, target + 3] (the dealer's "near the
+          // answer" range, clamped at zero) — never the true answer
+          // (the kid always has at least one tap to make).
+          for (const slot of result.hand) {
+            expect(slot.cardId).toBeNull();
+          }
+          const [aSlot, bSlot, sSlot] = result.round.equation.operandSlots;
+          if (!aSlot || !bSlot || !sSlot) {
+            throw new Error("stepper-sum: expected 3 operandSlots");
+          }
+          const aCard = aSlot.cardId ? result.cards[aSlot.cardId] : undefined;
+          const bCard = bSlot.cardId ? result.cards[bSlot.cardId] : undefined;
+          const sCard = sSlot.cardId ? result.cards[sSlot.cardId] : undefined;
+          if (
+            !aCard ||
+            !bCard ||
+            !sCard ||
+            aCard.kind !== "number" ||
+            bCard.kind !== "number" ||
+            sCard.kind !== "number"
+          ) {
+            throw new Error("stepper-sum: expected 3 NumberCards in operandSlots");
+          }
+          const op = result.round.equation.operator;
+          const real = op === "subtract" ? aCard.value - bCard.value : aCard.value + bCard.value;
+          expect(real).toBeGreaterThanOrEqual(1);
+          expect(real).toBeLessThanOrEqual(level.target);
+          expect(sCard.value).toBeGreaterThanOrEqual(0);
+          expect(sCard.value).toBeLessThanOrEqual(level.target + 3);
+          expect(sCard.value).not.toBe(real); // dealer guarantees ≠
         } else {
           const ok = hasValidPair(
             handValues(result),

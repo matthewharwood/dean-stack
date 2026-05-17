@@ -133,6 +133,12 @@
      when the player progresses past the wraith. */
   --animate-tier-up: tier-up 700ms ease-out;
 
+  /* Round-indicator bar wave. Each filled bar in the segmented
+     progress strip plays this with a per-bar `animation-delay` derived
+     from its index — the wave then travels left-to-right across the
+     strip on every cycle. Oceanic shimmer for the deep-sea theme. */
+  --animate-round-bar-wave: round-bar-wave 2400ms ease-in-out infinite;
+
   /* Operator pill change. Two phases driven by a `data-phase` attribute
      toggled in JS — the operator pill plays op-out THEN op-in when the
      glyph changes between deals, so the kid notices the rule has
@@ -310,6 +316,26 @@
   100% {
     transform: scale(1);
     filter: brightness(1);
+  }
+}
+
+/* Wave for the segmented round-indicator bars. Subtle vertical bob +
+   brightness pulse — the kid reads the strip as living water without
+   the motion competing with the equation or the play area. The
+   `transform-origin: bottom` makes the bars feel anchored to the
+   ocean floor as they rise / fall. Per-bar `animation-delay` (set
+   inline by the component) staggers the wave so it visibly travels
+   left-to-right. */
+@keyframes round-bar-wave {
+  0%,
+  100% {
+    transform: scaleY(0.92);
+    filter: brightness(0.9);
+  }
+
+  50% {
+    transform: scaleY(1);
+    filter: brightness(1.08);
   }
 }
 
