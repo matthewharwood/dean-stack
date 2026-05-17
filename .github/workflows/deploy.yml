@@ -60,7 +60,18 @@ jobs:
       # Playwright's browser binary is not bundled with the npm package; the
       # gate's `playwright test` step fails on a fresh runner without it.
       # `--with-deps` installs OS libs Chromium needs on ubuntu-latest.
+      #
+      # `working-directory: apps/web` is LOAD-BEARING. `@playwright/test`
+      # is only a direct dep in `apps/web/package.json` — running `bunx
+      # playwright install` from the repo root makes `bunx` fall back to
+      # fetching the LATEST `playwright` from npm, which installs
+      # browsers for a different internal revision than the workspace-
+      # pinned version. The gate then fails with "Executable doesn't
+      # exist at chromium_headless_shell-<N>" because the workspace
+      # Playwright is looking for a different revision. Running the
+      # install from the workspace pins `bunx` to the workspace dep.
       - run: bunx playwright install --with-deps chromium
+        working-directory: apps/web
 
       # Pillar 4 — the gate runs BEFORE the production build so we never
       # publish code that fails lint, types, unit, or e2e. This is the only
