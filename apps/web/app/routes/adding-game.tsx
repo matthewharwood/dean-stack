@@ -133,6 +133,17 @@ function RightCol({ children }: RegionProps) {
   );
 }
 
+// Map a discriminated Card to the right DraggableCard payload props.
+// Hoisted so the JSX spread reads as a single call instead of a nested
+// ternary inside the surrounding `card ? (...) : null` expression.
+type DraggablePayload = { value?: number; verdict?: boolean };
+function cardPayload(
+  card: { kind: "number"; value: number } | { kind: "verdict"; verdict: boolean },
+): DraggablePayload {
+  if (card.kind === "verdict") return { verdict: card.verdict };
+  return { value: card.value };
+}
+
 function Hand({
   hand,
   cards,
@@ -161,7 +172,7 @@ function Hand({
                 key={card.id}
                 locator={{ kind: "hand", id: slot.id }}
                 cardId={card.id}
-                value={card.value}
+                {...cardPayload(card)}
                 display={display}
                 dragLocked={dragLocked}
                 onSwap={onSwap}
@@ -244,17 +255,110 @@ function OperatorPill({ glyph }: { glyph: string }) {
   );
 }
 
+// Operator pill paired with the on-error result chip. On a loss we surface
+// the kid's actual computed LHS (e.g. 2 − 1 = 1) directly under the
+// operator pill so the answer sits between the two cards he dragged in —
+// the same spot his eye is already on after dropping the second card.
+// The chip uses the existing `vivid-orange` failure palette + the hint
+// slide-in keyframe so it reads as part of the same "wrong" beat as the
+// HintTooltip below the action button.
+function OperatorPillWithResult({
+  glyph,
+  failedComputed,
+}: {
+  glyph: string;
+  failedComputed: number | null;
+}) {
+  return (
+    <div className="relative shrink-0">
+      <OperatorPill glyph={glyph} />
+      {failedComputed !== null ? (
+        <div
+          className="absolute top-full left-1/2 mt-2 flex -translate-x-1/2 items-center gap-1 rounded-md border-2 border-vivid-orange/40 bg-vivid-orange/10 px-2 py-0.5 font-openrunde text-lg font-bold whitespace-nowrap text-vivid-orange shadow-subtle animate-hint-slide-in"
+          data-test="operator-result-badge"
+          aria-live="polite"
+        >
+          <span aria-hidden>=</span>
+          <span>{failedComputed}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function EquationView({
   equation,
   cards,
   dragLocked,
+  failedComputed,
   onSwap,
 }: {
   equation: EquationData;
   cards: CardCatalog;
   dragLocked: boolean;
+  // The LHS value the kid's dragged cards actually compute to, surfaced
+  // ONLY on a loss outcome. `null` while the round is pre-eval, mid-deal,
+  // or won — the chip stays invisible in all of those cases.
+  failedComputed: number | null;
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
 }) {
+  // ── true-false-multiply (R9) ───────────────────────────────────────
+  // Layout: [a] × [b] = [c] [?], with a "a rows of b dots" array
+  // rendered beneath. All three LHS/RHS slots are locked + pre-filled
+  // (kid never moves them); the kid lands a True or False card in the
+  // verdict slot. The dot array is the load-bearing pedagogy — the kid
+  // hasn't seen multiplication before, so the equation row's numbers
+  // mean nothing until they count the dots and match the count to `c`.
+  if (equation.shape === "true-false-multiply") {
+    const [aSlot, bSlot, cSlot] = equation.operandSlots;
+    if (!aSlot || !bSlot || !cSlot) {
+      throw new Error("EquationView: true-false-multiply needs 3 operandSlots");
+    }
+    const verdictSlot = equation.verdictSlot;
+    if (!verdictSlot) {
+      throw new Error("EquationView: true-false-multiply needs a verdictSlot");
+    }
+    const aCard = aSlot.cardId ? cards[aSlot.cardId] : undefined;
+    const bCard = bSlot.cardId ? cards[bSlot.cardId] : undefined;
+    const aValue = aCard && aCard.kind === "number" ? aCard.value : 0;
+    const bValue = bCard && bCard.kind === "number" ? bCard.value : 0;
+    return (
+      <div
+        className="flex flex-col items-center gap-3"
+        data-test="equation"
+        data-shape="true-false-multiply"
+      >
+        <div className="flex items-center justify-center gap-[28px]">
+          <DropOrLockedSlot
+            slot={aSlot}
+            cards={cards}
+            dragLocked={dragLocked}
+            display="numeric"
+            onSwap={onSwap}
+          />
+          <OperatorPill glyph={OPERATOR_GLYPH.multiply} />
+          <DropOrLockedSlot
+            slot={bSlot}
+            cards={cards}
+            dragLocked={dragLocked}
+            display="numeric"
+            onSwap={onSwap}
+          />
+          <OperatorPill glyph="=" />
+          <DropOrLockedSlot
+            slot={cSlot}
+            cards={cards}
+            dragLocked={dragLocked}
+            display="numeric"
+            onSwap={onSwap}
+          />
+          <VerdictSlot slot={verdictSlot} cards={cards} dragLocked={dragLocked} onSwap={onSwap} />
+        </div>
+        <ProductDotArray rows={aValue} cols={bValue} />
+      </div>
+    );
+  }
+
   // ── find-missing-result (R5–R6) ────────────────────────────────────
   // 3-slot layout: [LHS-1] op [LHS-2] = [result]. One of LHS-1/LHS-2 is
   // locked + pre-filled with the static; the other LHS slot AND the
@@ -283,7 +387,10 @@ function EquationView({
           display="ten-frame"
           onSwap={onSwap}
         />
-        <OperatorPill glyph={OPERATOR_GLYPH[equation.operator]} />
+        <OperatorPillWithResult
+          glyph={OPERATOR_GLYPH[equation.operator]}
+          failedComputed={failedComputed}
+        />
         <DropOrLockedSlot
           slot={op1}
           cards={cards}
@@ -325,7 +432,7 @@ function EquationView({
                     key={card.id}
                     locator={{ kind: "equation", id: slot.id }}
                     cardId={card.id}
-                    value={card.value}
+                    {...cardPayload(card)}
                     dragLocked={dragLocked}
                     onSwap={onSwap}
                   />
@@ -333,14 +440,21 @@ function EquationView({
               </SlotWrapper>
             </div>
             {idx < equation.operandSlots.length - 1 ? (
-              <OperatorPill glyph={OPERATOR_GLYPH[equation.operator]} />
+              <OperatorPillWithResult
+                glyph={OPERATOR_GLYPH[equation.operator]}
+                failedComputed={failedComputed}
+              />
             ) : null}
           </Fragment>
         );
       })}
       <OperatorPill glyph={COMPARATOR_GLYPH[equation.comparator ?? "eq"]} />
       <div className="h-[140px] w-[100px] shrink-0">
-        <Card value={equation.target?.value ?? 0} variant="target" disabled />
+        <Card
+          value={equation.target && equation.target.kind === "number" ? equation.target.value : 0}
+          variant="target"
+          disabled
+        />
       </div>
     </div>
   );
@@ -365,6 +479,9 @@ function DropOrLockedSlot({
   onSwap: (source: SlotLocator, target: SlotLocator) => void;
 }) {
   const card = slot.cardId ? cards[slot.cardId] : undefined;
+  // DropOrLockedSlot is reused across find-missing-result (R5–R8) which
+  // only deals number cards, so the narrowing is purely defensive.
+  const cardValue = card && card.kind === "number" ? card.value : 0;
   if (slot.locked) {
     return (
       <div
@@ -372,7 +489,7 @@ function DropOrLockedSlot({
         data-test="equation-slot"
         data-slot-locked="true"
       >
-        <Card value={card?.value ?? 0} variant="target" display={display} disabled />
+        <Card value={cardValue} variant="target" display={display} disabled />
       </div>
     );
   }
@@ -385,13 +502,88 @@ function DropOrLockedSlot({
             key={card.id}
             locator={{ kind: "equation", id: slot.id }}
             cardId={card.id}
-            value={card.value}
+            value={cardValue}
             display={display}
             dragLocked={dragLocked}
             onSwap={onSwap}
           />
         ) : null}
       </SlotWrapper>
+    </div>
+  );
+}
+
+// Droppable verdict slot for true-false-multiply (R9). Sits to the
+// right of the equation's product card. Renders an empty dotted-ring
+// placeholder when nothing's dropped; when a True/False card is
+// committed, it renders the DraggableCard so the kid can swap it back
+// out before clicking Evaluate.
+function VerdictSlot({
+  slot,
+  cards,
+  dragLocked,
+  onSwap,
+}: {
+  slot: { id: string; cardId: string | null };
+  cards: CardCatalog;
+  dragLocked: boolean;
+  onSwap: (source: SlotLocator, target: SlotLocator) => void;
+}) {
+  const card = slot.cardId ? cards[slot.cardId] : undefined;
+  const verdict = card && card.kind === "verdict" ? card.verdict : undefined;
+  return (
+    <div className="h-[140px] w-[100px] shrink-0" data-test="verdict-slot">
+      <SlotWrapper kind="equation" slotId={slot.id}>
+        <EmptySlot />
+        {card && verdict !== undefined ? (
+          <DraggableCard
+            key={card.id}
+            locator={{ kind: "equation", id: slot.id }}
+            cardId={card.id}
+            verdict={verdict}
+            dragLocked={dragLocked}
+            onSwap={onSwap}
+          />
+        ) : null}
+      </SlotWrapper>
+    </div>
+  );
+}
+
+// `a × b` rendered as an `a` rows × `b` cols grid of dots. The whole
+// pedagogical conceit of R9 — the kid can count these to verify the
+// claimed product without knowing multiplication yet. Sized so that the
+// max R9 array (3×3 = 9 dots) fits comfortably under the equation row.
+const PRODUCT_DOT_CELL_PX = 20;
+function ProductDotArray({ rows, cols }: { rows: number; cols: number }) {
+  const safeRows = Math.max(0, Math.min(5, Math.floor(rows)));
+  const safeCols = Math.max(0, Math.min(5, Math.floor(cols)));
+  if (safeRows === 0 || safeCols === 0) return null;
+  const total = safeRows * safeCols;
+  return (
+    <div
+      className="rounded-md border border-light-gray bg-canvas-white p-2 shadow-subtle"
+      data-test="product-dot-array"
+      data-rows={safeRows}
+      data-cols={safeCols}
+    >
+      <div
+        className="grid gap-1"
+        style={{
+          gridTemplateRows: `repeat(${safeRows}, ${PRODUCT_DOT_CELL_PX}px)`,
+          gridTemplateColumns: `repeat(${safeCols}, ${PRODUCT_DOT_CELL_PX}px)`,
+        }}
+      >
+        {Array.from({ length: total }, (_, i) => {
+          const r = Math.floor(i / safeCols);
+          const c = i % safeCols;
+          return (
+            <span key={`r${r}c${c}`} className="flex items-center justify-center" data-product-dot>
+              <span className="size-3 rounded-full bg-slate-ink" />
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -715,10 +907,12 @@ function useGameCelebration(
   roundIndex: number | null | undefined,
   gameStatus: AddingGameState["status"],
 ): {
-  celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 } | null;
+  celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 } | null;
   clear: () => void;
 } {
-  const [celebration, setCelebration] = useState<{ fromRound: 1 | 2 | 3 | 4 | 5 | 6 } | null>(null);
+  const [celebration, setCelebration] = useState<{
+    fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  } | null>(null);
   const prevLevelRef = useRef<number | null>(roundIndex ?? null);
   useEffect(() => {
     const curr = roundIndex ?? null;
@@ -735,7 +929,7 @@ function useGameCelebration(
   }, [roundIndex, gameStatus]);
   useEffect(() => {
     if (gameStatus === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
-      setCelebration({ fromRound: 6 });
+      setCelebration({ fromRound: 9 });
     }
   }, [gameStatus]);
   return { celebration, clear: () => setCelebration(null) };
@@ -1113,6 +1307,11 @@ function AddingGame() {
                   equation={game.round.equation}
                   cards={game.cards}
                   dragLocked={dragLocked}
+                  failedComputed={
+                    game.round.outcome && !game.round.outcome.won
+                      ? game.round.outcome.computedValue
+                      : null
+                  }
                   onSwap={handleSwap}
                 />
                 {/* Action area — relative wrapper so the hint can overlay
@@ -1124,7 +1323,14 @@ function AddingGame() {
                   <ActionButton
                     outcome={game.round.outcome}
                     attacks={currentPlayer?.attacks ?? null}
-                    canEvaluate={game.round.equation.operandSlots.every((s) => s.cardId !== null)}
+                    canEvaluate={
+                      // R9: only the verdict slot needs a card; operandSlots
+                      // are all locked + pre-filled at deal time. Everywhere
+                      // else: every droppable operand slot must be full.
+                      game.round.equation.shape === "true-false-multiply"
+                        ? game.round.equation.verdictSlot?.cardId != null
+                        : game.round.equation.operandSlots.every((s) => s.cardId !== null)
+                    }
                     onEvaluate={handleEvaluate}
                     onAttack={handleAttack}
                     attackPending={attackPending}

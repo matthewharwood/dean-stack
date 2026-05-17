@@ -3,6 +3,7 @@ import { Info, X } from "lucide-react";
 import { type CSSProperties, useEffect, useReducer, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
+import { PronounceButton } from "~/components/pronounce-button";
 import { defineComponent } from "~/lib/define-component";
 
 import { PlayerAvatarPropsSchema } from "./schema";
@@ -166,7 +167,10 @@ export const PlayerAvatar = defineComponent(PlayerAvatarPropsSchema, (props) => 
       data-levelup={levelUpActive ? "true" : undefined}
     >
       <div className="bg-black/70 px-3 py-2 text-white">
-        <div className="font-openrunde text-sm font-bold leading-tight">{player.name}</div>
+        <div className="flex items-center gap-1.5">
+          <div className="font-openrunde text-sm font-bold leading-tight">{player.name}</div>
+          <PronounceButton nameSoundId={player.nameSoundId} label={player.name} />
+        </div>
         <div className="text-[11px] uppercase tracking-wide text-white/70">
           {player.role} · {player.rarity}
         </div>

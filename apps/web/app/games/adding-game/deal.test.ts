@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Comparator, Operator } from "@dean-stack/schemas";
-import { HAND_SIZE } from "@dean-stack/schemas";
+import { HAND_SIZE, numberCardValue } from "@dean-stack/schemas";
 
 import { dealRound } from "./deal";
 import { LEVELS } from "./levels";
@@ -78,9 +78,9 @@ function hasValidMissingResultPair(
 
 function handValues(result: ReturnType<typeof dealRound>): number[] {
   // Single pass: map+filter collapsed into flatMap. `[]` skips empty slots /
-  // missing cards; `[value]` keeps real values. Equivalent semantics, one walk.
+  // missing cards / verdict cards (R9); `[value]` keeps real number values.
   return result.hand.flatMap((slot) => {
-    const value = slot.cardId ? result.cards[slot.cardId]?.value : undefined;
+    const value = slot.cardId ? numberCardValue(result.cards[slot.cardId]) : undefined;
     return value === undefined ? [] : [value];
   });
 }
@@ -108,7 +108,7 @@ describe("dealRound — level 1 (round 1 opener, add target 6)", () => {
     expect(result.round.equation.operandSlots[0]?.cardId).toBeNull();
     expect(result.round.equation.operandSlots[0]?.locked).toBe(false);
     expect(result.round.equation.operandSlots[1]?.cardId).toBeNull();
-    expect(result.round.equation.target?.value).toBe(6);
+    expect(numberCardValue(result.round.equation.target)).toBe(6);
     expect(result.round.equation.operator).toBe("add");
     expect(result.round.equation.comparator).toBe("eq");
   });
@@ -140,6 +140,16 @@ describe("dealRound — every level produces a solvable hand", () => {
             level.staticOperand.position,
           );
           expect(ok).toBe(true);
+        } else if (shape === "true-false-multiply") {
+          // R9 invariant: hand always contains exactly one TRUE and one
+          // FALSE verdict card; remaining 3 slots are empty. The kid only
+          // needs T or F — the dealer doesn't plant a numeric pair.
+          const verdicts = result.hand.flatMap((slot) => {
+            if (!slot.cardId) return [];
+            const c = result.cards[slot.cardId];
+            return c && c.kind === "verdict" ? [c.verdict] : [];
+          });
+          expect(verdicts.sort()).toEqual([false, true]);
         } else {
           const ok = hasValidPair(
             handValues(result),
@@ -174,7 +184,7 @@ describe("dealRound — find-missing-result equation shape (R5–R6)", () => {
     const staticCardId = s0?.cardId;
     expect(staticCardId).toBeTruthy();
     if (staticCardId) {
-      expect(result.cards[staticCardId]?.value).toBe(1);
+      expect(numberCardValue(result.cards[staticCardId])).toBe(1);
     }
   });
 
@@ -191,7 +201,7 @@ describe("dealRound — find-missing-result equation shape (R5–R6)", () => {
 
     const staticCardId = s1?.cardId;
     if (staticCardId) {
-      expect(result.cards[staticCardId]?.value).toBe(2);
+      expect(numberCardValue(result.cards[staticCardId])).toBe(2);
     }
   });
 
@@ -204,7 +214,7 @@ describe("dealRound — find-missing-result equation shape (R5–R6)", () => {
     const s0 = eq.operandSlots[0];
     expect(s0?.locked).toBe(true);
     if (s0?.cardId) {
-      expect(result.cards[s0.cardId]?.value).toBe(6);
+      expect(numberCardValue(result.cards[s0.cardId])).toBe(6);
     }
   });
 
@@ -224,6 +234,21 @@ describe("dealRound — find-missing-result equation shape (R5–R6)", () => {
         for (const value of handValues(result)) {
           expect(value).toBeGreaterThanOrEqual(1);
           expect(value).toBeLessThanOrEqual(5);
+        }
+      }
+    }
+  });
+
+  test("R7/R8 hand cards are all capped at 1..20 across many seeds", () => {
+    // R7/R8 mirror R5/R6 but raise the cap to 20. Same sweep guarantees
+    // the guaranteed pair AND fillers stay in [1, 20] — a regression
+    // would surface a 21-card or a 0-card the kid can't possibly use.
+    for (let levelIndex = 34; levelIndex <= 43; levelIndex++) {
+      for (let seed = 1; seed <= 30; seed++) {
+        const result = dealRound({ levelIndex, random: seededRandom(seed) });
+        for (const value of handValues(result)) {
+          expect(value).toBeGreaterThanOrEqual(1);
+          expect(value).toBeLessThanOrEqual(20);
         }
       }
     }

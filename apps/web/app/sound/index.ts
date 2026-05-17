@@ -6,5 +6,5 @@
 // per-instance types) is import-direct from its source file when needed —
 // no point re-exporting code that has zero current consumers.
 
-export { SFX_REGISTRY, type SfxEventId } from "./registry";
+export { isRegistered, SFX_REGISTRY, type SfxEventId } from "./registry";
 export { useSound } from "./use-sound";

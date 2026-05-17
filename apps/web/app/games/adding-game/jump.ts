@@ -19,20 +19,20 @@ import { applyXpGain } from "./xp";
 // │    localLevelIndex with the new round.                                      │
 // │ 2. ROUND_START_LEVEL below — add the entry. Its value is the index of the   │
 // │    NEW round's first level (== ROUND_BOUNDARIES[N-2] + 1).                  │
-// │ 3. The `1 | 2 | 3 | 4 | 5 | 6` literal union in this file's `Round` type    │
-// │    AND in the matching schemas (RoundIndicatorPropsSchema.round, etc.)      │
-// │    gets extended to include the new literal.                                │
+// │ 3. The `1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9` literal union in this file's     │
+// │    `Round` type AND in the matching schemas (RoundIndicatorPropsSchema      │
+// │    .round, etc.) gets extended to include the new literal.                  │
 // │ 4. components/round-jump-panel/index.tsx — the panel renders one button     │
 // │    per ROUND_START_LEVEL key. It already iterates dynamically, so step 2    │
 // │    is enough — but verify the row still fits, and add a roundLabel entry.   │
-// │ 5. RoundIndicator's "of 6" footer text — update when adding rounds.         │
+// │ 5. RoundIndicator's "of 9" footer text — update when adding rounds.         │
 // │ 6. evaluate.ts / deal.ts / hints.ts — if the new round introduces a new     │
 // │    equation shape, branch them too.                                         │
 // │                                                                              │
 // │ The comment above ROUND_START_LEVEL is the single source of truth — keep   │
 // │ it accurate when you add the round.                                         │
 // └──────────────────────────────────────────────────────────────────────────────┘
-export type Round = 1 | 2 | 3 | 4 | 5 | 6;
+export type Round = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export const ROUND_START_LEVEL: Record<Round, number> = {
   1: 1,
@@ -41,6 +41,9 @@ export const ROUND_START_LEVEL: Record<Round, number> = {
   4: 19,
   5: 24,
   6: 29,
+  7: 34,
+  8: 39,
+  9: 44,
 };
 
 // Total XP a perfect playthrough of rounds 1..(round-1) would have

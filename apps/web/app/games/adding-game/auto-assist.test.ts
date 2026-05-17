@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ADDING_GAME_DEFAULT, type AddingGameState } from "@dean-stack/schemas";
+import { ADDING_GAME_DEFAULT, type AddingGameState, numberCardValue } from "@dean-stack/schemas";
 
 import { applyAutoAssist } from "./auto-assist";
 import { dealRound } from "./deal";
@@ -25,7 +25,7 @@ function setHandValue(state: AddingGameState, handIdx: number, value: number): A
   if (!slot?.cardId) throw new Error(`hand[${handIdx}] has no card`);
   return {
     ...state,
-    cards: { ...state.cards, [slot.cardId]: { id: slot.cardId, value } },
+    cards: { ...state.cards, [slot.cardId]: { id: slot.cardId, kind: "number", value } },
   };
 }
 
@@ -51,7 +51,7 @@ describe("applyAutoAssist", () => {
     expect(operandSlot?.locked).toBe(true);
     expect(operandSlot?.cardId).not.toBeNull();
     if (operandSlot?.cardId) {
-      expect(next.cards[operandSlot.cardId]?.value).toBe(2);
+      expect(numberCardValue(next.cards[operandSlot.cardId])).toBe(2);
     }
 
     // Result slot stays untouched + unlocked.
@@ -93,7 +93,7 @@ describe("applyAutoAssist", () => {
     expect(resultSlot?.locked).toBe(true);
     expect(resultSlot?.cardId).not.toBeNull();
     if (resultSlot?.cardId) {
-      expect(next.cards[resultSlot.cardId]?.value).toBe(3);
+      expect(numberCardValue(next.cards[resultSlot.cardId])).toBe(3);
     }
   });
 
@@ -131,7 +131,7 @@ describe("applyAutoAssist", () => {
     const operandSlot = next.round.equation.operandSlots.find((s) => s.id === "eq:1");
     expect(operandSlot?.locked).toBe(true);
     if (operandSlot?.cardId) {
-      expect(next.cards[operandSlot.cardId]?.value).toBe(1);
+      expect(numberCardValue(next.cards[operandSlot.cardId])).toBe(1);
     }
   });
 
@@ -171,7 +171,7 @@ describe("applyAutoAssist", () => {
 
     // The wrong card (value 5) is back in some hand slot.
     const handValues = next.player.hand.flatMap((h) => {
-      const value = h.cardId ? next.cards[h.cardId]?.value : null;
+      const value = h.cardId ? numberCardValue(next.cards[h.cardId]) : null;
       return value == null ? [] : [value];
     });
     expect(handValues).toContain(5);

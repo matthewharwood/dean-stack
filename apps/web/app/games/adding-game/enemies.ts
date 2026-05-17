@@ -28,6 +28,7 @@ export const ENEMY_REGISTRY: readonly EnemyTemplate[] = [
   EnemyTemplateSchema.parse({
     id: "hadal-tide-minnow-echo",
     name: "Tide Minnow Echo",
+    nameSoundId: "pronounce-tide-minnow-echo",
     type: "current",
     rarity: "common",
     maxHp: 10,
@@ -47,6 +48,7 @@ This one is SUPER easy. Just give it a number. Any true number! Its tiny fin wil
   EnemyTemplateSchema.parse({
     id: "hadal-pressure-puff-echo",
     name: "Pressure Puff Echo",
+    nameSoundId: "pronounce-pressure-puff-echo",
     type: "pressure",
     rarity: "uncommon",
     maxHp: 28,
@@ -66,6 +68,7 @@ When it sighs, the water gets a tiny bit warmer. That is the only kind of weathe
   EnemyTemplateSchema.parse({
     id: "hadal-glow-polyp-echo",
     name: "Glow Polyp Echo",
+    nameSoundId: "pronounce-glow-polyp-echo",
     type: "bioluminescence",
     rarity: "rare",
     maxHp: 12,
@@ -85,6 +88,7 @@ Help it find a number. One of its little stars goes steady. That is all. That is
   EnemyTemplateSchema.parse({
     id: "hadal-silt-crawler-echo",
     name: "Silt Crawler Echo",
+    nameSoundId: "pronounce-silt-crawler-echo",
     type: "sand",
     rarity: "epic",
     maxHp: 28,
@@ -104,6 +108,7 @@ Be patient with it. It has been patient with everything else. So you can be pati
   EnemyTemplateSchema.parse({
     id: "hadal-ember-snail-echo",
     name: "Ember Snail Echo",
+    nameSoundId: "pronounce-ember-snail-echo",
     type: "magma",
     rarity: "legendary",
     maxHp: 44,
@@ -123,6 +128,7 @@ Give it a true answer. The coal will get bright for a second. You can see, way d
   EnemyTemplateSchema.parse({
     id: "hadal-pressure-wraith",
     name: "Hadal Pressure Wraith",
+    nameSoundId: "pronounce-pressure-wraith",
     type: "pressure",
     rarity: "mythic",
     maxHp: 42,
@@ -143,6 +149,7 @@ Do not be scared! It is not mad. It is just tired. The kind of tired we do not e
   EnemyTemplateSchema.parse({
     id: "hadal-glass-manta-echo",
     name: "Glass Manta Echo",
+    nameSoundId: "pronounce-glass-manta-echo",
     type: "glass",
     rarity: "common",
     maxHp: 14,
@@ -162,6 +169,7 @@ If your number is on its side of the line, it lets you pass. If it is not, it wa
   EnemyTemplateSchema.parse({
     id: "hadal-brine-needle-urchin-echo",
     name: "Brine Needle Urchin Echo",
+    nameSoundId: "pronounce-brine-needle-urchin-echo",
     type: "brine",
     rarity: "uncommon",
     maxHp: 24,
@@ -181,6 +189,7 @@ It will let you come near if your answer is small enough to fit in the circle. I
   EnemyTemplateSchema.parse({
     id: "hadal-basalt-lantern-leech-echo",
     name: "Basalt Lantern Leech Echo",
+    nameSoundId: "pronounce-basalt-lantern-leech-echo",
     type: "basalt",
     rarity: "rare",
     maxHp: 27,
@@ -200,6 +209,7 @@ When you go by, it lifts the light up a little. Hopeful! Answer it true and the 
   EnemyTemplateSchema.parse({
     id: "hadal-sandglass-stalker-echo",
     name: "Sandglass Stalker Echo",
+    nameSoundId: "pronounce-sandglass-stalker-echo",
     type: "sand",
     rarity: "epic",
     maxHp: 36,
@@ -219,6 +229,7 @@ If your number comes before its number, it lets the sand fall. If your number co
   EnemyTemplateSchema.parse({
     id: "hadal-kelp-censer-echo",
     name: "Kelp Censer Echo",
+    nameSoundId: "pronounce-kelp-censer-echo",
     type: "kelp",
     rarity: "legendary",
     maxHp: 60,

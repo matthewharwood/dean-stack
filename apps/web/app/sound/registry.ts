@@ -210,6 +210,96 @@ const SFX_REGISTRY_LITERAL = {
     policy: "loop",
     gain: 0.5,
   },
+
+  // ─── Character name pronunciations (ElevenLabs voice id zYcjlYFOd3taleS0gkk3) ──
+  // One MP3 per enemy + player template. Played from the speaker button
+  // rendered beside the character name in EnemyAvatar / PlayerAvatar.
+  // `restart` policy so back-to-back taps cancel the previous play —
+  // matches the rest of the UI sound contract.
+  "pronounce-tide-minnow-echo": {
+    path: "sfx/pronounce/tide-minnow-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-pressure-puff-echo": {
+    path: "sfx/pronounce/pressure-puff-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-glow-polyp-echo": {
+    path: "sfx/pronounce/glow-polyp-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-silt-crawler-echo": {
+    path: "sfx/pronounce/silt-crawler-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-ember-snail-echo": {
+    path: "sfx/pronounce/ember-snail-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-pressure-wraith": {
+    path: "sfx/pronounce/pressure-wraith.mp3",
+    policy: "restart",
+  },
+  "pronounce-glass-manta-echo": {
+    path: "sfx/pronounce/glass-manta-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-brine-needle-urchin-echo": {
+    path: "sfx/pronounce/brine-needle-urchin-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-basalt-lantern-leech-echo": {
+    path: "sfx/pronounce/basalt-lantern-leech-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-sandglass-stalker-echo": {
+    path: "sfx/pronounce/sandglass-stalker-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-kelp-censer-echo": {
+    path: "sfx/pronounce/kelp-censer-echo.mp3",
+    policy: "restart",
+  },
+  "pronounce-mara-brasswake": {
+    path: "sfx/pronounce/mara-brasswake.mp3",
+    policy: "restart",
+  },
+  "pronounce-oren-tideledger": {
+    path: "sfx/pronounce/oren-tideledger.mp3",
+    policy: "restart",
+  },
+  "pronounce-sable-kett": {
+    path: "sfx/pronounce/sable-kett.mp3",
+    policy: "restart",
+  },
+  "pronounce-pella-copperkeel": {
+    path: "sfx/pronounce/pella-copperkeel.mp3",
+    policy: "restart",
+  },
+  "pronounce-ivo-bellcurrent": {
+    path: "sfx/pronounce/ivo-bellcurrent.mp3",
+    policy: "restart",
+  },
+  "pronounce-nemi-valeglass": {
+    path: "sfx/pronounce/nemi-valeglass.mp3",
+    policy: "restart",
+  },
+  "pronounce-luma-pearlspoke": {
+    path: "sfx/pronounce/luma-pearlspoke.mp3",
+    policy: "restart",
+  },
+  "pronounce-thane-oxbell": {
+    path: "sfx/pronounce/thane-oxbell.mp3",
+    policy: "restart",
+  },
+  "pronounce-aster-drownedstar": {
+    path: "sfx/pronounce/aster-drownedstar.mp3",
+    policy: "restart",
+  },
+  "pronounce-bathypel-lantern-bride": {
+    path: "sfx/pronounce/bathypel-lantern-bride.mp3",
+    policy: "restart",
+  },
 } as const;
 
 export type SfxEventId = keyof typeof SFX_REGISTRY_LITERAL;

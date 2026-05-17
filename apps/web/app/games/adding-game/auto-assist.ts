@@ -1,4 +1,4 @@
-import type { AddingGameState, EquationSlot } from "@dean-stack/schemas";
+import { type AddingGameState, type EquationSlot, isNumberCard } from "@dean-stack/schemas";
 
 import { applySwap, type SlotLocator } from "./swap";
 
@@ -66,8 +66,11 @@ export function applyAutoAssist(state: AddingGameState): AddingGameState | null 
   // cap. The route shouldn't call this again, but guard regardless.
   if (operandSlot.locked && resultSlot.locked) return null;
 
-  const cardValue = (cardId: string | null): number | null =>
-    cardId ? (state.cards[cardId]?.value ?? null) : null;
+  const cardValue = (cardId: string | null): number | null => {
+    if (!cardId) return null;
+    const c = state.cards[cardId];
+    return c && isNumberCard(c) ? c.value : null;
+  };
   const staticValue = cardValue(lockedLhs.cardId) ?? 0;
   const operator = equation.operator;
 

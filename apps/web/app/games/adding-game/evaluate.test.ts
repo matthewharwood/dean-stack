@@ -21,9 +21,11 @@ function makeState(): AddingGameState {
 }
 
 function findPair(state: AddingGameState, target: number): [number, number] {
-  const values = state.player.hand.map((slot) =>
-    slot.cardId ? (state.cards[slot.cardId]?.value ?? 0) : 0,
-  );
+  const values = state.player.hand.map((slot) => {
+    if (!slot.cardId) return 0;
+    const c = state.cards[slot.cardId];
+    return c && c.kind === "number" ? c.value : 0;
+  });
   for (let a = 0; a < values.length; a++) {
     for (let b = a + 1; b < values.length; b++) {
       const va = values[a];
@@ -65,7 +67,8 @@ describe("evaluateRound", () => {
     state = applySwap(state, { kind: "hand", id: `hand:${i}` }, { kind: "equation", id: "eq:0" });
 
     const result = evaluateRound(state);
-    const filledValue = state.cards[state.round?.equation.operandSlots[0]?.cardId ?? ""]?.value;
+    const filledCard = state.cards[state.round?.equation.operandSlots[0]?.cardId ?? ""];
+    const filledValue = filledCard && filledCard.kind === "number" ? filledCard.value : undefined;
     expect(result?.computedValue).toBe(filledValue ?? 0);
     expect(result?.won).toBe(false);
   });
@@ -117,8 +120,8 @@ describe("evaluateRound — find-missing-result (R5)", () => {
       ...state,
       cards: {
         ...state.cards,
-        [operandCardId]: { id: operandCardId, value: 3 },
-        [resultCardId]: { id: resultCardId, value: 4 },
+        [operandCardId]: { id: operandCardId, kind: "number", value: 3 },
+        [resultCardId]: { id: resultCardId, kind: "number", value: 4 },
       },
     };
     // Place operand (value 3) into the unlocked LHS slot (eq:1) and the
@@ -142,8 +145,8 @@ describe("evaluateRound — find-missing-result (R5)", () => {
       ...state,
       cards: {
         ...state.cards,
-        [operandCardId]: { id: operandCardId, value: 3 },
-        [resultCardId]: { id: resultCardId, value: 5 },
+        [operandCardId]: { id: operandCardId, kind: "number", value: 3 },
+        [resultCardId]: { id: resultCardId, kind: "number", value: 5 },
       },
     };
     state = applySwap(state, { kind: "hand", id: "hand:0" }, { kind: "equation", id: "eq:1" });
@@ -189,8 +192,8 @@ describe("evaluateRound — find-missing-result (R6, subtract)", () => {
       ...state,
       cards: {
         ...state.cards,
-        [operandCardId]: { id: operandCardId, value: 2 },
-        [resultCardId]: { id: resultCardId, value: 4 },
+        [operandCardId]: { id: operandCardId, kind: "number", value: 2 },
+        [resultCardId]: { id: resultCardId, kind: "number", value: 4 },
       },
     };
     state = applySwap(state, { kind: "hand", id: "hand:0" }, { kind: "equation", id: "eq:1" });

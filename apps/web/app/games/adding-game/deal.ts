@@ -1,11 +1,12 @@
 import {
-  type Card,
   type CardCatalog,
   type Equation,
   HAND_SIZE,
   type HandSlot,
+  type NumberCard,
   type Round,
   type RoundEnemy,
+  type VerdictCard,
 } from "@dean-stack/schemas";
 
 import { ENEMY_REGISTRY } from "./enemies";
@@ -63,10 +64,17 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
   const shape = level.equationShape ?? "find-sum";
   const tStamp = Date.now();
 
-  // Common: the 5-card player hand. Both shapes plant a guaranteed pair —
-  // for find-sum it's (a, b) such that the equation holds; for
-  // find-missing-result it's (a, b = static OP a) so the kid can pick
-  // both the operand and the result from their hand.
+  // R9 short-circuit: true-false-multiply has its own hand (T+F cards
+  // only) and a pre-filled locked equation. Return early; the find-sum
+  // / find-missing-result hand-dealer below doesn't apply.
+  if (shape === "true-false-multiply") {
+    return dealTrueFalseMultiplyRound(level, levelIndex, tStamp, pickInt, random);
+  }
+
+  // Common: the 5-card player hand. Both number-card shapes plant a
+  // guaranteed pair — for find-sum it's (a, b) such that the equation
+  // holds; for find-missing-result it's (a, b = static OP a) so the kid
+  // can pick both the operand and the result from their hand.
   const guaranteed =
     shape === "find-missing-result"
       ? pickGuaranteedMissingResultPair(level, pickInt)
@@ -84,7 +92,7 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
     const value = values[i];
     if (value === undefined) throw new Error("dealRound: hand index out of range");
     const cardId = `card:r${levelIndex}:t${tStamp}:h${i}`;
-    const card: Card = { id: cardId, value };
+    const card: NumberCard = { id: cardId, kind: "number", value };
     cards[cardId] = card;
     hand.push({ id: `hand:${i}`, cardId });
   }
@@ -101,7 +109,11 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
     // The slot gets `locked: true` so drag.tsx and applySwap refuse to
     // move it.
     const staticCardId = `card:r${levelIndex}:t${tStamp}:static`;
-    const staticCard: Card = { id: staticCardId, value: level.staticOperand.value };
+    const staticCard: NumberCard = {
+      id: staticCardId,
+      kind: "number",
+      value: level.staticOperand.value,
+    };
     cards[staticCardId] = staticCard;
 
     const staticAtFirst = level.staticOperand.position === "first";
@@ -122,11 +134,12 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
       operator: level.operator,
       comparator: level.comparator,
       target: null,
+      verdictSlot: null,
     };
   } else {
     // find-sum (R1–R4): RHS is the displayed target card.
     const targetCardId = `card:r${levelIndex}:t${tStamp}:target`;
-    const targetCard: Card = { id: targetCardId, value: level.target };
+    const targetCard: NumberCard = { id: targetCardId, kind: "number", value: level.target };
     cards[targetCardId] = targetCard;
     equation = {
       shape: "find-sum",
@@ -137,6 +150,7 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
       operator: level.operator,
       comparator: level.comparator,
       target: targetCard,
+      verdictSlot: null,
     };
   }
 
@@ -333,4 +347,115 @@ function shuffle<T>(arr: readonly T[], random: () => number): T[] {
     a[j] = tmp;
   }
   return a;
+}
+
+// R9 dealer — true-false-multiply.
+//
+// Layout produced:
+//   hand: [True, False, empty, empty, empty] — verdict cards in slots 0–1,
+//   the remaining 3 slots stay empty (the kid only needs T or F).
+//   equation: operandSlots = [a, b, c] ALL locked + pre-filled with
+//   NumberCards (a × b is the real product; c is what the equation
+//   CLAIMS the product is — sometimes true, sometimes off by ±1).
+//   verdictSlot: a single droppable equation slot the kid lands T or F on.
+//   target: null — the claimed product is in operandSlots[2].
+//
+// Factor scope: `level.handValueRange` doubles as the factor range for
+// R9 (1..3 today). The level's `target` is the per-turn damage on a win.
+// `comparator` is meaningless here and is always "eq" in the level data;
+// the evaluator ignores it for this shape.
+//
+// True/false ratio: ~50/50 via a coin flip. False answers are off by
+// exactly ±1 (the user-locked design choice); the helper clamps to c ≥ 1
+// so we never claim "3 × 1 = 0" (zero products are visually weird for a
+// first-time-multiplying kid).
+function dealTrueFalseMultiplyRound(
+  level: LevelConfig,
+  levelIndex: number,
+  tStamp: number,
+  pickInt: (min: number, max: number) => number,
+  random: () => number,
+): DealtRound {
+  const { min, max } = level.handValueRange;
+  const a = pickInt(min, max);
+  const b = pickInt(min, max);
+  const realProduct = a * b;
+  const isTrue = random() < 0.5;
+  const c = isTrue ? realProduct : distractorProduct(realProduct, random);
+
+  const cards: CardCatalog = {};
+
+  // Locked LHS / RHS number cards. Stored in the catalog the same way as
+  // R5/R6 statics so the evaluator + renderer resolve them through the
+  // same `cards[slot.cardId]` path.
+  const aId = `card:r${levelIndex}:t${tStamp}:a`;
+  const bId = `card:r${levelIndex}:t${tStamp}:b`;
+  const cId = `card:r${levelIndex}:t${tStamp}:c`;
+  cards[aId] = { id: aId, kind: "number", value: a };
+  cards[bId] = { id: bId, kind: "number", value: b };
+  cards[cId] = { id: cId, kind: "number", value: c };
+
+  // Verdict cards. Fixed ids — re-dealing a round always produces the
+  // same T/F card ids per level, but since rounds clean up cards between
+  // deals the catalog stays small.
+  const trueId = `card:r${levelIndex}:t${tStamp}:true`;
+  const falseId = `card:r${levelIndex}:t${tStamp}:false`;
+  const trueCard: VerdictCard = { id: trueId, kind: "verdict", verdict: true };
+  const falseCard: VerdictCard = { id: falseId, kind: "verdict", verdict: false };
+  cards[trueId] = trueCard;
+  cards[falseId] = falseCard;
+
+  // Hand: T at slot 0, F at slot 1, 2–4 empty. Keeping the kid's
+  // verdict cards in fixed positions is the simplest mental model — no
+  // value beyond visual constancy, since both cards lead to the same
+  // verdict-slot regardless of which hand position they sat in.
+  const hand: HandSlot[] = [];
+  for (let i = 0; i < HAND_SIZE; i++) {
+    if (i === 0) hand.push({ id: `hand:${i}`, cardId: trueId });
+    else if (i === 1) hand.push({ id: `hand:${i}`, cardId: falseId });
+    else hand.push({ id: `hand:${i}`, cardId: null });
+  }
+
+  const equation: Equation = {
+    shape: "true-false-multiply",
+    operator: "multiply",
+    comparator: "eq",
+    operandSlots: [
+      { id: "eq:a", cardId: aId, locked: true },
+      { id: "eq:b", cardId: bId, locked: true },
+      { id: "eq:c", cardId: cId, locked: true },
+    ],
+    target: null,
+    verdictSlot: { id: "eq:verdict", cardId: null, locked: false },
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
+}
+
+// Pick a distractor product that's exactly 1 off from the real value.
+// Random sign, with two clamps:
+//   - never produce c = 0 (a kid reading "3 × 1 = 0" has no concrete
+//     way to count it); forces the +1 branch when real === 1.
+//   - never produce c > 10 (the dot array we render beneath has to fit
+//     a single 2×5 ten-frame). Factors max 3 → real max 9 → +1 max 10,
+//     which is fine; clamp is defensive.
+function distractorProduct(real: number, random: () => number): number {
+  const wantsMinus = random() < 0.5;
+  if (real <= 1) return real + 1;
+  if (real >= 10) return real - 1;
+  return wantsMinus ? real - 1 : real + 1;
 }
