@@ -6,11 +6,16 @@ import { soundSettingsAtom } from "~/state/atoms";
 
 import { resolveAttackSfxId } from "./play-attack";
 import { getSfxPlayer } from "./player";
+import { setProceduralEnabled, setProceduralVolume } from "./procedural";
 import type { SfxEventId } from "./registry";
 
 export interface SoundApi {
-  // Play any registered event by its typed ID.
-  play: (id: SfxEventId) => void;
+  // Play any registered event by its typed ID. The optional
+  // `options.volumeScale` (0..1) multiplies the per-event gain for
+  // this one call only — used by the auto-play character-name effect
+  // so the same MP3 the speaker button uses can play softer when it
+  // auto-fires.
+  play: (id: SfxEventId, options?: { volumeScale?: number }) => void;
   // Stop any playing instance(s) of an event (and any active loop).
   stop: (id: SfxEventId) => void;
   // Stop every active sound — useful on route change or game reset.
@@ -18,6 +23,11 @@ export interface SoundApi {
   // Resolve an Attack to its sound (per-character preferred, kind base
   // fallback) and play it. Silent when neither is registered.
   playAttack: (attack: Attack) => void;
+  // Resolve an Attack to its sound, play it, and resolve when the
+  // sound FINISHES. Returns an already-resolved Promise when no
+  // sound is registered. Used by the attack flow so the enemy
+  // doesn't die until the sound completes.
+  playAttackUntilEnded: (attack: Attack) => Promise<void>;
 }
 
 // Module-scope stable reference. Returning a new object literal from the
@@ -28,8 +38,8 @@ export interface SoundApi {
 // All methods just dispatch to the singleton player — they don't close
 // over component-scoped state, so module-scope is safe.
 const STABLE_API: SoundApi = {
-  play: (id) => {
-    void getSfxPlayer().play(id);
+  play: (id, options) => {
+    void getSfxPlayer().play(id, options);
   },
   stop: (id) => {
     getSfxPlayer().stop(id);
@@ -40,6 +50,11 @@ const STABLE_API: SoundApi = {
   playAttack: (attack) => {
     const id = resolveAttackSfxId(attack);
     if (id) void getSfxPlayer().play(id);
+  },
+  playAttackUntilEnded: async (attack) => {
+    const id = resolveAttackSfxId(attack);
+    if (!id) return;
+    await getSfxPlayer().playUntilEnded(id);
   },
 };
 
@@ -88,6 +103,11 @@ export function useSound(): SoundApi {
     const player = getSfxPlayer();
     player.setEnabled(settings.enabled);
     player.setMasterVolume(settings.masterVolume);
+    // Mirror the same settings onto the procedural Web-Audio pipeline
+    // so a single mute toggle silences BOTH the sample-based player
+    // AND the swipe / stepper procedural cues.
+    setProceduralEnabled(settings.enabled);
+    setProceduralVolume(settings.masterVolume);
   }, [settings.enabled, settings.masterVolume]);
 
   return STABLE_API;

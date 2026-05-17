@@ -146,6 +146,13 @@
   --animate-op-out: op-out 200ms ease-in forwards;
   --animate-op-in: op-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 
+  /* Operator-shape breathing pulse. 0.9 ↔ 1.1 scale, 2800ms full
+     cycle, ease-in-out — slow enough that the eye reads it as
+     "alive" without the pill ever feeling like it's vibrating. Only
+     applied to the SHAPE element (the SVG behind the glyph), so the
+     glyph text itself stays pin-sharp. */
+  --animate-op-pulse: op-pulse 2800ms ease-in-out infinite;
+
   /* Player level-up celebration — green vignette + per-particle confetti
      burst, scoped to the right-column avatar container. Mirrors the
      damage-vignette structure (radial gradient with a transparent
@@ -344,6 +351,20 @@
   50% {
     transform: scaleY(1);
     filter: brightness(1.08);
+  }
+}
+
+/* Slow breathing pulse for the per-operator decorative shape (circle
+   for +, triangle for −, diamond for ×). Lives on the SVG shape only;
+   the glyph stays sharp. 2800ms cycle, ease-in-out via the token. */
+@keyframes op-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+  }
+
+  50% {
+    transform: scale(1.1);
   }
 }
 

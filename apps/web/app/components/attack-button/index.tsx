@@ -1,6 +1,5 @@
 import { ATTACK_ICON } from "~/games/adding-game/attack-icons";
 import { defineComponent } from "~/lib/define-component";
-import { useSound } from "~/sound";
 
 import { AttackButtonPropsSchema } from "./schema";
 
@@ -21,13 +20,13 @@ import { AttackButtonPropsSchema } from "./schema";
 export const AttackButton = defineComponent(AttackButtonPropsSchema, (props) => {
   const { attack, damage, onSelect, pending } = props;
   const Icon = ATTACK_ICON[attack.kind];
-  const sfx = useSound();
   return (
     <button
       type="button"
       onClick={() => {
-        // Play per-character variant if registered, kind-base fallback, silent if neither.
-        sfx.playAttack(attack);
+        // Sound is fired-and-awaited from useAttackFlow now (so the
+        // enemy death waits for the sound to finish). The button just
+        // hands the attack off to the route.
         onSelect(attack);
       }}
       disabled={pending}
