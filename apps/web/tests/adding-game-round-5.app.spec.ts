@@ -60,9 +60,9 @@ test("Round 5 entry renders find-missing-result equation with locked static", as
   await expect(operandSlot).not.toHaveAttribute("data-slot-locked", "true");
   await expect(resultSlot).not.toHaveAttribute("data-slot-locked", "true");
 
-  // Round indicator confirms we're in round 5 of 6.
+  // Round indicator confirms we're in round 5 of 9.
   const indicator = page.getByTestId("round-indicator");
   await expect(indicator).toHaveAttribute("data-round", "5");
   await expect(indicator).toContainText("of");
-  await expect(indicator).toContainText("6");
+  await expect(indicator).toContainText("9");
 });

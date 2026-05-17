@@ -24,6 +24,7 @@ export const PLAYER_REGISTRY: readonly PlayerTemplate[] = [
   PlayerTemplateSchema.parse({
     id: "hadal-player-common-mara-brasswake",
     name: "Mara Brasswake",
+    nameSoundId: "pronounce-mara-brasswake",
     role: "apprentice",
     rarity: "common",
     imageUrl: `${BASE}players/hadal-player-common-mara-brasswake.png`,
@@ -43,6 +44,7 @@ She wakes up FIRST before going down deep. She goes to bed LAST. And — fun fac
   PlayerTemplateSchema.parse({
     id: "hadal-player-common-oren-tideledger",
     name: "Oren Tideledger",
+    nameSoundId: "pronounce-oren-tideledger",
     role: "bookkeeper",
     rarity: "common",
     imageUrl: `${BASE}players/hadal-player-common-oren-tideledger.png`,
@@ -62,6 +64,7 @@ He sits by the round window with a warm pencil. He writes the deep ocean down in
   PlayerTemplateSchema.parse({
     id: "hadal-player-uncommon-sable-kett",
     name: "Sable Kett",
+    nameSoundId: "pronounce-sable-kett",
     role: "engineer",
     rarity: "uncommon",
     imageUrl: `${BASE}players/hadal-player-uncommon-sable-kett.png`,
@@ -81,6 +84,7 @@ She walks around the engine room. Wrench in one hand. Hot tea in the other. The 
   PlayerTemplateSchema.parse({
     id: "hadal-player-uncommon-pella-copperkeel",
     name: "Pella Copperkeel",
+    nameSoundId: "pronounce-pella-copperkeel",
     role: "cook",
     rarity: "uncommon",
     imageUrl: `${BASE}players/hadal-player-uncommon-pella-copperkeel.png`,
@@ -100,6 +104,7 @@ She bakes bread on dive days. The smoke goes up the chimney pipe. Out into the d
   PlayerTemplateSchema.parse({
     id: "hadal-player-rare-ivo-bellcurrent",
     name: "Ivo Bellcurrent",
+    nameSoundId: "pronounce-ivo-bellcurrent",
     role: "bell-ringer",
     rarity: "rare",
     imageUrl: `${BASE}players/hadal-player-rare-ivo-bellcurrent.png`,
@@ -119,6 +124,7 @@ He is listening for the sunken bell. Everybody knows it. Nobody talks about it. 
   PlayerTemplateSchema.parse({
     id: "hadal-player-rare-nemi-valeglass",
     name: "Nemi Valeglass",
+    nameSoundId: "pronounce-nemi-valeglass",
     role: "cartographer",
     rarity: "rare",
     imageUrl: `${BASE}players/hadal-player-rare-nemi-valeglass.png`,
@@ -138,6 +144,7 @@ She picks where the ship goes next. She does NOT ask the others. By the time she
   PlayerTemplateSchema.parse({
     id: "hadal-player-epic-luma-pearlspoke",
     name: "Luma Pearlspoke",
+    nameSoundId: "pronounce-luma-pearlspoke",
     role: "diplomat",
     rarity: "epic",
     imageUrl: `${BASE}players/hadal-player-epic-luma-pearlspoke.png`,
@@ -157,6 +164,7 @@ When a monster will not calm down, the captain sends Luma. She does not bring a 
   PlayerTemplateSchema.parse({
     id: "hadal-player-epic-thane-oxbell",
     name: "Thane Oxbell",
+    nameSoundId: "pronounce-thane-oxbell",
     role: "watchman",
     rarity: "epic",
     imageUrl: `${BASE}players/hadal-player-epic-thane-oxbell.png`,
@@ -176,6 +184,7 @@ He stands at the front of the ship every dive. Hand on the bell rope. Eyes on th
   PlayerTemplateSchema.parse({
     id: "hadal-player-mythical-aster-drownedstar",
     name: "Aster Drownedstar",
+    nameSoundId: "pronounce-aster-drownedstar",
     role: "astronomer",
     rarity: "mythic",
     imageUrl: `${BASE}players/hadal-player-mythical-aster-drownedstar.png`,
@@ -195,6 +204,7 @@ She holds a tiny piece of glass to her eye. She looks at NOTHING. Or at least, n
   PlayerTemplateSchema.parse({
     id: "hadal-player-mythical-lantern-bride-bathypel",
     name: "Bathypel, the Lantern Bride",
+    nameSoundId: "pronounce-bathypel-lantern-bride",
     role: "vow-keeper",
     rarity: "mythic",
     imageUrl: `${BASE}players/hadal-player-mythical-lantern-bride-bathypel.png`,

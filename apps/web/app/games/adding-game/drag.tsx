@@ -333,13 +333,19 @@ export function DraggableCard({
   locator,
   cardId,
   value,
+  verdict,
   display,
   dragLocked,
   onSwap,
 }: {
   locator: SlotLocator;
   cardId: string;
-  value: number;
+  // Number-card face value. Optional because R9 verdict cards have no
+  // numeric face — the `verdict` prop drives the render instead.
+  value?: number | undefined;
+  // R9 verdict card. When set, the inner Card renders a True/False text
+  // body instead of a number; `value` and `display` are ignored.
+  verdict?: boolean | undefined;
   // Forwarded to the inner Card. R5/R6 pass "ten-frame" so hand and
   // equation operand cards render as a 2×5 grid; everywhere else
   // defaults to numeric. Explicit `| undefined` matches our strict
@@ -600,7 +606,11 @@ export function DraggableCard({
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
     >
-      <Card value={value} display={display} />
+      <Card
+        {...(value !== undefined ? { value } : {})}
+        {...(verdict !== undefined ? { verdict } : {})}
+        display={display}
+      />
     </div>
   );
 }

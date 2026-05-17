@@ -1,4 +1,10 @@
-import type { AddingGameState, Comparator } from "@dean-stack/schemas";
+import {
+  type AddingGameState,
+  type Comparator,
+  isNumberCard,
+  isVerdictCard,
+  numberCardValue,
+} from "@dean-stack/schemas";
 
 // Verb form per comparator — used in hint body templates.
 // Hoisted so the templates don't carry nested ternaries.
@@ -39,6 +45,14 @@ export type Hint = {
 const HANDS_MAX = 10;
 const fits = (n: number): boolean => n >= 0 && n <= HANDS_MAX;
 
+// Shared number-card lookup. Module-scope so the find-missing-result and
+// true-false-multiply generators can both call it without each defining
+// their own identical closure (sonarjs's no-identical-functions rule).
+function cardValueOf(state: AddingGameState, cardId: string | null | undefined): number {
+  if (!cardId) return 0;
+  return numberCardValue(state.cards[cardId]) ?? 0;
+}
+
 // Pure: given the current state (which has the failed outcome on it),
 // returns the hints that apply. Operator-specific hints filter themselves
 // out when the operator is wrong; direction hints branch on too-big vs
@@ -60,9 +74,12 @@ export function generateHints(state: AddingGameState): Hint[] {
   if (round.equation.shape === "find-missing-result") {
     return generateFindMissingResultHints(state);
   }
+  if (round.equation.shape === "true-false-multiply") {
+    return generateTrueFalseMultiplyHints(state);
+  }
 
   const targetCard = round.equation.target;
-  if (!targetCard) return [];
+  if (!targetCard || !isNumberCard(targetCard)) return [];
   const target = targetCard.value;
   const computed = round.outcome.computedValue;
   const operator = round.equation.operator;
@@ -301,16 +318,14 @@ function generateFindMissingResultHints(state: AddingGameState): Hint[] {
   const slot0 = eq.operandSlots[0];
   const slot1 = eq.operandSlots[1];
   const slot2 = eq.operandSlots[2];
-  const cardValue = (cardId: string | null | undefined): number =>
-    cardId ? (state.cards[cardId]?.value ?? 0) : 0;
   const lockedSlot = (() => {
     if (slot0?.locked) return slot0;
     if (slot1?.locked) return slot1;
     return null;
   })();
   const playerOperandSlot = slot0?.locked ? slot1 : slot0;
-  const staticValue = cardValue(lockedSlot?.cardId);
-  const playerOperand = cardValue(playerOperandSlot?.cardId);
+  const staticValue = cardValueOf(state, lockedSlot?.cardId);
+  const playerOperand = cardValueOf(state, playerOperandSlot?.cardId);
   const operandPlaced = !!playerOperandSlot?.cardId;
   const resultPlaced = !!slot2?.cardId;
   const tooBig = result > computed;
@@ -429,4 +444,101 @@ function generateFindMissingResultHints(state: AddingGameState): Hint[] {
   });
 
   return hints;
+}
+
+// ─── true-false-multiply (R9) hints ──────────────────────────────────────
+// The kid has NEVER seen multiplication before. Every hint must teach by
+// COUNTING the dot array, never by appealing to memorized facts. Templates
+// frame "3 × 4" as "3 groups of 4" (or "3 fours"), and the only correct
+// mental move is to count the dots that the equation renderer puts on
+// screen.
+//
+// We surface the actual a, b, claimed-c values in the hint copy so the
+// kid sees the specific numbers AND the dot-count routine attached to
+// them, not generic prose. All hint ids start with "tfm-" so the route's
+// recently-shown filter keeps them in their own rotation.
+function generateTrueFalseMultiplyHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+
+  const a = cardValueOf(state, eq.operandSlots[0]?.cardId);
+  const b = cardValueOf(state, eq.operandSlots[1]?.cardId);
+  const c = cardValueOf(state, eq.operandSlots[2]?.cardId);
+  const real = a * b;
+  const truth = real === c;
+
+  // Verdict pick — read the kid's card directly so the hint can call out
+  // what they actually said.
+  const verdictCardId = eq.verdictSlot?.cardId;
+  const verdictCard = verdictCardId ? state.cards[verdictCardId] : undefined;
+  const kidVerdict = verdictCard && isVerdictCard(verdictCard) ? verdictCard.verdict : null;
+
+  const hints: Hint[] = [];
+
+  // Always-on grounding: tell the kid what `a × b` MEANS. Repeating this
+  // every wrong-answer is intentional — it's a brand-new concept, and
+  // hearing the same framing each time builds the schema.
+  hints.push({
+    id: "tfm-meaning",
+    emphasis: `${a} × ${b} means ${a} groups of ${b}.`,
+    body: `Count the dots! There are ${a} rows of ${b}. *Touch each dot* as you count.`,
+  });
+
+  // Repeated-addition framing — the only multiplication procedure the kid
+  // can apply on day one. Spelled out as `b + b + b` because the kid CAN
+  // add. Caps at 3 + groups (matches the R9 scope).
+  hints.push({
+    id: "tfm-repeated-add",
+    emphasis: "It's just adding.",
+    body: `${a} × ${b} is the *same* as ${repeatedAddString(b, a)}. Add them up!`,
+  });
+
+  // Direction nudge — was the claim too big or too small? Helps the kid
+  // narrow without giving the answer.
+  if (kidVerdict !== null && !truth) {
+    if (c > real) {
+      hints.push({
+        id: "tfm-too-many",
+        emphasis: "There aren't that many dots.",
+        body: `The card says ${c}, but ${a} groups of ${b} is *fewer than that*. Count again.`,
+      });
+    } else if (c < real) {
+      hints.push({
+        id: "tfm-not-enough",
+        emphasis: "There are MORE dots than that.",
+        body: `The card says ${c}, but ${a} groups of ${b} is *more*. Count again.`,
+      });
+    }
+  }
+
+  // What did the kid pick + what is the truth? Pure verdict feedback so
+  // they connect the True/False card with the dot count.
+  if (kidVerdict !== null) {
+    const kidSaid = kidVerdict ? "TRUE" : "FALSE";
+    const reality = truth ? "TRUE" : "FALSE";
+    hints.push({
+      id: "tfm-verdict-mismatch",
+      emphasis: `You said ${kidSaid}. The dots say ${reality}.`,
+      body: `Count the dots one more time. ${a} groups of ${b} is *${real}*. The card says ${c}.`,
+    });
+  }
+
+  // Encouragement — the kid is doing brand-new math; tell them so.
+  hints.push({
+    id: "tfm-encouragement",
+    emphasis: "This is brand-new math.",
+    body: `You're learning *multiplication*! Just count the dots — that's the whole trick.`,
+  });
+
+  return hints;
+}
+
+// "3 + 3 + 3" for repeatedAddString(3, 3); "4" for repeatedAddString(4, 1).
+// Caps at ~6 terms defensively (R9 caps factors at 3, so this is fine).
+function repeatedAddString(addend: number, times: number): string {
+  if (times <= 0) return "0";
+  if (times === 1) return String(addend);
+  const capped = Math.min(times, 6);
+  return Array.from({ length: capped }, () => String(addend)).join(" + ");
 }

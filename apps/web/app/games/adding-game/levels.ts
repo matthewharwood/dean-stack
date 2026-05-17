@@ -7,7 +7,7 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 // for find-sum levels; for find-missing-result levels, damage = the kid's
 // chosen result card.
 //
-// SIX ROUNDS structure (the kid's progression):
+// NINE ROUNDS structure (the kid's progression):
 //   Round 1 — addition only, equality.   The "spirits" learning to count.
 //   Round 2 — subtraction only, equality. The same six echoes, but now
 //             the kid needs the inverse operation.
@@ -23,6 +23,14 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 //   Round 6 — same five tier-2 echoes again. find-missing-result +
 //             subtract. Encounter 3 → posters flip to the _L2 variant
 //             (the cap). HP scales another notch.
+//   Round 7 — same five tier-2 echoes a fourth time. find-missing-result
+//             + add, but value cap raised to 20. Same SHAPE as R5; what's
+//             new is the magnitude — the kid now mentally counts up from
+//             a larger static into the teens. Posters stay at _L2.
+//   Round 8 — same five tier-2 echoes a fifth time. find-missing-result
+//             + subtract with the 1..20 cap. Mirrors R6 with a larger
+//             static, forcing count-down from the high teens. Posters
+//             stay at _L2 (the cap).
 //
 // Round 5/6 fields:
 //   - equationShape: "find-missing-result"
@@ -427,34 +435,233 @@ export const LEVELS: readonly LevelConfig[] = [
     hp: 18,
     handValueRange: { min: 1, max: 5 },
   },
+  // ── ROUND 7 — find-missing-result + add, values to 20 ───────────────
+  // The five tier-2 echoes return for their fourth encounter. Same shape
+  // as R5 (`static + ? = ?` / `? + static = ?`) but every kid-played
+  // card is in [1, 20] instead of [1, 5]. Static ramps to 14 so the kid
+  // is still mostly computing into the teens, not stuck at the ceiling.
+  // Per-turn damage = kid's chosen result ∈ [static+1, 20]; HP is tuned
+  // to keep turns-per-enemy in the 2–4 range. Posters stay at _L2 (the
+  // visual cap was already hit in R6); the difficulty signal is the
+  // magnitude jump, not the art.
+  {
+    index: 34,
+    enemyId: "hadal-glass-manta-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 5 },
+    target: 20,
+    hp: 18,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 35,
+    enemyId: "hadal-brine-needle-urchin-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "second", value: 8 },
+    target: 20,
+    hp: 22,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 36,
+    enemyId: "hadal-basalt-lantern-leech-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 10 },
+    target: 20,
+    hp: 26,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 37,
+    enemyId: "hadal-sandglass-stalker-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "second", value: 12 },
+    target: 20,
+    hp: 30,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 38,
+    enemyId: "hadal-kelp-censer-echo",
+    operator: "add",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 14 },
+    target: 20,
+    hp: 36,
+    handValueRange: { min: 1, max: 20 },
+  },
+  // ── ROUND 8 — find-missing-result + subtract, values to 20 ──────────
+  // Fifth (and capped) encounter for the five tier-2 echoes. Mirrors R6
+  // (`static − ? = ?`, position always "first" so the static is the
+  // minuend) but with the 1..20 cap. Statics ramp 10 → 19 so the kid is
+  // counting down from the high teens by the last level. Per-turn damage
+  // = kid's chosen result ∈ [1, static−1]; HP is calibrated against the
+  // expected per-turn damage so turns-per-enemy stays in the 2–4 range.
+  {
+    index: 39,
+    enemyId: "hadal-glass-manta-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 10 },
+    target: 9,
+    hp: 14,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 40,
+    enemyId: "hadal-brine-needle-urchin-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 12 },
+    target: 11,
+    hp: 18,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 41,
+    enemyId: "hadal-basalt-lantern-leech-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 15 },
+    target: 14,
+    hp: 22,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 42,
+    enemyId: "hadal-sandglass-stalker-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 17 },
+    target: 16,
+    hp: 28,
+    handValueRange: { min: 1, max: 20 },
+  },
+  {
+    index: 43,
+    enemyId: "hadal-kelp-censer-echo",
+    operator: "subtract",
+    comparator: "eq",
+    equationShape: "find-missing-result",
+    staticOperand: { position: "first", value: 19 },
+    target: 18,
+    hp: 32,
+    handValueRange: { min: 1, max: 20 },
+  },
+  // ── ROUND 9 — true-false-multiply (multiplication intro) ────────────
+  // The five tier-2 echoes return for their SIXTH (and capped) encounter
+  // — posters were already capped at _L2 in R6, so the visual signal is
+  // identical; the difficulty signal is the brand-new mechanic.
+  //
+  // The kid has NEVER seen multiplication. R9 introduces it as a
+  // true/false judgment: the dealer puts a complete `a × b = c` on the
+  // board (sometimes true, sometimes off by ±1), and the kid drags a
+  // True or False card onto a verdict slot. The equation view ALWAYS
+  // renders a dot array (a rows × b cols) beneath the equation so the
+  // kid can verify by counting — no multiplication knowledge required.
+  //
+  // Factor scope is locked at 1..3 (handValueRange below doubles as the
+  // factor range for this shape). Max product = 9, max distractor = 10
+  // — both fit in the single ten-frame array we render. Per-turn damage
+  // = level.target, calibrated for ~2–4 turns per enemy at flat damage
+  // (no per-card agency in this shape, so the reward is flat per level).
+  {
+    index: 44,
+    enemyId: "hadal-glass-manta-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "true-false-multiply",
+    target: 4,
+    hp: 8,
+    handValueRange: { min: 1, max: 3 },
+  },
+  {
+    index: 45,
+    enemyId: "hadal-brine-needle-urchin-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "true-false-multiply",
+    target: 5,
+    hp: 12,
+    handValueRange: { min: 1, max: 3 },
+  },
+  {
+    index: 46,
+    enemyId: "hadal-basalt-lantern-leech-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "true-false-multiply",
+    target: 6,
+    hp: 16,
+    handValueRange: { min: 1, max: 3 },
+  },
+  {
+    index: 47,
+    enemyId: "hadal-sandglass-stalker-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "true-false-multiply",
+    target: 6,
+    hp: 20,
+    handValueRange: { min: 1, max: 3 },
+  },
+  {
+    index: 48,
+    enemyId: "hadal-kelp-censer-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "true-false-multiply",
+    target: 7,
+    hp: 24,
+    handValueRange: { min: 1, max: 3 },
+  },
 ];
 
 export const FINAL_LEVEL_INDEX: number = LEVELS.length;
 
 // Round boundaries — the LAST level index of each round. Used by the
 // route's round indicator and the celebration trigger.
-export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33];
+export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33, 38, 43, 48];
 
 export function findLevel(index: number): LevelConfig | undefined {
   return LEVELS.find((l) => l.index === index);
 }
 
 // Which round (1-indexed) does a given level belong to?
-export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 {
+export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 {
   if (levelIndex <= 6) return 1;
   if (levelIndex <= 12) return 2;
   if (levelIndex <= 18) return 3;
   if (levelIndex <= 23) return 4;
   if (levelIndex <= 28) return 5;
-  return 6;
+  if (levelIndex <= 33) return 6;
+  if (levelIndex <= 38) return 7;
+  if (levelIndex <= 43) return 8;
+  return 9;
 }
 
-export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6): number {
+export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9): number {
   if (round === 1) return 6;
   if (round === 2) return 6;
   if (round === 3) return 6;
   if (round === 4) return 5;
   if (round === 5) return 5;
+  if (round === 6) return 5;
+  if (round === 7) return 5;
+  if (round === 8) return 5;
   return 5;
 }
 
@@ -465,5 +672,8 @@ export function localLevelIndex(levelIndex: number): number {
   if (levelIndex <= 18) return levelIndex - 12;
   if (levelIndex <= 23) return levelIndex - 18;
   if (levelIndex <= 28) return levelIndex - 23;
-  return levelIndex - 28;
+  if (levelIndex <= 33) return levelIndex - 28;
+  if (levelIndex <= 38) return levelIndex - 33;
+  if (levelIndex <= 43) return levelIndex - 38;
+  return levelIndex - 43;
 }

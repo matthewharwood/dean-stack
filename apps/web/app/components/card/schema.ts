@@ -3,7 +3,13 @@ import * as z from "zod";
 export const CardPropsSchema = z.object({
   // Numeric face value rendered in the center of the card. Integer; negatives
   // are allowed so future expansion (subtraction) doesn't need a schema bump.
-  value: z.int(),
+  // Optional because R9 verdict cards have no numeric value — they're
+  // boolean. When `verdict` is set, `value` is ignored.
+  value: z.int().optional(),
+  // R9 verdict card. When set, the card renders as a bold "True" / "False"
+  // text card (green for true, red for false). Wins over `value` and
+  // `display` when present.
+  verdict: z.boolean().optional(),
   // "default" — the standard playable card (hand or operand placement).
   // "target" — the equation right-hand-side. Visually distinct (inset frame,
   //   muted palette) to read as immutable. The drag system never wraps a
@@ -17,8 +23,10 @@ export const CardPropsSchema = z.object({
   //   "numeric"   — bold OpenRunde digit (R1–R4). The default.
   //   "ten-frame" — 2×5 grid of dots; first `value` cells filled. Forces
   //                 visual subitizing instead of numeral abstraction.
-  //                 Used in R5/R6 to match the kid's ten-frame math
-  //                 worksheets. Cap is 10 (clamped). Negative values
+  //                 Used in R5–R8 to match the kid's ten-frame math
+  //                 worksheets. Values >10 stack a second 2×5 frame
+  //                 beneath the first (the standard double-ten-frame /
+  //                 twenty-frame). Cap is 20 (clamped). Negative values
   //                 render as 0 dots (defensive — none of our levels
   //                 produce them today).
   display: z.enum(["numeric", "ten-frame"]).optional(),

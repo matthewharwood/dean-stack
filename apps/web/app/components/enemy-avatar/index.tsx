@@ -3,6 +3,7 @@ import { Info, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { LoreBio } from "~/components/lore-bio";
+import { PronounceButton } from "~/components/pronounce-button";
 import { derivePosterUrl } from "~/games/adding-game/poster-variant";
 import { defineComponent } from "~/lib/define-component";
 
@@ -125,7 +126,10 @@ export const EnemyAvatar = defineComponent(EnemyAvatarPropsSchema, (props) => {
       data-rarity={enemy.rarity}
     >
       <div className="bg-black/70 px-3 py-2 text-white">
-        <div className="font-openrunde text-sm font-bold leading-tight">{enemy.name}</div>
+        <div className="flex items-center gap-1.5">
+          <div className="font-openrunde text-sm font-bold leading-tight">{enemy.name}</div>
+          <PronounceButton nameSoundId={enemy.nameSoundId} label={enemy.name} />
+        </div>
         <div className="text-[11px] uppercase tracking-wide text-white/70">
           {enemy.type} · {enemy.rarity}
         </div>

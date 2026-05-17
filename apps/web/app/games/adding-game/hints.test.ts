@@ -95,11 +95,13 @@ describe("generateHints", () => {
     }
   });
 
-  test("every find-missing-result level (R5–R6) produces hints on a wrong answer", () => {
-    // R5/R6 levels (24..33) — the new shape. Each must surface at least
-    // one finger-counting hand AND one operator-specific hint so the kid
-    // sees pedagogically diverse framing.
-    for (let level = 24; level <= 33; level++) {
+  test("every find-missing-result level (R5–R8) produces hints on a wrong answer", () => {
+    // R5..R8 levels (24..43) — every find-missing-result level. Each
+    // must surface at least one finger-counting hand AND one operator-
+    // specific hint so the kid sees pedagogically diverse framing. R7/R8
+    // share the shape with R5/R6 (only the value cap differs), so the
+    // same hint generator must keep working across the wider range.
+    for (let level = 24; level <= 43; level++) {
       const state = makeStateWithOutcome({ levelIndex: level, computed: 0, expected: 10 });
       const hints = generateHints(state);
       expect(hints.length).toBeGreaterThanOrEqual(4);
@@ -123,6 +125,23 @@ describe("generateHints", () => {
     const ids = generateHints(state).map((h) => h.id);
     expect(ids).toContain("fmr-sub-count-down");
     expect(ids).not.toContain("fmr-add-count-up");
+  });
+
+  test("every true-false-multiply level (R9) produces tfm-prefixed hints on a wrong answer", () => {
+    // R9 levels (44..48). Different shape from R5–R8 — the kid drags a
+    // verdict card, not a number. Hints must teach multiplication from
+    // scratch (never assume he knows it), so every id is "tfm-…" and the
+    // pool is large enough to keep rotation fresh on consecutive losses.
+    for (let level = 44; level <= 48; level++) {
+      // computed=1 (truth=true) but kid said expectedValue=0 (false) →
+      // wrong-answer outcome that the hint generator can speak to.
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 1, expected: 0 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(3);
+      for (const id of hints.map((h) => h.id)) {
+        expect(id.startsWith("tfm-")).toBe(true);
+      }
+    }
   });
 
   // Level 13 is round 3: add / gt / target 7.

@@ -18,12 +18,50 @@ import * as z from "zod";
 // `<NAME>_DEFAULT` companion that atomWithIDB consumes directly.
 
 // ───── Cards ──────────────────────────────────────────────────────────────
-
-export const CardSchema = z.object({
+// Two card kinds share the same catalog and slot machinery:
+//   - number  (R1–R8): `value: int`. The standard playable face.
+//   - verdict (R9):    `verdict: boolean`. Renders as a True/False text
+//                      card. Used in the true-false-multiply shape where
+//                      the kid drags a verdict onto the equation instead
+//                      of a number.
+// The `kind` discriminator drives narrowing in consumers (dealer,
+// evaluator, hints, route). `.default("number")` on the number branch
+// keeps every pre-R9 IDB row re-parseable without a migration — old
+// `{ id, value }` rows are routed through the number branch with kind
+// filled in.
+export const NumberCardSchema = z.object({
   id: z.string().min(1),
+  kind: z.literal("number").default("number"),
   value: z.int(),
 });
+export type NumberCard = z.infer<typeof NumberCardSchema>;
+
+export const VerdictCardSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("verdict"),
+  verdict: z.boolean(),
+});
+export type VerdictCard = z.infer<typeof VerdictCardSchema>;
+
+export const CardSchema = z.union([NumberCardSchema, VerdictCardSchema]);
 export type Card = z.infer<typeof CardSchema>;
+
+export function isNumberCard(card: Card): card is NumberCard {
+  return card.kind === "number";
+}
+export function isVerdictCard(card: Card): card is VerdictCard {
+  return card.kind === "verdict";
+}
+
+// Read the numeric value off a card-or-nothing, returning undefined when
+// the input is missing OR is a verdict card. Convenience used by code that
+// only operates on number-card shapes (find-sum / find-missing-result
+// evaluator paths, tests, hint generators) — replaces the old `?.value`
+// pattern that the discriminated union made unsafe.
+export function numberCardValue(card: Card | undefined | null): number | undefined {
+  if (!card || !isNumberCard(card)) return undefined;
+  return card.value;
+}
 
 // Flat id→card lookup. The dealer writes here at the top of every round and
 // cleanup wipes consumed entries during the scoring phase.
@@ -66,9 +104,19 @@ export type Comparator = z.infer<typeof ComparatorSchema>;
 //                            played. Win when `a OP b == result.value`.
 //                            Damage = result.value (kid is rewarded for
 //                            picking bigger result cards). Rounds 5+.
+//   "true-false-multiply"  : operandSlots = [a, b, c], ALL locked + pre-
+//                            filled. `verdictSlot` is a separate droppable
+//                            slot that holds the kid's True/False verdict
+//                            card. Win when the verdict matches whether
+//                            `a × b == c`. Damage = the equation's target
+//                            (set by the level config). R9 only.
 // `.default("find-sum")` keeps tier-1 IDB rows re-parseable without a
 // migration.
-export const EquationShapeSchema = z.enum(["find-sum", "find-missing-result"]);
+export const EquationShapeSchema = z.enum([
+  "find-sum",
+  "find-missing-result",
+  "true-false-multiply",
+]);
 export type EquationShape = z.infer<typeof EquationShapeSchema>;
 
 export const EquationSchema = z.object({
@@ -78,9 +126,15 @@ export const EquationSchema = z.object({
   comparator: ComparatorSchema.default("eq"),
   // For "find-sum": the displayed RHS goal card. For "find-missing-result":
   // null — the kid's chosen result card lives in `operandSlots[2]` and the
-  // RHS is rendered from there. `.default(null)` keeps both shapes parseable
-  // from a single schema; deal.ts populates per-shape.
+  // RHS is rendered from there. For "true-false-multiply": null — the
+  // claimed product lives in `operandSlots[2]` (locked). `.default(null)`
+  // keeps both shapes parseable from a single schema; deal.ts populates
+  // per-shape.
   target: CardSchema.nullable().default(null),
+  // R9 only — a single droppable slot where the kid lands a True/False
+  // card. Null for every other shape. `.default(null)` keeps pre-R9 IDB
+  // rows re-parseable without a migration.
+  verdictSlot: EquationSlotSchema.nullable().default(null),
 });
 export type Equation = z.infer<typeof EquationSchema>;
 
@@ -188,6 +242,11 @@ export const EnemyTemplateSchema = z.object({
   // Allowed to span newlines; the avatar's bio renderer splits on blank
   // lines for paragraph spacing.
   bio: z.string().min(1),
+  // ElevenLabs-generated pronunciation MP3, registered as a `pronounce-…`
+  // entry in apps/web/app/sound/registry.ts. The avatar renders a small
+  // speaker button next to the name that calls `sfx.play(nameSoundId)`.
+  // Optional so unrelated tests / fixtures don't have to plumb it.
+  nameSoundId: z.string().min(1).optional(),
 });
 export type EnemyTemplate = z.infer<typeof EnemyTemplateSchema>;
 
@@ -265,6 +324,11 @@ export const PlayerTemplateSchema = z.object({
   // evaluation, picks one — they all apply the same damage; the choice
   // is purely about which animation plays.
   attacks: z.tuple([AttackSchema, AttackSchema, AttackSchema]),
+  // ElevenLabs-generated pronunciation MP3, registered as a `pronounce-…`
+  // entry in apps/web/app/sound/registry.ts. The avatar renders a small
+  // speaker button next to the name that calls `sfx.play(nameSoundId)`.
+  // Optional so unrelated tests / fixtures don't have to plumb it.
+  nameSoundId: z.string().min(1).optional(),
 });
 export type PlayerTemplate = z.infer<typeof PlayerTemplateSchema>;
 
