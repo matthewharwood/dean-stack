@@ -34,15 +34,19 @@ void main(void) {
   vTextureCoord = filterTextureCoord();
 }`;
 
-// Procedural water. Three sine layers at different frequencies and
-// directions (the diagonal phase `(x + y)` and the cross-diagonals make
-// the wave fronts intersect, so the eye reads complexity instead of a
-// uniform grid). One slow-traveling sheen band layered on top.
+// Procedural water — deep oceanic palette with diagonal flow
+// (top-left → bottom-right via the `(uv.x + uv.y)` phase). Four wave
+// layers + a slow-traveling sheen + a soft vignette so the title-
+// screen kid actually reads "ocean", not "subtle off-white".
 //
-// `uTime` is in milliseconds — we scale it down to a slow oceanic
-// drift inside the shader (the 0.0003 multiplier ⇒ a wave cycle every
-// ~20s at the slowest layer). `uViewport` lets us normalize UVs so the
-// wavelengths stay consistent regardless of canvas size.
+// `uTime` is in milliseconds — we scale it down to a slow drift inside
+// the shader (the 0.00025 multiplier ⇒ a wave cycle every ~25s at the
+// slowest layer). `uViewport` lets us normalize UVs so the wavelengths
+// stay consistent regardless of canvas size.
+//
+// Performance: ~20 ops/pixel including sin × 5. At 1080p × 60fps that
+// is ~125 MOps/s on the GPU — trivial. The shader is single-pass and
+// allocates nothing per-frame.
 const FRAGMENT = `in vec2 vTextureCoord;
 out vec4 finalColor;
 
@@ -54,29 +58,38 @@ void main(void) {
   // viewport-invariant. (Without this, a wider canvas would stretch
   // the waves horizontally.)
   vec2 uv = vTextureCoord * uViewport / max(uViewport.x, uViewport.y);
-  float t = uTime * 0.0003;
+  float t = uTime * 0.00025;
 
-  // Three sine layers — diagonal, cross-diagonal-fast, cross-diagonal-
-  // slow. The blend (0.5 / 0.3 / 0.2) keeps the largest wave dominant
-  // so the kid reads big slow swells with small ripples on top.
-  float w1 = sin((uv.x + uv.y) * 8.0 + t * 1.0) * 0.5 + 0.5;
-  float w2 = sin((uv.x * 11.0 - uv.y * 7.0) + t * 1.7) * 0.5 + 0.5;
-  float w3 = sin((uv.x * 4.0 + uv.y * 3.0) - t * 0.5) * 0.5 + 0.5;
-  float waves = w1 * 0.5 + w2 * 0.3 + w3 * 0.2;
+  // Four sine layers — slow primary diagonal, fast cross-diagonal,
+  // medium back-diagonal, and a slow drift. Phases all key off the
+  // diagonal sum (uv.x + uv.y) so wave fronts travel top-left → bottom-right;
+  // cross terms shimmer the surface so it doesn't read as a single
+  // rolling sheet. The blend weights keep the slow primary dominant
+  // so the eye reads BIG slow swells with finer detail on top.
+  float w1 = sin((uv.x + uv.y) * 5.0  + t * 1.0) * 0.5 + 0.5;
+  float w2 = sin((uv.x * 13.0 - uv.y * 9.0) + t * 1.9) * 0.5 + 0.5;
+  float w3 = sin((uv.x * 7.0  + uv.y * 4.0) - t * 0.7) * 0.5 + 0.5;
+  float w4 = sin((uv.x * 2.0  + uv.y * 2.5) + t * 0.4) * 0.5 + 0.5;
+  float waves = w1 * 0.45 + w2 * 0.20 + w3 * 0.20 + w4 * 0.15;
 
-  // Pale oceanic palette — slightly darker in the troughs, slightly
-  // lighter on the crests. Subtle enough to live behind the panels
-  // without competing with the gameplay surfaces.
-  vec3 deepCol = vec3(0.74, 0.83, 0.89);
-  vec3 lightCol = vec3(0.88, 0.94, 0.97);
+  // Deep oceanic palette — saturated blue in the troughs, bright
+  // sea-foam on the crests. Wider luminance gap than the old pale
+  // grey so the motion actually reads on a white-ish page.
+  vec3 deepCol  = vec3(0.32, 0.55, 0.74);
+  vec3 lightCol = vec3(0.78, 0.92, 0.97);
   vec3 color = mix(deepCol, lightCol, waves);
 
-  // Diagonal sheen — a thin band of light that drifts across the
-  // canvas, so the kid catches a "sun glint" every ~30s. Smoothstep
-  // gives the band soft edges; the small additive bump keeps the
-  // overall brightness in range.
-  float sheen = smoothstep(0.45, 0.55, sin((uv.x + uv.y) * 1.5 + t * 0.3) * 0.5 + 0.5);
-  color += vec3(sheen * 0.06);
+  // Slow-traveling sheen band — a diagonal highlight that drifts
+  // across the canvas like a sun glint on the water. Brighter than
+  // before so it reads as a distinct event, not background noise.
+  float sheen = smoothstep(0.46, 0.54, sin((uv.x + uv.y) * 1.5 + t * 0.35) * 0.5 + 0.5);
+  color += vec3(sheen * 0.18);
+
+  // Soft radial vignette so the corners darken into "deep ocean".
+  // The kid's eye centers on the action; the deeps frame it.
+  float d = length(vTextureCoord - 0.5);
+  float vignette = smoothstep(0.95, 0.35, d);
+  color *= mix(0.75, 1.0, vignette);
 
   finalColor = vec4(color, 1.0);
 }`;

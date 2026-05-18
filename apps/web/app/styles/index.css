@@ -604,8 +604,8 @@
    gradient — no visible repeats at the edges. */
 .water-bg {
   background:
-    linear-gradient(135deg, transparent 30%, rgb(255 255 255 / 28%) 50%, transparent 70%),
-    linear-gradient(135deg, #dde7ec 0%, #c5d8e1 40%, #d4e2ea 60%, #c8d9e2 100%);
+    linear-gradient(135deg, transparent 35%, rgb(255 255 255 / 38%) 50%, transparent 65%),
+    linear-gradient(135deg, #c7dde8 0%, #6fa3c4 40%, #4f8cb3 60%, #6699c0 100%);
   background-size:
     320% 320%,
     220% 220%;

@@ -69,11 +69,28 @@ const SFX_REGISTRY_LITERAL = {
     path: "sfx/event/evaluate-wrong.mp3",
     policy: "restart",
   },
+  // Splash voiceover (ElevenLabs TTS, same voice id as the character
+  // pronunciations). The intro auto-plays on the first splash mount;
+  // the begin-descent line fires on the button click. `restart` so a
+  // second tap (or a rapid mount/unmount via dev jump) cancels any
+  // in-flight previous play instead of stacking.
+  "event-splash-intro": {
+    path: "sfx/event/splash-intro.mp3",
+    policy: "restart",
+  },
+  "event-splash-begin-descent": {
+    path: "sfx/event/splash-begin-descent.mp3",
+    policy: "restart",
+  },
 
   // ─── Foley (card interactions) ─────────────────────────────────────
-  "foley-card-pickup": { path: "sfx/foley/T1-FOL-01-card-pickup.mp3", policy: "restart" },
-  "foley-card-drop-snap": { path: "sfx/foley/T1-FOL-02-card-drop-snap.mp3", policy: "polyphony" },
-  "foley-card-drop-revert": { path: "sfx/foley/T1-FOL-03-card-drop-revert.mp3", policy: "restart" },
+  // Pickup / drop sounds refreshed via ElevenLabs SFX-gen (naturalistic
+  // tabletop Foley — paper-on-felt rustle for pickup, oak-board click
+  // for the equation drop, paper-on-paper plop for the hand drop).
+  // The old T1-FOL filenames have been retired.
+  "foley-card-pickup": { path: "sfx/foley/card-pickup.mp3", policy: "restart" },
+  "foley-card-drop-snap": { path: "sfx/foley/card-drop-equation.mp3", policy: "polyphony" },
+  "foley-card-drop-revert": { path: "sfx/foley/card-drop-hand.mp3", policy: "restart" },
   "foley-card-drag-hover-enter": {
     path: "sfx/foley/T2-FOL-01-card-drag-hover-enter.mp3",
     policy: "restart",

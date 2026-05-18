@@ -2,8 +2,25 @@ import { animate } from "animejs";
 import { type ReactNode, useRef } from "react";
 
 import { Card } from "~/components/card";
+import { getSfxPlayer } from "~/sound";
 
 import { type SlotLocator, slotLocatorEquals } from "./swap";
+
+// Foley wrappers — module-level so the drag handlers (which live inside
+// component closures, not React render paths) can fire SFX without
+// threading `useSound` through the prop chain. `getSfxPlayer` returns
+// the singleton; the player respects the same mute/volume settings
+// `useSound` syncs at the React layer.
+//
+// One pickup id (shared), two drop ids keyed off the destination slot:
+// equation drops get the woody board-snap, hand drops (including
+// reverts back to the hand) get the gentler paper plop.
+function playPickup(): void {
+  void getSfxPlayer().play("foley-card-pickup");
+}
+function playDropForKind(kind: SlotLocator["kind"]): void {
+  void getSfxPlayer().play(kind === "equation" ? "foley-card-drop-snap" : "foley-card-drop-revert");
+}
 
 // ─── Tunables ─────────────────────────────────────────────────────────────
 // Calibrated for a 6–8 year old's coordination on an iPad. The minimum drag
@@ -414,6 +431,10 @@ export function DraggableCard({
       pointerId: e.pointerId,
       ySamples: [{ y: e.clientY, t: now }],
     };
+    // Pickup foley — the kid hears the paper-on-felt rustle the
+    // moment their finger lands. Fires on EVERY grab (hand or
+    // equation), shared across both source kinds.
+    playPickup();
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
@@ -555,6 +576,7 @@ export function DraggableCard({
       ) {
         const home = findFirstEmptyHandSlot();
         if (home) {
+          playDropForKind(home.kind);
           snapAndCommit(drag.el, drag.source, home, fromTransform, null, drag.sourceCenter, onSwap);
           return;
         }
@@ -567,6 +589,7 @@ export function DraggableCard({
       ) {
         const eqSlot = findFirstEmptyEquationSlot();
         if (eqSlot) {
+          playDropForKind(eqSlot.kind);
           snapAndCommit(
             drag.el,
             drag.source,
@@ -582,9 +605,16 @@ export function DraggableCard({
     }
 
     if (!drag.hasMoved || !drag.currentTarget) {
+      // Revert path — no target, card flies back to where it came
+      // from. The destination kind matches the source kind, so the
+      // foley matches: a hand-origin reverts to a hand slot (soft
+      // plop), an equation-origin reverts to an equation slot
+      // (woody snap).
+      playDropForKind(drag.source.kind);
       revertCard(drag.el, fromTransform);
       return;
     }
+    playDropForKind(drag.currentTarget.kind);
     snapAndCommit(
       drag.el,
       drag.source,
