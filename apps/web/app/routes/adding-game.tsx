@@ -66,7 +66,12 @@ export const Route = createFileRoute("/adding-game")({
   component: AddingGame,
 });
 
-type RegionProps = { children?: ReactNode };
+// `transparent` (optional) drops the panel-glass background + shadow on
+// LeftCol / Top / Bottom / RightCol — used by the splash screen so the
+// 4 surrounding panels disappear and the title sits over the bare
+// water canvas. The Center panel is excluded by design (the splash
+// content lives there and still benefits from the glass surface).
+type RegionProps = { children?: ReactNode; transparent?: boolean };
 
 function GameBoard({ children }: RegionProps) {
   // `select-none` + iOS callout suppression: a long-press on a number / "+"
@@ -95,11 +100,13 @@ function GameBoard({ children }: RegionProps) {
   );
 }
 
-function LeftCol({ children }: RegionProps) {
+function LeftCol({ children, transparent }: RegionProps) {
   return (
     <section
       aria-label="Left panel"
-      className="panel-glass relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in"
+      className={`relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in ${
+        transparent ? "" : "panel-glass"
+      }`}
     >
       {children}
     </section>
@@ -110,11 +117,11 @@ function GameMain({ children }: RegionProps) {
   return <div className="flex min-h-0 flex-col gap-[18px] animate-panel-fade-in">{children}</div>;
 }
 
-function Top({ children }: RegionProps) {
+function Top({ children, transparent }: RegionProps) {
   return (
     <section
       aria-label="Top center panel"
-      className="panel-glass relative h-[200px] shrink-0 rounded-lg"
+      className={`relative h-[200px] shrink-0 rounded-lg ${transparent ? "" : "panel-glass"}`}
     >
       {children}
     </section>
@@ -132,22 +139,24 @@ function Center({ children }: RegionProps) {
   );
 }
 
-function Bottom({ children }: RegionProps) {
+function Bottom({ children, transparent }: RegionProps) {
   return (
     <section
       aria-label="Bottom center panel"
-      className="panel-glass relative h-[200px] shrink-0 rounded-lg"
+      className={`relative h-[200px] shrink-0 rounded-lg ${transparent ? "" : "panel-glass"}`}
     >
       <div className="grid h-full grid-cols-5 gap-[18px] p-[18px]">{children}</div>
     </section>
   );
 }
 
-function RightCol({ children }: RegionProps) {
+function RightCol({ children, transparent }: RegionProps) {
   return (
     <section
       aria-label="Right panel"
-      className="panel-glass relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in"
+      className={`relative grid grid-rows-[1fr] rounded-lg p-3 animate-panel-fade-in ${
+        transparent ? "" : "panel-glass"
+      }`}
     >
       {children}
     </section>
@@ -872,12 +881,43 @@ function ActionButton({
   );
 }
 
+// Splash begin-descent click flow. The intro voiceover was removed
+// from the splash — browser autoplay policy meant it required a click
+// to fire anyway, which read as flaky. The Begin button still owns
+// its own voiceover: await `playUntilEnded(begin-descent)` THEN wait
+// 300ms, THEN call onBegin so the dive-in transition doesn't start
+// until the spoken line lands. While we're waiting, the button is
+// disabled so a double-tap can't queue a second descent.
+function useSplashVoiceover(onBegin: () => void): {
+  handleBegin: () => void;
+  beginPending: boolean;
+} {
+  const sfx = useSound();
+  const [beginPending, setBeginPending] = useState(false);
+
+  const handleBegin = (): void => {
+    if (beginPending) return;
+    setBeginPending(true);
+    void (async () => {
+      await sfx.playUntilEnded("event-splash-begin-descent");
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
+      onBegin();
+      // beginPending stays true through the dive-in — the splash
+      // unmounts when onBegin completes its state transition, so the
+      // flag doesn't matter past this point.
+    })();
+  };
+
+  return { handleBegin, beginPending };
+}
+
 // The empty state the kid sees on a fresh visit before they've started a
 // game. Replaces the "no enemy yet" stuck-look with a deliberate Begin
 // affordance — clicking it triggers the dive-in animation, which fades
 // out into the first round. The lore-fragment text sets the mood before
 // the descent (8s of marine snow + light shafts) does the rest.
 function Splash({ onBegin }: { onBegin: () => void }) {
+  const { handleBegin, beginPending } = useSplashVoiceover(onBegin);
   return (
     <div
       className="flex h-full flex-col items-center justify-center gap-8 px-8 text-center"
@@ -895,9 +935,11 @@ function Splash({ onBegin }: { onBegin: () => void }) {
       </div>
       <button
         type="button"
-        onClick={onBegin}
-        className="flex items-center gap-2 rounded-full bg-radiant-violet px-10 py-4 font-openrunde text-xl font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+        onClick={handleBegin}
+        disabled={beginPending}
+        className="flex items-center gap-2 rounded-full bg-radiant-violet px-10 py-4 font-openrunde text-xl font-bold text-white shadow-subtle transition-transform duration-150 hover:scale-[1.04] active:scale-95 disabled:cursor-wait disabled:opacity-80 disabled:hover:scale-100"
         data-test="splash-begin"
+        data-begin-pending={beginPending ? "true" : undefined}
       >
         <span>Begin the descent</span>
         <ArrowRight size={22} strokeWidth={2.5} aria-hidden />
@@ -1373,6 +1415,11 @@ function AddingGame() {
   const roundEnemy = game.round?.enemy ?? null;
   const enemyTemplate = roundEnemy ? (findEnemyTemplate(roundEnemy.templateId) ?? null) : null;
   const ended = game.status === "ended";
+  // Title screen: no active round AND game hasn't ended → Splash is
+  // showing. Used to drop the 4 surrounding panels' glass backgrounds
+  // so the title sits over the bare water canvas (Center stays
+  // glass-backed since that's where the Splash content lives).
+  const isSplash = !ended && !game.round;
 
   // Player roster cycle + per-pilot XP — fully persisted in IDB via
   // `game.player.selectedPilotId` and `game.player.pilotProgress`. The
@@ -1430,6 +1477,39 @@ function AddingGame() {
     : null;
   const currentXpThreshold = currentProgress ? xpThresholdForLevel(currentProgress.level) : null;
 
+  // Splash-gated panel children. Hoisted so the JSX below stays a
+  // single line per panel — keeps AddingGame under react-doctor's
+  // giant-component threshold.
+  const enemyAvatarNode = isSplash ? null : (
+    <EnemyAvatar
+      key={enemyTemplate?.id ?? "no-enemy"}
+      enemy={enemyTemplate}
+      hp={roundEnemy?.hp ?? null}
+      maxHp={game.round ? (findLevel(game.round.index)?.hp ?? null) : null}
+      encounters={encountersFor(game.enemyEncounters, roundEnemy?.templateId)}
+    />
+  );
+  const handNode = isSplash ? null : (
+    <Hand
+      hand={game.player.hand}
+      cards={game.cards}
+      dragLocked={dragLocked}
+      display={game.round?.equation.shape === "find-missing-result" ? "ten-frame" : "numeric"}
+      onSwap={handleSwap}
+    />
+  );
+  const playerAvatarNode = isSplash ? null : (
+    <PlayerAvatar
+      key={currentPlayer?.id ?? "no-pilot"}
+      player={currentPlayer}
+      profileIndex={currentPlayer && currentIndex >= 0 ? currentIndex + 1 : null}
+      profileCount={currentPlayer ? PLAYER_REGISTRY.length : null}
+      onCycle={currentPlayer ? handleCyclePlayer : null}
+      progress={currentProgress}
+      xpThreshold={currentXpThreshold}
+    />
+  );
+
   return (
     <>
       <DevMenu>
@@ -1443,20 +1523,9 @@ function AddingGame() {
         onComplete={clearCelebration}
       />
       <GameBoard>
-        <LeftCol>
-          <EnemyAvatar
-            // Re-mount on enemy change. Drives the flip-back reset for the
-            // new enemy without an internal effect; same key-as-trigger
-            // pattern as PlayerAvatar above.
-            key={enemyTemplate?.id ?? "no-enemy"}
-            enemy={enemyTemplate}
-            hp={roundEnemy?.hp ?? null}
-            maxHp={game.round ? (findLevel(game.round.index)?.hp ?? null) : null}
-            encounters={encountersFor(game.enemyEncounters, roundEnemy?.templateId)}
-          />
-        </LeftCol>
+        <LeftCol transparent={isSplash}>{enemyAvatarNode}</LeftCol>
         <GameMain>
-          <Top>
+          <Top transparent={isSplash}>
             {game.round ? (
               <div className="flex size-full items-center justify-between px-3">
                 <RoundIndicator
@@ -1548,34 +1617,9 @@ function AddingGame() {
               </div>
             )}
           </Center>
-          <Bottom>
-            <Hand
-              hand={game.player.hand}
-              cards={game.cards}
-              dragLocked={dragLocked}
-              display={
-                game.round?.equation.shape === "find-missing-result" ? "ten-frame" : "numeric"
-              }
-              onSwap={handleSwap}
-            />
-          </Bottom>
+          <Bottom transparent={isSplash}>{handNode}</Bottom>
         </GameMain>
-        <RightCol>
-          <PlayerAvatar
-            // Re-mount on pilot change. Drives the per-pilot state reset
-            // (flipped-back, level-up baseline) without an internal effect
-            // — React tears down + re-initializes useState/useRef defaults
-            // for the new pilot. Cleaner than a `[playerId]` effect, which
-            // biome's useExhaustiveDependencies flags as a trigger-only dep.
-            key={currentPlayer?.id ?? "no-pilot"}
-            player={currentPlayer}
-            profileIndex={currentPlayer && currentIndex >= 0 ? currentIndex + 1 : null}
-            profileCount={currentPlayer ? PLAYER_REGISTRY.length : null}
-            onCycle={currentPlayer ? handleCyclePlayer : null}
-            progress={currentProgress}
-            xpThreshold={currentXpThreshold}
-          />
-        </RightCol>
+        <RightCol transparent={isSplash}>{playerAvatarNode}</RightCol>
       </GameBoard>
     </>
   );

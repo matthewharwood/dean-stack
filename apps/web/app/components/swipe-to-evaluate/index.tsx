@@ -40,13 +40,15 @@ const COMMIT_HOLD_MS = 180;
 
 type DragSession = {
   pointerId: number;
-  startX: number;
+  trackLeft: number;
   trackWidth: number;
+  moved: boolean;
 };
 
 export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (props) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragSession | null>(null);
+  const progressRef = useRef(0);
   // `progress` is 0 (rest, right) → 1 (committed, left). Used by both
   // the knob transform and the fill width so they stay in lockstep.
   const [progress, setProgress] = useState(0);
@@ -72,12 +74,28 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
   // ResizeObserver fires.
   const maxTravelPx = Math.max(0, trackWidth - KNOB_SIZE_PX - TRACK_PADDING_PX * 2);
 
+  const setProgressValue = (next: number): number => {
+    const bounded = Math.max(0, Math.min(1, next));
+    progressRef.current = bounded;
+    setProgress(bounded);
+    return bounded;
+  };
+
+  const progressForClientX = (clientX: number, drag: DragSession): number => {
+    const travel = Math.max(0, drag.trackWidth - KNOB_SIZE_PX - TRACK_PADDING_PX * 2);
+    if (travel === 0) return 0;
+    const restCenterX = drag.trackLeft + drag.trackWidth - TRACK_PADDING_PX - KNOB_SIZE_PX / 2;
+    return Math.max(0, Math.min(1, (restCenterX - clientX) / travel));
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     if (committing) return;
+    const trackBox = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const measuredTrackWidth = trackBox.width || trackWidth;
     // setPointerCapture throws when the pointerId isn't an active
     // browser pointer — happens with synthetic `dispatchEvent` from
     // Playwright tests. The drag still works (events target the
-    // knob directly), so swallow the throw and proceed.
+    // track directly), so swallow the throw and proceed.
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
@@ -90,7 +108,13 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
       // committing still no-ops on release).
       props.onDisabledAttempt?.();
     }
-    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, trackWidth };
+    const drag = {
+      pointerId: e.pointerId,
+      trackLeft: trackBox.left,
+      trackWidth: measuredTrackWidth,
+      moved: false,
+    };
+    dragRef.current = drag;
     setIsDragging(true);
     // Kick the procedural oscillator. Web Audio unlocks on this
     // gesture (iOS Safari requires a user gesture to resume). We
@@ -99,17 +123,16 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
     // "miss" sound on release without commit closes the gesture so
     // the kid never feels like the UI ignored them.
     startSwipeProgress();
+    const next = setProgressValue(progressForClientX(e.clientX, drag));
+    updateSwipeProgress(next);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    const deltaX = e.clientX - drag.startX;
-    const travel = Math.max(0, drag.trackWidth - KNOB_SIZE_PX - TRACK_PADDING_PX * 2);
-    if (travel === 0) return;
-    // Right→left: negative deltaX increases progress.
-    const next = Math.max(0, Math.min(1, -deltaX / travel));
-    setProgress(next);
+    const previous = progressRef.current;
+    const next = setProgressValue(progressForClientX(e.clientX, drag));
+    if (Math.abs(next - previous) > 0.01) drag.moved = true;
     updateSwipeProgress(next);
   };
 
@@ -124,7 +147,7 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
     }
     dragRef.current = null;
     setIsDragging(false);
-    const committed = props.canCommit && progress >= COMMIT_THRESHOLD;
+    const committed = props.canCommit && drag.moved && progressRef.current >= COMMIT_THRESHOLD;
     // Always bookend the procedural audio. `committed=true` plays the
     // ding chime; `committed=false` plays the miss tone — covers BOTH
     // "released too early" AND "swiped fully on a disabled affordance"
@@ -136,20 +159,20 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
       // Snap to full + brief hold so the kid sees the bar fill before
       // the parent re-renders into the win/loss state.
       setCommitting(true);
-      setProgress(1);
+      setProgressValue(1);
       window.setTimeout(() => {
         props.onCommit();
         // Reset for the next round. If the parent flips to the
         // win-state (different component), this state is GC'd anyway;
         // for a loss it leaves the track ready for the next try.
         setCommitting(false);
-        setProgress(0);
+        setProgressValue(0);
       }, COMMIT_HOLD_MS);
     } else {
       // Spring back. We don't `setIsDragging(false)` AGAIN here — the
       // existing transition class handles the snap because isDragging
       // already flipped off above.
-      setProgress(0);
+      setProgressValue(0);
     }
   };
 
@@ -195,7 +218,11 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
     >
       <div
         ref={trackRef}
-        className={`relative w-full overflow-hidden rounded-full border-2 ${trackToneClass}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        className={`relative w-full touch-none overflow-hidden rounded-full border-2 ${trackToneClass}`}
         style={{ height: TRACK_HEIGHT_PX }}
       >
         {/* Fill: anchored to the RIGHT edge, grows leftward with
@@ -215,14 +242,11 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
           <ArrowLeft size={20} strokeWidth={3} aria-hidden />
           <span data-test="swipe-label">{muted ? "Fill out the board" : label}</span>
         </div>
-        {/* Knob — captures the pointer. The Swords glyph hints
+        {/* Knob — visual thumb. The track captures the pointer so the
+            centered label area also starts the charge gesture. The Swords glyph hints
             "attack" so the swipe feels like an action verb, not a
             generic UI affordance. */}
         <div
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerEnd}
-          onPointerCancel={handlePointerEnd}
           className={`absolute flex touch-none cursor-grab items-center justify-center rounded-full active:cursor-grabbing ${knobToneClass}`}
           style={knobStyle}
           role="slider"

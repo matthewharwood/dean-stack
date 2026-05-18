@@ -108,3 +108,49 @@ test("SwipeToEvaluate.Interactive — full right-to-left drag fires onCommit onc
   // for the text change is more reliable than a hardcoded sleep.
   await expect(counter).toHaveText("commits: 1");
 });
+
+test("SwipeToEvaluate.Interactive — drag from the track label also commits", async ({ page }) => {
+  await page.goto(`${STORY_BASE}interactive`);
+
+  const counter = page.getByTestId("commit-counter");
+  await expect(counter).toHaveText("commits: 0");
+
+  const track = page.getByTestId("swipe-to-evaluate").locator("> div").first();
+  const trackBox = await track.boundingBox();
+  if (!trackBox) throw new Error("track not measurable");
+
+  const startX = trackBox.x + trackBox.width * 0.55;
+  const startY = trackBox.y + trackBox.height / 2;
+  const endX = trackBox.x + 12;
+  const pointerId = 8;
+
+  await track.dispatchEvent("pointerdown", {
+    pointerId,
+    pointerType: "touch",
+    clientX: startX,
+    clientY: startY,
+    button: 0,
+    buttons: 1,
+    isPrimary: true,
+  });
+  await track.dispatchEvent("pointermove", {
+    pointerId,
+    pointerType: "touch",
+    clientX: endX,
+    clientY: startY,
+    button: 0,
+    buttons: 1,
+    isPrimary: true,
+  });
+  await track.dispatchEvent("pointerup", {
+    pointerId,
+    pointerType: "touch",
+    clientX: endX,
+    clientY: startY,
+    button: 0,
+    buttons: 0,
+    isPrimary: true,
+  });
+
+  await expect(counter).toHaveText("commits: 1");
+});

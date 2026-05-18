@@ -6,7 +6,7 @@ import { soundSettingsAtom } from "~/state/atoms";
 
 import { resolveAttackSfxId } from "./play-attack";
 import { getSfxPlayer } from "./player";
-import { setProceduralEnabled, setProceduralVolume } from "./procedural";
+import { setProceduralEnabled, setProceduralVolume, unlockProceduralAudio } from "./procedural";
 import type { SfxEventId } from "./registry";
 
 export interface SoundApi {
@@ -16,6 +16,10 @@ export interface SoundApi {
   // so the same MP3 the speaker button uses can play softer when it
   // auto-fires.
   play: (id: SfxEventId, options?: { volumeScale?: number }) => void;
+  // Play an event and resolve when the sample FINISHES. Loops resolve
+  // immediately (they have no natural end). Used by the splash flow
+  // so the dive-in transition waits for the voiceover to land.
+  playUntilEnded: (id: SfxEventId, options?: { volumeScale?: number }) => Promise<void>;
   // Stop any playing instance(s) of an event (and any active loop).
   stop: (id: SfxEventId) => void;
   // Stop every active sound — useful on route change or game reset.
@@ -41,6 +45,7 @@ const STABLE_API: SoundApi = {
   play: (id, options) => {
     void getSfxPlayer().play(id, options);
   },
+  playUntilEnded: (id, options) => getSfxPlayer().playUntilEnded(id, options),
   stop: (id) => {
     getSfxPlayer().stop(id);
   },
@@ -70,6 +75,7 @@ function installUnlockListener(): void {
 
   const unlock = (): void => {
     getSfxPlayer().unlock();
+    unlockProceduralAudio();
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);
     window.removeEventListener("touchstart", unlock);

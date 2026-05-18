@@ -31,6 +31,7 @@ let swipeOscBody: OscillatorNode | null = null;
 let swipeOscGrit: OscillatorNode | null = null;
 let swipeGritGain: GainNode | null = null;
 let swipeGain: GainNode | null = null;
+let unlocked = false;
 
 function ensureCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -51,6 +52,33 @@ function maybeResume(c: AudioContext): void {
   if (c.state === "suspended") {
     void c.resume();
   }
+}
+
+// iOS/WebKit is stricter than desktop Chromium: a context that only gets
+// created later by a React pointer handler can remain suspended even though
+// the sample-based SFX player was unlocked earlier. Create/resume this
+// procedural context during the same first user gesture and tick a silent
+// oscillator so later swipe/stepper sounds start from an already-running
+// context.
+export function unlockProceduralAudio(): void {
+  if (unlocked) return;
+  const c = ensureCtx();
+  if (!c || !masterGain) return;
+  maybeResume(c);
+
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  g.gain.value = 0;
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(c.currentTime);
+  osc.stop(c.currentTime + 0.01);
+  osc.addEventListener("ended", () => {
+    osc.disconnect();
+    g.disconnect();
+  });
+
+  unlocked = true;
 }
 
 // ── Public mute/volume API ─────────────────────────────────────────
@@ -119,6 +147,7 @@ function teardownSwipeNodes(): void {
 }
 
 export function startSwipeProgress(): void {
+  unlockProceduralAudio();
   const c = ensureCtx();
   if (!c || !masterGain || !enabled) return;
   maybeResume(c);
