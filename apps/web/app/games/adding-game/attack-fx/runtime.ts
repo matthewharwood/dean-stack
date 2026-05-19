@@ -14,38 +14,67 @@ import { runWave } from "./kinds/wave";
 import { resetSoftCircleCache } from "./textures";
 
 // Singleton Pixi runtime that owns the full-viewport overlay canvas. The
-// route mounts <AttackFxLayer/> once; that component calls `attach(canvas)`
-// here to bind. Attack buttons call `runAttack(...)` and `await` the
-// returned Promise — the function adds Sprites/Containers to the stage,
-// drives them via the Pixi Ticker for ≤500ms, and resolves on completion.
+// route keeps <AttackFxLayer/> as a marker, but the canvas and Pixi app are
+// created lazily on first attack. Attack buttons call `runAttack(...)` and
+// `await` the returned Promise — the function adds Sprites/Containers to the
+// stage, drives them via the Pixi Ticker for ≤500ms, and resolves on completion.
 //
-// Why singleton: each attack creating + tearing down its own Pixi app
-// would cost ~50ms init per click and never warm up the GPU. One
-// long-lived app, many short-lived particle effects, gives consistent
-// 60fps.
+// The app is torn down after each attack. That costs a small init on the next
+// attack, but it avoids keeping an idle full-screen canvas/WebGL context alive
+// on localhost desktop browsers.
 //
 // Pixi is a side channel (per dean-stack rules); this module is called
-// from event handlers, not render. React only owns the canvas DOM node.
+// from event handlers, not render.
 
 let app: Application | null = null;
-let initPromise: Promise<Application> | null = null;
+let initPromise: Promise<Application | null> | null = null;
+let host: HTMLDivElement | null = null;
+let canvas: HTMLCanvasElement | null = null;
 
-async function attach(canvas: HTMLCanvasElement): Promise<void> {
-  if (app || initPromise) return;
+function ensureCanvas(): HTMLCanvasElement | null {
+  if (canvas?.isConnected) return canvas;
+  if (typeof document === "undefined") return null;
+  host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.setAttribute("data-test", "attack-fx-layer");
+  host.className = "pointer-events-none fixed inset-0 z-30";
+  canvas = document.createElement("canvas");
+  canvas.className = "block size-full";
+  host.appendChild(canvas);
+  document.body.appendChild(host);
+  return canvas;
+}
+
+async function ensureApp(): Promise<Application | null> {
+  if (app) return app;
+  if (initPromise) return initPromise;
+  const nextCanvas = ensureCanvas();
+  if (!nextCanvas) return null;
   initPromise = (async () => {
     const next = new Application();
-    await next.init({
-      canvas,
-      resizeTo: canvas.parentElement ?? canvas,
-      antialias: true,
-      preference: "webgl",
-      backgroundAlpha: 0,
-      autoStart: true,
-    });
-    app = next;
-    return next;
+    try {
+      await next.init({
+        canvas: nextCanvas,
+        resizeTo: nextCanvas.parentElement ?? nextCanvas,
+        antialias: true,
+        preference: "webgl",
+        backgroundAlpha: 0,
+        autoStart: true,
+      });
+      if (canvas !== nextCanvas) {
+        next.destroy(true, { children: true, texture: false });
+        return null;
+      }
+      app = next;
+      return next;
+    } catch {
+      next.destroy(true, { children: true, texture: false });
+      return null;
+    } finally {
+      initPromise = null;
+    }
   })();
-  await initPromise;
+  return initPromise;
 }
 
 function detach(): void {
@@ -54,6 +83,9 @@ function detach(): void {
     app = null;
   }
   initPromise = null;
+  host?.remove();
+  host = null;
+  canvas = null;
   resetSoftCircleCache();
 }
 
@@ -89,26 +121,26 @@ const KIND_RUNNERS: Record<Attack["kind"], AttackRunner> = {
 
 // Public dispatch. Resolves after the kind's animation completes (≤500ms
 // per dean-stack rules). Throws if the runtime isn't attached yet — the
-// route is responsible for mounting <AttackFxLayer/> before any attack
-// button can be tapped.
+// route keeps <AttackFxLayer/> as a marker, but the overlay itself is created
+// lazily here so route entry does not allocate an idle full-screen canvas.
 async function runAttack(attack: Attack, fromRect: Rect, toRect: Rect): Promise<void> {
-  if (!app) {
-    if (initPromise) await initPromise;
-  }
-  const ready = app;
+  const ready = app ?? (await ensureApp());
   if (!ready) return;
   const runner = KIND_RUNNERS[attack.kind];
   if (!runner) return;
-  return runner({
-    app: ready,
-    from: rectCenter(fromRect),
-    to: rectCenter(toRect),
-    color: attack.color,
-  });
+  try {
+    return await runner({
+      app: ready,
+      from: rectCenter(fromRect),
+      to: rectCenter(toRect),
+      color: attack.color,
+    });
+  } finally {
+    detach();
+  }
 }
 
 export const attackFxRuntime = {
-  attach,
   detach,
   runAttack,
 };

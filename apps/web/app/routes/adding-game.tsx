@@ -13,23 +13,28 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ArrowRight, Check } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useReducer, useRef, useState } from "react";
+import {
+  Fragment,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import { AttackButton } from "~/components/attack-button";
 import { Card } from "~/components/card";
 import { DevMenu } from "~/components/dev-menu";
-import { DiveInIntro } from "~/components/dive-in-intro";
 import { EnemyAvatar } from "~/components/enemy-avatar";
 import { HintTooltip } from "~/components/hint-tooltip";
 import { PlayerAvatar } from "~/components/player-avatar";
-import { RoundCompleteFx } from "~/components/round-complete-fx";
 import { RoundIndicator } from "~/components/round-indicator";
 import { RoundJumpPanel } from "~/components/round-jump-panel";
 import { StepperCard } from "~/components/stepper-card";
 import { SwipeToEvaluate } from "~/components/swipe-to-evaluate";
-import { WaterCanvas } from "~/components/water-canvas";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
-import { attackFxRuntime } from "~/games/adding-game/attack-fx/runtime";
 import { applyAutoAssist } from "~/games/adding-game/auto-assist";
 import { dealRound } from "~/games/adding-game/deal";
 import { DraggableCard, EmptySlot, SlotWrapper } from "~/games/adding-game/drag";
@@ -53,6 +58,24 @@ import { buildSeoLinks, buildSeoMeta } from "~/lib/seo";
 import { isRegistered, type SoundApi, useSound } from "~/sound";
 import { playStepperBlip } from "~/sound/procedural";
 import { addingGameAtom } from "~/state/atoms";
+
+const ENABLE_PIXI_FX =
+  !import.meta.env.SSR && (import.meta.env.PROD || import.meta.env.VITE_ENABLE_PIXI_FX === "true");
+
+const DiveInIntro = lazy(async () => {
+  const { DiveInIntro: Component } = await import("~/components/dive-in-intro");
+  return { default: Component };
+});
+
+const RoundCompleteFx = lazy(async () => {
+  const { RoundCompleteFx: Component } = await import("~/components/round-complete-fx");
+  return { default: Component };
+});
+
+const WaterCanvas = lazy(async () => {
+  const { WaterCanvas: Component } = await import("~/components/water-canvas");
+  return { default: Component };
+});
 
 export const Route = createFileRoute("/adding-game")({
   head: () => ({
@@ -91,7 +114,11 @@ function GameBoard({ children }: RegionProps) {
   return (
     <main className="water-bg relative h-dvh font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
       <div className="pointer-events-none absolute inset-0 z-0">
-        <WaterCanvas />
+        {ENABLE_PIXI_FX ? (
+          <Suspense fallback={null}>
+            <WaterCanvas />
+          </Suspense>
+        ) : null}
       </div>
       <div className="relative z-10 grid h-full grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px]">
         {children}
@@ -1037,6 +1064,7 @@ function resetToIdle(state: AddingGameState): AddingGameState {
 function useGameCelebration(
   roundIndex: number | null | undefined,
   gameStatus: AddingGameState["status"],
+  enabled: boolean,
 ): {
   celebration: { fromRound: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 } | null;
   clear: () => void;
@@ -1046,6 +1074,11 @@ function useGameCelebration(
   } | null>(null);
   const prevLevelRef = useRef<number | null>(roundIndex ?? null);
   useEffect(() => {
+    if (!enabled) {
+      setCelebration(null);
+      prevLevelRef.current = roundIndex ?? null;
+      return;
+    }
     const curr = roundIndex ?? null;
     const prev = prevLevelRef.current;
     prevLevelRef.current = curr;
@@ -1057,12 +1090,13 @@ function useGameCelebration(
     if (advanced || completed) {
       setCelebration({ fromRound: roundOf(prev) });
     }
-  }, [roundIndex, gameStatus]);
+  }, [roundIndex, gameStatus, enabled]);
   useEffect(() => {
+    if (!enabled) return;
     if (gameStatus === "ended" && prevLevelRef.current === FINAL_LEVEL_INDEX) {
       setCelebration({ fromRound: 12 });
     }
-  }, [gameStatus]);
+  }, [gameStatus, enabled]);
   return { celebration, clear: () => setCelebration(null) };
 }
 
@@ -1116,12 +1150,17 @@ function useAttackFlow(
   game: AddingGameState,
   sfx: SoundApi,
   onContinue: () => void,
+  enableFx: boolean,
 ): {
   attackPending: boolean;
   runAttack: (attack: Attack | null) => void;
 } {
   const [attackPending, setAttackPending] = useState(false);
   const fireAttackAnimation = async (attack: Attack): Promise<void> => {
+    if (!enableFx) {
+      await sfx.playAttackUntilEnded(attack);
+      return;
+    }
     if (typeof document === "undefined") return;
     const fromEl = document.querySelector('[data-test="action-button"]');
     const toEl = document.querySelector('[data-test="enemy-avatar"]');
@@ -1139,6 +1178,7 @@ function useAttackFlow(
     // the "attack lands, THEN the world reacts" beat. If the sound
     // is unregistered, playAttackUntilEnded resolves immediately so
     // the animation pacing is unaffected.
+    const { attackFxRuntime } = await import("~/games/adding-game/attack-fx/runtime");
     await Promise.all([
       attackFxRuntime.runAttack(
         attack,
@@ -1350,16 +1390,13 @@ function AddingGame() {
   const { celebration, clear: clearCelebration } = useGameCelebration(
     game.round?.index,
     game.status,
+    ENABLE_PIXI_FX,
   );
   const { hint, dismiss: dismissHint } = useGameHints(game);
 
   // Begin: kid clicked "Begin" on splash. Mount the dive-in; the deal
   // happens in handleIntroComplete so the cards appear UNDER the intro
   // as it fades.
-  const handleBegin = (): void => {
-    setIntroPlaying(true);
-  };
-
   // Intro complete: tear down the overlay, deal level 1. setGame guards
   // against double-deal on StrictMode rerun.
   const handleIntroComplete = (): void => {
@@ -1375,6 +1412,14 @@ function AddingGame() {
         round: result.round,
       };
     });
+  };
+
+  const handleBegin = (): void => {
+    if (ENABLE_PIXI_FX) {
+      setIntroPlaying(true);
+      return;
+    }
+    handleIntroComplete();
   };
 
   const handleSwap = (source: SlotLocator, target: SlotLocator): void => {
@@ -1394,7 +1439,12 @@ function AddingGame() {
     if (next) setGame(() => next);
   };
 
-  const { attackPending, runAttack: handleAttack } = useAttackFlow(game, sfx, handleContinue);
+  const { attackPending, runAttack: handleAttack } = useAttackFlow(
+    game,
+    sfx,
+    handleContinue,
+    ENABLE_PIXI_FX,
+  );
 
   // Play Again from victory — wipe to idle AND fire the intro. The kid
   // sees the same descent as their first dive, then a fresh round 1.
@@ -1516,12 +1566,16 @@ function AddingGame() {
         <RoundJumpPanel />
       </DevMenu>
       <AttackFxLayer />
-      {introPlaying ? <DiveInIntro onComplete={handleIntroComplete} /> : null}
-      <RoundCompleteFx
-        active={celebration !== null}
-        fromRound={celebration?.fromRound ?? null}
-        onComplete={clearCelebration}
-      />
+      {ENABLE_PIXI_FX && introPlaying ? (
+        <Suspense fallback={null}>
+          <DiveInIntro onComplete={handleIntroComplete} />
+        </Suspense>
+      ) : null}
+      {ENABLE_PIXI_FX && celebration !== null ? (
+        <Suspense fallback={null}>
+          <RoundCompleteFx active fromRound={celebration.fromRound} onComplete={clearCelebration} />
+        </Suspense>
+      ) : null}
       <GameBoard>
         <LeftCol transparent={isSplash}>{enemyAvatarNode}</LeftCol>
         <GameMain>
