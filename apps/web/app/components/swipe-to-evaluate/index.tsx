@@ -88,72 +88,23 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
     return Math.max(0, Math.min(1, (restCenterX - clientX) / travel));
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
-    if (committing) return;
-    const trackBox = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const measuredTrackWidth = trackBox.width || trackWidth;
-    // setPointerCapture throws when the pointerId isn't an active
-    // browser pointer — happens with synthetic `dispatchEvent` from
-    // Playwright tests. The drag still works (events target the
-    // track directly), so swallow the throw and proceed.
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // no-op
-    }
-    if (!props.canCommit) {
-      // Disabled grab — fire the optional callback so the parent can
-      // surface its "fill out the board" prompt, then let the rest of
-      // the drag run silently (the knob still tracks the finger,
-      // committing still no-ops on release).
-      props.onDisabledAttempt?.();
-    }
-    const drag = {
-      pointerId: e.pointerId,
-      trackLeft: trackBox.left,
-      trackWidth: measuredTrackWidth,
-      moved: false,
-    };
-    dragRef.current = drag;
-    setIsDragging(true);
-    // Kick the procedural oscillator. Web Audio unlocks on this
-    // gesture (iOS Safari requires a user gesture to resume). We
-    // fire the audio EVEN ON A DISABLED GRAB — the rising tone is
-    // tactile feedback that the swipe is being tracked; the eventual
-    // "miss" sound on release without commit closes the gesture so
-    // the kid never feels like the UI ignored them.
-    startSwipeProgress();
-    const next = setProgressValue(progressForClientX(e.clientX, drag));
-    updateSwipeProgress(next);
-  };
+  // ── Drag lifecycle ─────────────────────────────────────────────────
+  // We attach pointermove / pointerup / pointercancel to WINDOW for
+  // the duration of the drag, NOT to the track element. With mouse
+  // input, the cursor can leave the track at the speed of light;
+  // window listeners always receive those events regardless of what
+  // element is currently under the cursor. setPointerCapture is a
+  // theoretical alternative but races on Safari and silently drops
+  // events when capture transfers — the window-listener pattern is
+  // the canonical drag implementation for exactly this reason.
+  //
+  // The track only owns onPointerDown (kick the drag); the cleanup
+  // path tears down its own listeners so a fresh drag re-installs
+  // clean handlers each grab.
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    const previous = progressRef.current;
-    const next = setProgressValue(progressForClientX(e.clientX, drag));
-    if (Math.abs(next - previous) > 0.01) drag.moved = true;
-    updateSwipeProgress(next);
-  };
-
-  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>): void => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Same rationale as setPointerCapture above — synthetic events
-      // may not own a real capture to release.
-    }
+  const finishDrag = (committed: boolean): void => {
     dragRef.current = null;
     setIsDragging(false);
-    const committed = props.canCommit && drag.moved && progressRef.current >= COMMIT_THRESHOLD;
-    // Always bookend the procedural audio. `committed=true` plays the
-    // ding chime; `committed=false` plays the miss tone — covers BOTH
-    // "released too early" AND "swiped fully on a disabled affordance"
-    // (since the swipe was tracked but never qualified for a commit).
-    // The win/loss SFX for the equation itself still fires later from
-    // useEvaluateHandler.
     stopSwipeProgress(committed);
     if (committed) {
       // Snap to full + brief hold so the kid sees the bar fill before
@@ -162,18 +113,65 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
       setProgressValue(1);
       window.setTimeout(() => {
         props.onCommit();
-        // Reset for the next round. If the parent flips to the
-        // win-state (different component), this state is GC'd anyway;
-        // for a loss it leaves the track ready for the next try.
         setCommitting(false);
         setProgressValue(0);
       }, COMMIT_HOLD_MS);
     } else {
-      // Spring back. We don't `setIsDragging(false)` AGAIN here — the
-      // existing transition class handles the snap because isDragging
-      // already flipped off above.
+      // Spring back via the !isDragging transition class above.
       setProgressValue(0);
     }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (committing) return;
+    if (dragRef.current) return; // already dragging — ignore second pointer
+    const trackBox = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const measuredTrackWidth = trackBox.width || trackWidth;
+    if (!props.canCommit) {
+      // Disabled grab — fire the optional callback so the parent can
+      // surface its "fill out the board" prompt; the rest of the drag
+      // still tracks the finger so the kid gets tactile feedback,
+      // committing just no-ops on release.
+      props.onDisabledAttempt?.();
+    }
+    const drag: DragSession = {
+      pointerId: e.pointerId,
+      trackLeft: trackBox.left,
+      trackWidth: measuredTrackWidth,
+      moved: false,
+    };
+    dragRef.current = drag;
+    setIsDragging(true);
+    // Kick the procedural oscillator. Web Audio unlocks on this
+    // gesture (iOS Safari requires a user gesture to resume).
+    startSwipeProgress();
+    const initial = setProgressValue(progressForClientX(e.clientX, drag));
+    updateSwipeProgress(initial);
+
+    // Window listeners — own every subsequent move/up event for this
+    // pointer regardless of where the cursor goes. Same handlers also
+    // catch pointercancel so a system gesture (iOS Safari hands the
+    // gesture off to the OS) cleanly bookends the audio + state.
+    const onWindowMove = (ev: PointerEvent): void => {
+      const current = dragRef.current;
+      if (!current || current.pointerId !== ev.pointerId) return;
+      const previous = progressRef.current;
+      const next = setProgressValue(progressForClientX(ev.clientX, current));
+      if (Math.abs(next - previous) > 0.01) current.moved = true;
+      updateSwipeProgress(next);
+    };
+    const onWindowEnd = (ev: PointerEvent): void => {
+      const current = dragRef.current;
+      if (!current || current.pointerId !== ev.pointerId) return;
+      window.removeEventListener("pointermove", onWindowMove);
+      window.removeEventListener("pointerup", onWindowEnd);
+      window.removeEventListener("pointercancel", onWindowEnd);
+      const committed = props.canCommit && current.moved && progressRef.current >= COMMIT_THRESHOLD;
+      finishDrag(committed);
+    };
+    window.addEventListener("pointermove", onWindowMove);
+    window.addEventListener("pointerup", onWindowEnd);
+    window.addEventListener("pointercancel", onWindowEnd);
   };
 
   // Knob style — pinned at right at rest, translateX(-progress * max)
@@ -219,9 +217,6 @@ export const SwipeToEvaluate = defineComponent(SwipeToEvaluatePropsSchema, (prop
       <div
         ref={trackRef}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
         className={`relative w-full touch-none overflow-hidden rounded-full border-2 ${trackToneClass}`}
         style={{ height: TRACK_HEIGHT_PX }}
       >

@@ -110,8 +110,14 @@ export function setProceduralVolume(value: number): void {
 // in across the upper half of the swipe (p² curve) so the kid hears a
 // clean tone at first, then the energy builds toward the commit.
 
-const SWIPE_FREQ_MIN_HZ = 220;
-const SWIPE_FREQ_MAX_HZ = 1100;
+// Two octaves below the previous A3 → C#6 range. The lower register
+// reads as "low rumble building" instead of "kettle whistle rising",
+// which is what the user wanted — less piercing on the iPad speaker
+// AND more "charging energy" than "approaching siren". Grit layer
+// (2× ratio below) lifts the upper harmonics so the cue still cuts
+// through ambient noise.
+const SWIPE_FREQ_MIN_HZ = 55;
+const SWIPE_FREQ_MAX_HZ = 275;
 const SWIPE_GAIN_BASE = 0.12;
 const SWIPE_GAIN_MAX = 0.55;
 const SWIPE_GRIT_FREQ_RATIO = 2;

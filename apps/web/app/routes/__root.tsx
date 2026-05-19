@@ -8,22 +8,23 @@ import { idbHydrationPromise } from "~/state/hydration";
 // Dev-only TanStack DevTools host + Router plugin. The `import.meta.env.DEV`
 // ternary is statically known at build time, so Vite tree-shakes the lazy()
 // branch (and its dynamic imports) out of the production bundle.
-const TanStackDevtools = import.meta.env.DEV
-  ? lazy(async () => {
-      const [{ TanStackDevtools: Host }, { TanStackRouterDevtoolsPanel }] = await Promise.all([
-        import("@tanstack/react-devtools"),
-        import("@tanstack/react-router-devtools"),
-      ]);
-      return {
-        default: () => (
-          <Host
-            config={{ position: "bottom-right" }}
-            plugins={[{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> }]}
-          />
-        ),
-      };
-    })
-  : null;
+const TanStackDevtools =
+  import.meta.env.DEV && import.meta.env.VITE_ENABLE_TANSTACK_DEVTOOLS === "true"
+    ? lazy(async () => {
+        const [{ TanStackDevtools: Host }, { TanStackRouterDevtoolsPanel }] = await Promise.all([
+          import("@tanstack/react-devtools"),
+          import("@tanstack/react-router-devtools"),
+        ]);
+        return {
+          default: () => (
+            <Host
+              config={{ position: "bottom-right" }}
+              plugins={[{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+            />
+          ),
+        };
+      })
+    : null;
 
 export const Route = createRootRoute({
   head: () => ({

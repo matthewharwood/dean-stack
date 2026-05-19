@@ -24,6 +24,10 @@ function resolveBase(): string {
   return raw.endsWith("/") ? raw : `${raw}/`;
 }
 
+function enableTanStackDevtools(): boolean {
+  return process.env.VITE_ENABLE_TANSTACK_DEVTOOLS === "true";
+}
+
 export default defineConfig(async ({ mode }) => {
   // Vite's config bundler runs in a Node subprocess that does NOT inherit
   // Bun's auto-loaded .env. Fill in missing vars from .env files, but never
@@ -49,9 +53,10 @@ export default defineConfig(async ({ mode }) => {
     },
     plugins: [
       // Browser → editor source linking via the TanStack DevTools client.
-      // Pure Vite plugin; injects a tiny dev-mode runtime that the @tanstack/react-devtools
-      // host picks up. Runs in dev only — no-op for `vite build`.
-      tanstackDevtools(),
+      // Opt-in locally: the plugin starts a sidecar event-bus server during
+      // `vite dev`, and non-EADDRINUSE bind failures leave Vite waiting before
+      // it prints the localhost URL. GH Pages never runs this path.
+      ...(enableTanStackDevtools() ? tanstackDevtools() : []),
       ...sharedPlugins(),
       tanstackStart({
         srcDirectory: "app",
