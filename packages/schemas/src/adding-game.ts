@@ -376,6 +376,67 @@ export type GameStatus = z.infer<typeof GameStatusSchema>;
 export const EnemyEncountersSchema = z.record(z.string(), z.int().min(0)).default({});
 export type EnemyEncounters = z.infer<typeof EnemyEncountersSchema>;
 
+// ───── Echo Crystals (gacha-style upgrades) ──────────────────────────────
+// A kid-safe collection system layered over the 12-round campaign. The kid
+// CHOOSES one of three crystals at every odd-numbered round transition
+// (R1, R3, R5, R7, R9, R11). Six pulls per playthrough; 18 crystals in the
+// pool; ~3 full playthroughs collects them all. No tiers, no duplicates,
+// no RNG inside the pull moment itself — only which 3 options appear is
+// randomized (within category constraints) per pull.
+//
+// See: apps/web/app/games/adding-game/crystals.ts for the metadata
+// registry (name, color, icon, description, applied effect).
+export const CrystalCategorySchema = z.enum([
+  "tide-sigil", // Ambient cosmetic — modifies the water canvas / page bg vfx
+  "card-charm", // Per-card visual flourish — modifies the DraggableCard render
+  "crew-bond", // Pilot-specific buff — only active when the bound pilot is selected
+  "math-tool", // Quiet helper — assist threshold, "off by N" badge, prettier hints
+  "echo-magic", // Gameplay surprise — lucky-strike, decorative healing puddle
+]);
+export type CrystalCategory = z.infer<typeof CrystalCategorySchema>;
+
+export const CrystalIdSchema = z.enum([
+  // Tide Sigils (4)
+  "bioluminescent-trail",
+  "bubble-burst",
+  "caustic-light",
+  "marine-snow",
+  // Card Charms (4)
+  "phosphor-numerals",
+  "soft-hover",
+  "edge-coral",
+  "whisper-scale",
+  // Crew Bonds (5) — one per "active" pilot in the first batch
+  "maras-compass",
+  "orens-ledger",
+  "sables-edge",
+  "pellas-keel",
+  "ivos-bell",
+  // Math Tools (3)
+  "counting-pearls",
+  "echo-listener",
+  "gentle-tide",
+  // Echo Magic (2)
+  "lucky-strike",
+  "tide-pool",
+]);
+export type CrystalId = z.infer<typeof CrystalIdSchema>;
+
+// The round-trigger map. Pulls fire after the kid completes a round whose
+// index appears here. Validated at runtime so a future "every round" cadence
+// can't slip in without a deliberate schema edit.
+export const PULL_TRIGGER_ROUNDS = [1, 3, 5, 7, 9, 11] as const;
+export type PullTriggerRound = (typeof PULL_TRIGGER_ROUNDS)[number];
+
+// Persisted between "round just won" and "kid taps a card". If the kid
+// closes the tab mid-pull, on reopen we restore EXACTLY the same three
+// options (no re-shuffle) so the gacha moment feels stable, not RNG-soup.
+export const PendingPullSchema = z.object({
+  triggeredAfterRound: z.int().min(1).max(11),
+  options: z.array(CrystalIdSchema).length(3),
+});
+export type PendingPull = z.infer<typeof PendingPullSchema>;
+
 // IDB-persisted root. Singleton — `id` is the IDB key (matches the Settings
 // pattern). round is null when status is idle or ended.
 export const AddingGameStateSchema = z.object({
@@ -388,6 +449,23 @@ export const AddingGameStateSchema = z.object({
   // Defaults to {} so existing IDB rows from before this field was added
   // re-parse cleanly on hydrate — no migration bump needed.
   enemyEncounters: EnemyEncountersSchema,
+  // ───── Echo Crystals state ─────────────────────────────────────────────
+  // All three fields default so existing IDB rows from before the gacha
+  // shipped re-parse without a DB_VERSION bump.
+  //
+  // `crystals`            : ids the kid has collected, in acquisition order.
+  // `pendingPull`         : non-null while a pull ceremony is live (3 options
+  //                         dealt, kid hasn't picked yet). Persisted so a
+  //                         mid-pull reload restores the same three cards.
+  // `nextPullAfterRound`  : the next entry in PULL_TRIGGER_ROUNDS the kid
+  //                         is eligible for. Starts at 1; advances when a
+  //                         pull resolves. Re-entering R1 after a pull
+  //                         already resolved at R1 does NOT re-trigger.
+  crystals: z.array(CrystalIdSchema).default([]),
+  pendingPull: PendingPullSchema.nullable().default(null),
+  // Tightened to a literal union so the inferred TS type matches
+  // PullTriggerRound exactly — no cast at the route boundary.
+  nextPullAfterRound: z.literal([1, 3, 5, 7, 9, 11]).default(1),
 });
 export type AddingGameState = z.infer<typeof AddingGameStateSchema>;
 export const ADDING_GAME_DEFAULT: AddingGameState = AddingGameStateSchema.parse({});

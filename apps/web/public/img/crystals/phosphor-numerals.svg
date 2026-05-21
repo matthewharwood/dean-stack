@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Phosphor Numerals crystal">
+  <defs>
+    <linearGradient id="a" x1="70" y1="207" x2="184" y2="49" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#327967"/>
+      <stop offset=".55" stop-color="#b8f0e0"/>
+      <stop offset="1" stop-color="#f4fff9"/>
+    </linearGradient>
+    <filter id="g" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M83 49h90c15 0 25 10 25 25v108c0 15-10 25-25 25H83c-15 0-25-10-25-25V74c0-15 10-25 25-25Z" fill="#183c44" stroke="#b8f0e0" stroke-width="4" opacity=".72"/>
+  <path d="M91 65h74c9 0 17 8 17 17v92c0 9-8 17-17 17H91c-9 0-17-8-17-17V82c0-9 8-17 17-17Z" fill="url(#a)" stroke="#f0fff9" stroke-width="3" filter="url(#g)"/>
+  <g fill="#f6fffb" filter="url(#g)">
+    <circle cx="105" cy="101" r="9"/><circle cx="128" cy="101" r="9"/><circle cx="151" cy="101" r="9"/>
+    <circle cx="105" cy="128" r="9"/><circle cx="151" cy="128" r="9"/>
+    <circle cx="105" cy="155" r="9"/><circle cx="128" cy="155" r="9"/><circle cx="151" cy="155" r="9"/>
+  </g>
+  <path d="M92 83c22 9 48 9 76-1" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".48"/>
+  <path d="M79 207 51 222M177 207l28 15" fill="none" stroke="#b8f0e0" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+</svg>

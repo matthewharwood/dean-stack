@@ -83,6 +83,28 @@ const SFX_REGISTRY_LITERAL = {
     policy: "restart",
   },
 
+  // Echo-Crystal pull ceremony (ElevenLabs-generated, see
+  // apps/web/app/components/crystal-pull-panel/index.tsx for the
+  // T=0 → T=10s storyboard). Build-up plays on panel mount and
+  // sustains until the kid taps a card; select fires on tap; release
+  // fires at the flip apex of the chosen crystal.
+  //
+  // `restart` policy on all three so a rapid double-tap or mid-pull
+  // reload cancels any in-flight previous play instead of stacking.
+  "event-pull-buildup": {
+    path: "sfx/event/pull-buildup.mp3",
+    policy: "restart",
+    gain: 0.7,
+  },
+  "event-pull-select": {
+    path: "sfx/event/pull-select.mp3",
+    policy: "restart",
+  },
+  "event-pull-release": {
+    path: "sfx/event/pull-release.mp3",
+    policy: "restart",
+  },
+
   // ─── Foley (card interactions) ─────────────────────────────────────
   // Pickup / drop sounds refreshed via ElevenLabs SFX-gen (naturalistic
   // tabletop Foley — paper-on-felt rustle for pickup, oak-board click
@@ -374,6 +396,86 @@ const SFX_REGISTRY_LITERAL = {
   },
   "pronounce-abyssal-fleetmind-echo": {
     path: "sfx/pronounce/abyssal-fleetmind-echo.mp3",
+    policy: "restart",
+  },
+
+  // ─── Echo-Crystal lore narration (same voice id as enemies/pilots) ─
+  // One TTS clip per crystal that reads "<Crystal Name>. <description>"
+  // aloud. Wired to the PronounceButton on the CrystalPullPanel reveal
+  // info card so the kid can re-listen to what they just picked up;
+  // also surfaced on the CollectionBar tooltip so they can revisit any
+  // owned crystal's lore. `restart` policy so a rapid double-tap cancels
+  // the previous play rather than stacking.
+  "pronounce-crystal-bioluminescent-trail": {
+    path: "sfx/pronounce/crystal-bioluminescent-trail.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-bubble-burst": {
+    path: "sfx/pronounce/crystal-bubble-burst.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-caustic-light": {
+    path: "sfx/pronounce/crystal-caustic-light.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-marine-snow": {
+    path: "sfx/pronounce/crystal-marine-snow.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-phosphor-numerals": {
+    path: "sfx/pronounce/crystal-phosphor-numerals.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-soft-hover": {
+    path: "sfx/pronounce/crystal-soft-hover.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-edge-coral": {
+    path: "sfx/pronounce/crystal-edge-coral.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-whisper-scale": {
+    path: "sfx/pronounce/crystal-whisper-scale.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-maras-compass": {
+    path: "sfx/pronounce/crystal-maras-compass.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-orens-ledger": {
+    path: "sfx/pronounce/crystal-orens-ledger.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-sables-edge": {
+    path: "sfx/pronounce/crystal-sables-edge.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-pellas-keel": {
+    path: "sfx/pronounce/crystal-pellas-keel.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-ivos-bell": {
+    path: "sfx/pronounce/crystal-ivos-bell.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-counting-pearls": {
+    path: "sfx/pronounce/crystal-counting-pearls.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-echo-listener": {
+    path: "sfx/pronounce/crystal-echo-listener.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-gentle-tide": {
+    path: "sfx/pronounce/crystal-gentle-tide.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-lucky-strike": {
+    path: "sfx/pronounce/crystal-lucky-strike.mp3",
+    policy: "restart",
+  },
+  "pronounce-crystal-tide-pool": {
+    path: "sfx/pronounce/crystal-tide-pool.mp3",
     policy: "restart",
   },
 } as const;

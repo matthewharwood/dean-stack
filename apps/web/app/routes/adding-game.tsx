@@ -3,11 +3,18 @@ import {
   type Attack,
   type CardCatalog,
   type Comparator,
+  type CrystalId,
+  type EnemyTemplate,
   type Equation as EquationData,
   HAND_SIZE,
   type HandSlot,
   type Operator,
   PLAYER_DEFAULT,
+  type PlayerProgress,
+  type PlayerTemplate,
+  PULL_TRIGGER_ROUNDS,
+  type PullTriggerRound,
+  type RoundEnemy,
   type RoundOutcome,
 } from "@dean-stack/schemas";
 import { createFileRoute } from "@tanstack/react-router";
@@ -25,7 +32,11 @@ import {
 } from "react";
 
 import { AttackButton } from "~/components/attack-button";
+import { BubbleBurstFx } from "~/components/bubble-burst-fx";
 import { Card } from "~/components/card";
+import { CollectionBar } from "~/components/collection-bar";
+import { CrystalEffectsLayer } from "~/components/crystal-effects-layer";
+import { CrystalPullPanel } from "~/components/crystal-pull-panel";
 import { DevMenu } from "~/components/dev-menu";
 import { EnemyAvatar } from "~/components/enemy-avatar";
 import { HintTooltip } from "~/components/hint-tooltip";
@@ -36,6 +47,7 @@ import { StepperCard } from "~/components/stepper-card";
 import { SwipeToEvaluate } from "~/components/swipe-to-evaluate";
 import { AttackFxLayer } from "~/games/adding-game/attack-fx/layer";
 import { applyAutoAssist } from "~/games/adding-game/auto-assist";
+import { buildPullOptions } from "~/games/adding-game/crystals";
 import { dealRound } from "~/games/adding-game/deal";
 import { DraggableCard, EmptySlot, SlotWrapper } from "~/games/adding-game/drag";
 import { findEnemyTemplate } from "~/games/adding-game/enemies";
@@ -59,8 +71,14 @@ import { isRegistered, type SoundApi, useSound } from "~/sound";
 import { playStepperBlip } from "~/sound/procedural";
 import { addingGameAtom } from "~/state/atoms";
 
-const ENABLE_PIXI_FX =
-  !import.meta.env.SSR && (import.meta.env.PROD || import.meta.env.VITE_ENABLE_PIXI_FX === "true");
+// Pixi-driven FX (water canvas, dive-in intro, round-complete cinematic,
+// attack projectile + per-attack VFX). On in every browser environment;
+// gated only on SSR (Pixi can't render server-side) and an explicit
+// `VITE_DISABLE_PIXI_FX=true` opt-out for the rare case where a contributor
+// wants a leaner dev bundle. Default-ON in dev because the kid IS the
+// dev-server audience (iPad-over-LAN per CLAUDE.md) — without the FX the
+// attack flow looks broken: enemy shakes + reddens but nothing flies.
+const ENABLE_PIXI_FX = !import.meta.env.SSR && import.meta.env.VITE_DISABLE_PIXI_FX !== "true";
 
 const DiveInIntro = lazy(async () => {
   const { DiveInIntro: Component } = await import("~/components/dive-in-intro");
@@ -96,7 +114,16 @@ export const Route = createFileRoute("/adding-game")({
 // content lives there and still benefits from the glass surface).
 type RegionProps = { children?: ReactNode; transparent?: boolean };
 
-function GameBoard({ children }: RegionProps) {
+// Module-level so the GameBoard default-prop value is a stable reference
+// across renders. A `prop = []` literal would create a fresh array each
+// call, breaking identity-based memoization in any downstream consumer
+// (react-doctor catches this exact shape).
+const NO_OWNED_CRYSTALS: readonly CrystalId[] = [];
+
+function GameBoard({
+  children,
+  ownedCrystals = NO_OWNED_CRYSTALS,
+}: RegionProps & { ownedCrystals?: readonly CrystalId[] }) {
   // `select-none` + iOS callout suppression: a long-press on a number / "+"
   // glyph would otherwise trigger Safari's text-selection magnifier or copy
   // menu and eat the pointer events the drag system is listening for.
@@ -107,18 +134,29 @@ function GameBoard({ children }: RegionProps) {
   //     so the kid still sees an oceanic palette).
   //   - `<WaterCanvas />` mounts a Pixi shader on top of that fallback;
   //     when it's running, the shader paints over the CSS gradient.
+  //   - `<CrystalEffectsLayer />` renders Tide-Sigil cosmetics (marine
+  //     snow drift, caustic light pulse) in the SAME z-0 layer as the
+  //     water. The kid sees them floating in the ocean, beneath the UI.
   //   - Grid children sit above the canvas via `relative z-10`. The
   //     panel surfaces use `panel-glass` so the water shows through the
   //     gaps AND subtly through the panels themselves (cards stay
   //     opaque on top).
+  // Crystal-driven className list. Each owned crystal contributes a
+  // `charm-<id>` class that CSS descendant selectors target — zero
+  // prop-threading, any descendant can opt into a charm rule via the
+  // selectors defined under "Card Charm crystal effects" in styles/index.css.
+  const charmClasses = ownedCrystals.map((c) => `charm-${c}`).join(" ");
   return (
-    <main className="water-bg relative h-dvh font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
+    <main
+      className={`water-bg relative h-dvh font-openrunde select-none [-webkit-touch-callout:none] [-webkit-user-select:none] ${charmClasses}`}
+    >
       <div className="pointer-events-none absolute inset-0 z-0">
         {ENABLE_PIXI_FX ? (
           <Suspense fallback={null}>
             <WaterCanvas />
           </Suspense>
         ) : null}
+        <CrystalEffectsLayer ownedCrystals={[...ownedCrystals]} />
       </div>
       <div className="relative z-10 grid h-full grid-cols-[1fr_2fr_1fr] gap-[18px] p-[18px]">
         {children}
@@ -1100,6 +1138,105 @@ function useGameCelebration(
   return { celebration, clear: () => setCelebration(null) };
 }
 
+// ── Echo Crystal pull trigger ──────────────────────────────────────────
+// Mirrors useGameCelebration: watches level-index transitions and fires
+// when the kid crosses a ROUND boundary FROM a round listed in
+// PULL_TRIGGER_ROUNDS. On match, writes a `pendingPull` (the 3 options
+// the kid will see) into IDB-backed state via setGame. The panel reads
+// pendingPull and unmounts itself by clearing it through onSelect.
+//
+// The trigger is idempotent on `nextPullAfterRound`: once a pull has
+// resolved for round N, `nextPullAfterRound` advances past N, so the kid
+// crossing R1 again on a replay won't re-trigger the same pull (until
+// they reset their state via the dev menu's "Clear state").
+function useCrystalPullTrigger(
+  game: AddingGameState,
+  setGame: (updater: (prev: AddingGameState) => AddingGameState) => void,
+  enabled: boolean,
+): void {
+  const prevLevelRef = useRef<number | null>(game.round?.index ?? null);
+  useEffect(() => {
+    if (!enabled) {
+      prevLevelRef.current = game.round?.index ?? null;
+      return;
+    }
+    const curr = game.round?.index ?? null;
+    const prev = prevLevelRef.current;
+    prevLevelRef.current = curr;
+    if (prev == null) return;
+    if (!ROUND_BOUNDARIES.includes(prev)) return;
+    const advanced = curr != null && curr > prev;
+    const completed = prev === FINAL_LEVEL_INDEX && (curr == null || game.status === "ended");
+    if (!advanced && !completed) return;
+    const fromRound = roundOf(prev);
+    if (!(PULL_TRIGGER_ROUNDS as readonly number[]).includes(fromRound)) return;
+    setGame((prevState) => {
+      if (prevState.nextPullAfterRound !== fromRound) return prevState;
+      if (prevState.pendingPull) return prevState;
+      const triggered = fromRound as PullTriggerRound;
+      const options = buildPullOptions(triggered, prevState.crystals);
+      return {
+        ...prevState,
+        pendingPull: { triggeredAfterRound: triggered, options },
+      };
+    });
+  }, [game.round?.index, game.status, enabled, setGame]);
+}
+
+// Advance to the next entry in PULL_TRIGGER_ROUNDS. If the kid is already
+// past the last trigger (R11), stay there — subsequent boundary crosses
+// won't match and no further pulls fire.
+function advancePullTrigger(curr: PullTriggerRound): PullTriggerRound {
+  const idx = (PULL_TRIGGER_ROUNDS as readonly number[]).indexOf(curr);
+  const next = PULL_TRIGGER_ROUNDS[idx + 1];
+  return (next ?? curr) as PullTriggerRound;
+}
+
+// Bubble Burst Tide Sigil — one burst per winning evaluation. Watches
+// the round outcome and bumps an integer trigger that the BubbleBurstFx
+// key listens to (remounting the burst so the CSS keyframe restarts
+// cleanly). When the kid doesn't own the crystal, `enabled` stays false
+// and the component renders nothing — zero overhead until acquired.
+function useBubbleBurstFx(game: AddingGameState): ReactNode {
+  const [trigger, setTrigger] = useState(0);
+  const prevWonRef = useRef(false);
+  const wonNow = game.round?.outcome?.won === true;
+  useEffect(() => {
+    if (wonNow && !prevWonRef.current) setTrigger((t) => t + 1);
+    prevWonRef.current = wonNow;
+  }, [wonNow]);
+  const enabled = game.crystals.includes("bubble-burst") && trigger > 0;
+  return <BubbleBurstFx key={trigger} enabled={enabled} trigger={trigger} />;
+}
+
+// Compose the trigger + handler + render ternary into one hook so
+// AddingGame stays under react-doctor's giant-component threshold.
+// Returns the panel node (or null) AND the trigger effect runs as a
+// side effect of the hook. The caller passes `celebration` so the panel
+// holds off until the round-complete cinematic clears.
+function useCrystalPullSession(
+  game: AddingGameState,
+  setGame: (updater: (prev: AddingGameState) => AddingGameState) => void,
+  celebrationActive: boolean,
+): ReactNode {
+  useCrystalPullTrigger(game, setGame, true);
+  if (!game.pendingPull || celebrationActive) return null;
+  const handleSelect = (id: CrystalId): void => {
+    setGame((prev) => ({
+      ...prev,
+      crystals: prev.crystals.includes(id) ? prev.crystals : [...prev.crystals, id],
+      pendingPull: null,
+      nextPullAfterRound: advancePullTrigger(prev.nextPullAfterRound),
+    }));
+  };
+  return (
+    <CrystalPullPanel
+      options={game.pendingPull.options as [CrystalId, CrystalId, CrystalId]}
+      onSelect={handleSelect}
+    />
+  );
+}
+
 // Hint banner state — owns the hint object, the recently-shown id, the
 // outcome-tracking ref, and the two effects (outcome→hint, pointerdown
 // dismissal). Returns the live hint + a stable dismiss callback.
@@ -1367,6 +1504,66 @@ function useAutoplayCharacterNames(state: AddingGameState, sfx: SoundApi): void 
   }, [pilotId, sfx]);
 }
 
+// Splash-gated panel children — three sibling nodes that all collapse
+// to null on the title screen. Extracted so AddingGame's body stays
+// under react-doctor's 300-line giant-component threshold.
+interface PanelChildrenArgs {
+  isSplash: boolean;
+  enemyTemplate: EnemyTemplate | null;
+  roundEnemy: RoundEnemy | null;
+  game: AddingGameState;
+  dragLocked: boolean;
+  handleSwap: (source: SlotLocator, target: SlotLocator) => void;
+  currentPlayer: PlayerTemplate | null;
+  currentIndex: number;
+  currentProgress: PlayerProgress | null;
+  currentXpThreshold: number | null;
+  handleCyclePlayer: () => void;
+}
+
+function buildPanelChildren(args: PanelChildrenArgs): {
+  enemyAvatarNode: ReactNode;
+  handNode: ReactNode;
+  playerAvatarNode: ReactNode;
+} {
+  if (args.isSplash) {
+    return { enemyAvatarNode: null, handNode: null, playerAvatarNode: null };
+  }
+  return {
+    enemyAvatarNode: (
+      <EnemyAvatar
+        key={args.enemyTemplate?.id ?? "no-enemy"}
+        enemy={args.enemyTemplate}
+        hp={args.roundEnemy?.hp ?? null}
+        maxHp={args.game.round ? (findLevel(args.game.round.index)?.hp ?? null) : null}
+        encounters={encountersFor(args.game.enemyEncounters, args.roundEnemy?.templateId)}
+      />
+    ),
+    handNode: (
+      <Hand
+        hand={args.game.player.hand}
+        cards={args.game.cards}
+        dragLocked={args.dragLocked}
+        display={
+          args.game.round?.equation.shape === "find-missing-result" ? "ten-frame" : "numeric"
+        }
+        onSwap={args.handleSwap}
+      />
+    ),
+    playerAvatarNode: (
+      <PlayerAvatar
+        key={args.currentPlayer?.id ?? "no-pilot"}
+        player={args.currentPlayer}
+        profileIndex={args.currentPlayer && args.currentIndex >= 0 ? args.currentIndex + 1 : null}
+        profileCount={args.currentPlayer ? PLAYER_REGISTRY.length : null}
+        onCycle={args.currentPlayer ? args.handleCyclePlayer : null}
+        progress={args.currentProgress}
+        xpThreshold={args.currentXpThreshold}
+      />
+    ),
+  };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 
 function AddingGame() {
@@ -1392,6 +1589,8 @@ function AddingGame() {
     game.status,
     ENABLE_PIXI_FX,
   );
+  const crystalPullNode = useCrystalPullSession(game, setGame, celebration !== null);
+  const bubbleBurstNode = useBubbleBurstFx(game);
   const { hint, dismiss: dismissHint } = useGameHints(game);
 
   // Begin: kid clicked "Begin" on splash. Mount the dive-in; the deal
@@ -1527,38 +1726,22 @@ function AddingGame() {
     : null;
   const currentXpThreshold = currentProgress ? xpThresholdForLevel(currentProgress.level) : null;
 
-  // Splash-gated panel children. Hoisted so the JSX below stays a
-  // single line per panel — keeps AddingGame under react-doctor's
-  // giant-component threshold.
-  const enemyAvatarNode = isSplash ? null : (
-    <EnemyAvatar
-      key={enemyTemplate?.id ?? "no-enemy"}
-      enemy={enemyTemplate}
-      hp={roundEnemy?.hp ?? null}
-      maxHp={game.round ? (findLevel(game.round.index)?.hp ?? null) : null}
-      encounters={encountersFor(game.enemyEncounters, roundEnemy?.templateId)}
-    />
-  );
-  const handNode = isSplash ? null : (
-    <Hand
-      hand={game.player.hand}
-      cards={game.cards}
-      dragLocked={dragLocked}
-      display={game.round?.equation.shape === "find-missing-result" ? "ten-frame" : "numeric"}
-      onSwap={handleSwap}
-    />
-  );
-  const playerAvatarNode = isSplash ? null : (
-    <PlayerAvatar
-      key={currentPlayer?.id ?? "no-pilot"}
-      player={currentPlayer}
-      profileIndex={currentPlayer && currentIndex >= 0 ? currentIndex + 1 : null}
-      profileCount={currentPlayer ? PLAYER_REGISTRY.length : null}
-      onCycle={currentPlayer ? handleCyclePlayer : null}
-      progress={currentProgress}
-      xpThreshold={currentXpThreshold}
-    />
-  );
+  // Splash-gated panel children. All three nodes are bundled into one
+  // helper call so AddingGame's body stays under react-doctor's
+  // 300-line giant-component threshold.
+  const { enemyAvatarNode, handNode, playerAvatarNode } = buildPanelChildren({
+    isSplash,
+    enemyTemplate,
+    roundEnemy,
+    game,
+    dragLocked,
+    handleSwap,
+    currentPlayer,
+    currentIndex,
+    currentProgress,
+    currentXpThreshold,
+    handleCyclePlayer,
+  });
 
   return (
     <>
@@ -1576,7 +1759,9 @@ function AddingGame() {
           <RoundCompleteFx active fromRound={celebration.fromRound} onComplete={clearCelebration} />
         </Suspense>
       ) : null}
-      <GameBoard>
+      {crystalPullNode}
+      {bubbleBurstNode}
+      <GameBoard ownedCrystals={game.crystals}>
         <LeftCol transparent={isSplash}>{enemyAvatarNode}</LeftCol>
         <GameMain>
           <Top transparent={isSplash}>
@@ -1590,6 +1775,7 @@ function AddingGame() {
                   totalLevels={FINAL_LEVEL_INDEX}
                 />
                 <MistakesBadge count={game.round.wrongAttempts ?? 0} />
+                <CollectionBar ownedCrystals={[...game.crystals]} />
               </div>
             ) : null}
           </Top>

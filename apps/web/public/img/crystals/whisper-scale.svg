@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Whisper Scale crystal">
+  <defs>
+    <radialGradient id="a" cx="46%" cy="36%" r="72%">
+      <stop stop-color="#fffaff"/>
+      <stop offset=".52" stop-color="#d5c9ff"/>
+      <stop offset="1" stop-color="#7869b6"/>
+    </radialGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g fill="none" stroke="#d5c9ff" stroke-linecap="round" opacity=".65">
+    <path d="M51 104c24-25 50-38 77-38s53 13 77 38" fill="none" stroke-width="5"/>
+    <path d="M39 133c28-31 58-47 89-47s61 16 89 47" fill="none" stroke-width="4"/>
+    <path d="M56 166c23-25 47-37 72-37s49 12 72 37" fill="none" stroke-width="4"/>
+  </g>
+  <path d="M128 46c48 33 67 71 57 112-8 31-30 50-57 63-27-13-49-32-57-63-10-41 9-79 57-112Z" fill="url(#a)" stroke="#f4efff" stroke-width="4" filter="url(#g)"/>
+  <path d="M128 46v175M82 116c32 0 62-17 91-51M77 151c38-12 72-5 102 20" fill="none" stroke="#fff" stroke-width="3" opacity=".5"/>
+  <path d="M101 93c18 9 38 7 59-6" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".55"/>
+</svg>

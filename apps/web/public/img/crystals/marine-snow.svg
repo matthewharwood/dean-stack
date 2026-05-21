@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Marine Snow crystal">
+  <defs>
+    <radialGradient id="a" cx="45%" cy="35%" r="70%">
+      <stop stop-color="#ffffff"/>
+      <stop offset=".52" stop-color="#e7f6ff"/>
+      <stop offset="1" stop-color="#7aa9c6"/>
+    </radialGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g fill="#f8fdff" opacity=".85">
+    <circle cx="55" cy="49" r="4"/><circle cx="91" cy="83" r="3"/><circle cx="204" cy="54" r="5"/>
+    <circle cx="47" cy="140" r="3"/><circle cx="213" cy="143" r="4"/><circle cx="173" cy="212" r="3"/>
+    <circle cx="86" cy="218" r="5"/><circle cx="197" cy="98" r="2.5"/>
+  </g>
+  <g filter="url(#g)">
+    <path d="M128 37 173 72l17 58-31 72-31 19-31-19-31-72 17-58Z" fill="url(#a)" stroke="#f8fdff" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M128 37v184M83 72l45 58 45-58M66 130h124M97 202l31-72 31 72" fill="none" stroke="#fff" stroke-width="3" opacity=".55"/>
+    <path d="M104 77c17 9 34 8 52-4" fill="none" stroke="#fff" stroke-width="7" opacity=".65" stroke-linecap="round"/>
+  </g>
+  <g fill="none" stroke="#e7f6ff" stroke-linecap="round" opacity=".8">
+    <path d="M37 91h22M48 80v22M203 185h20M213 175v20M61 196l13 13M74 196l-13 13" fill="none" stroke-width="4"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Echo Listener crystal">
+  <defs>
+    <radialGradient id="a" cx="43%" cy="34%" r="72%">
+      <stop stop-color="#f7fdff"/>
+      <stop offset=".5" stop-color="#b5d6e8"/>
+      <stop offset="1" stop-color="#517b93"/>
+    </radialGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M130 38c44 20 68 51 68 88 0 50-41 84-92 94-22-22-37-51-37-84 0-45 27-82 61-98Z" fill="url(#a)" stroke="#eef9ff" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M144 79c-30 0-53 23-53 55 0 24 14 43 36 48 25-13 39-30 39-50 0-15-11-26-26-26-13 0-24 10-24 23 0 9 6 16 15 16" fill="none" stroke="#173b48" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+  <path d="M144 79c-30 0-53 23-53 55 0 24 14 43 36 48" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+  <g fill="none" stroke="#b5d6e8" stroke-linecap="round" opacity=".78">
+    <path d="M43 97c-17 20-17 42 0 65" fill="none" stroke-width="6"/>
+    <path d="M25 78c-28 37-28 76 0 117" fill="none" stroke-width="5"/>
+    <path d="M207 96c17 20 17 42 0 65" fill="none" stroke-width="6"/>
+  </g>
+</svg>
