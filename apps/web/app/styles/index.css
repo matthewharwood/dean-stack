@@ -153,6 +153,28 @@
      glyph text itself stays pin-sharp. */
   --animate-op-pulse: op-pulse 2800ms ease-in-out infinite;
 
+  /* ── Echo Crystal effects ───────────────────────────────────────────
+     Cosmetic animations the kid unlocks via the gacha pull system. All
+     of them are intentionally subtle (the kid is doing math; the layer
+     should never compete for attention) and all of them honour
+     prefers-reduced-motion via the global rule near the bottom of
+     this file. Naming convention: `crystal-<id>` so the source-of-
+     truth in apps/web/app/games/adding-game/crystals.ts maps 1:1 to
+     the CSS animation by id.
+
+     marine-snow — particle drift from top to bottom. Each <span>
+       starts above the viewport with `top: -8px` and the keyframe
+       translates it downward by 105vh while modulating opacity so
+       particles fade in at the top and out at the bottom. Per-particle
+       randomisation (left%, duration, delay, size) lives in the
+       CrystalEffectsLayer component as a module-level constant.
+
+     caustic-light — slow pulse of the two radial gradients painted
+       inline on the layer. Brightness modulated from 1 → 1.25 over
+       8s so the trench "breathes" with a sun-glint feel. */
+  --animate-crystal-marine-snow: crystal-marine-snow linear infinite;
+  --animate-crystal-caustic-pulse: crystal-caustic-pulse 8000ms ease-in-out infinite;
+
   /* Player level-up celebration — green vignette + per-particle confetti
      burst, scoped to the right-column avatar container. Mirrors the
      damage-vignette structure (radial gradient with a transparent
@@ -698,6 +720,163 @@
   .water-bg {
     animation: none;
   }
+
+  /* Echo-Crystal cosmetic animations — kid still sees the EFFECT (snow
+     particles are visible, caustic light still tints), but no motion. */
+
+  @keyframes crystal-marine-snow {
+    from {
+      transform: translateY(0);
+      opacity: 0.3;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 0.3;
+    }
+  }
+
+  @keyframes crystal-caustic-pulse {
+    from {
+      filter: brightness(1);
+    }
+
+    to {
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes crystal-bubble-rise {
+    from {
+      transform: translate(0, 0) scale(1);
+      opacity: 0;
+    }
+
+    to {
+      transform: translate(0, 0) scale(1);
+      opacity: 0;
+    }
+  }
+}
+
+/* ── Echo Crystal keyframes ──────────────────────────────────────────
+   marine-snow drifts a particle from above the viewport (top: -8px set
+   inline) all the way down past the bottom edge. The opacity envelope
+   fades it in / out so particles appear gracefully at top + bottom. */
+@keyframes crystal-marine-snow {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: var(--initial-opacity, 0.5);
+  }
+
+  90% {
+    opacity: var(--initial-opacity, 0.5);
+  }
+
+  100% {
+    transform: translateY(105vh);
+    opacity: 0;
+  }
+}
+
+@keyframes crystal-caustic-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+/* ── Card Charm crystal effects ──────────────────────────────────────
+   Each owned crystal contributes a `charm-<id>` class on <main>; the
+   rules below target descendant cards via [data-test="card"]. Because
+   the rules live in CSS they incur zero JS cost when the kid hasn't
+   collected that crystal — the descendant selector simply matches
+   nothing on a class-less main.
+
+   Specificity is high enough to override the card's default styling
+   without `!important` (descendant selector + attribute selector).
+   The :not(.crystal-card) escape so the gacha-panel cards themselves
+   never inherit gameplay-card charms. */
+
+.charm-phosphor-numerals [data-test="card"]:not(.crystal-card) {
+  filter: drop-shadow(0 0 4px rgb(184 240 224 / 60%));
+}
+
+.charm-soft-hover [data-test="card"][data-dragging="true"] {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow:
+    0 8px 20px rgb(20 50 80 / 25%),
+    0 2px 4px rgb(20 50 80 / 15%);
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out;
+}
+
+.charm-edge-coral [data-test="card"]:not(.crystal-card) {
+  border-color: rgb(255 183 162 / 70%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 215 200 / 60%),
+    0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.charm-whisper-scale [data-test="card"]:not(.crystal-card) {
+  animation: crystal-whisper-scale 2400ms ease-in-out infinite;
+}
+
+@keyframes crystal-whisper-scale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Bubble Burst Tide Sigil — fires once per correct evaluation. Each
+   bubble lifts ~85vh, drifts laterally via the --bubble-drift custom
+   property the component sets per-bubble, and fades out at the apex
+   so they pop softly instead of vanishing hard. */
+@keyframes crystal-bubble-rise {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.85;
+  }
+
+  100% {
+    transform: translate(var(--bubble-drift, 0), -85vh) scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-crystal-bubble-rise {
+  animation-name: crystal-bubble-rise;
+  animation-timing-function: cubic-bezier(0.25, 0.7, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+
+/* Bioluminescent Trail — Tide-Sigil sibling that lives on the card to
+   keep the effect localised to the kid's drag pointer. Matches the
+   data-dragging attribute set by drag.tsx so the glow only fires while
+   the card is in flight. The glow is keyed to the card's bounding box
+   (no separate element), so it tracks the drag transform automatically. */
+.charm-bioluminescent-trail [data-test="card"][data-dragging="true"] {
+  box-shadow:
+    0 0 24px rgb(127 227 255 / 65%),
+    0 0 48px rgb(127 227 255 / 35%);
 }
 
 /* Pointer-fine variant — true mouse hover only. iPad Safari synthesises a

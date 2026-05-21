@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Mara's Compass crystal">
+  <defs>
+    <radialGradient id="a" cx="44%" cy="34%" r="74%">
+      <stop stop-color="#fff9e8"/>
+      <stop offset=".48" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#9c6c25"/>
+    </radialGradient>
+    <filter id="g" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M128 33 185 70l17 65-35 62-39 25-39-25-35-62 17-65Z" fill="url(#a)" stroke="#fff1c6" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <circle cx="128" cy="128" r="54" fill="#14313a" opacity=".28" stroke="#fff1c6" stroke-width="4"/>
+  <circle cx="128" cy="128" r="39" fill="#ffd27a" opacity=".35" stroke="#573e21" stroke-width="3"/>
+  <path d="M128 72 144 128l-16 56-16-56Z" fill="#fff8df" stroke="#6c4d26" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M72 128h112M128 72v112" fill="none" stroke="#6c4d26" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+  <path d="M97 90c18-13 43-16 63-5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".48"/>
+  <circle cx="128" cy="128" r="7" fill="#fff4cf"/>
+</svg>

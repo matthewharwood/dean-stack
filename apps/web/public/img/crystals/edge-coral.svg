@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Edge Coral crystal">
+  <defs>
+    <linearGradient id="a" x1="75" y1="202" x2="181" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9d5149"/>
+      <stop offset=".5" stop-color="#ffb7a2"/>
+      <stop offset="1" stop-color="#fff0e9"/>
+    </linearGradient>
+    <filter id="g" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M83 61h90c12 0 22 10 22 22v90c0 12-10 22-22 22H83c-12 0-22-10-22-22V83c0-12 10-22 22-22Z" fill="url(#a)" stroke="#fff0e9" stroke-width="4" filter="url(#g)"/>
+  <path d="M83 61c15 26 15 108 0 134M173 61c-17 26-17 108 0 134M61 83c26 13 108 13 134 0M61 173c26-13 108-13 134 0" fill="none" stroke="#fff" stroke-width="3" opacity=".45"/>
+  <g fill="none" stroke="#ff8f7f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#g)">
+    <path d="M58 80c-18-3-27-12-31-27M57 102c-21 4-34 0-45-13M59 155c-19 2-30 10-37 26M196 75c16-6 25-17 26-33M197 107c22 1 35-5 43-20M196 172c18 3 29 12 36 27"/>
+  </g>
+  <g fill="none" stroke="#ffd0c4" stroke-width="4" stroke-linecap="round">
+    <path d="M34 53l14 6M18 89l16 2M22 181l14-8M222 42l-12 10M240 87l-16 5M232 199l-13-9"/>
+  </g>
+</svg>

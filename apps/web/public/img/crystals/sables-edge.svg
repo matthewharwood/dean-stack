@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Sable's Edge crystal">
+  <defs>
+    <linearGradient id="a" x1="66" y1="204" x2="191" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#465466"/>
+      <stop offset=".5" stop-color="#a8b6c7"/>
+      <stop offset="1" stop-color="#f6fbff"/>
+    </linearGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M185 32c-12 58-34 106-67 143l-38-38C117 104 127 80 185 32Z" fill="url(#a)" stroke="#eff5fb" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M185 32 118 175M102 159l45-78" fill="none" stroke="#ffffff" stroke-width="4" opacity=".5" stroke-linecap="round"/>
+  <path d="M73 132 124 183l-20 20-51-51Z" fill="#253140" stroke="#cdd8e4" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M55 188 92 151l14 14-37 37c-5 5-12 5-17 0s-5-10 3-14Z" fill="#a8b6c7" stroke="#eff5fb" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M181 58l28-21M161 86l41-8M137 116l31 18" fill="none" stroke="#f8fcff" stroke-width="5" stroke-linecap="round" filter="url(#g)"/>
+  <circle cx="84" cy="181" r="5" fill="#f8fcff"/>
+</svg>

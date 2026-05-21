@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Lucky Strike crystal">
+  <defs>
+    <linearGradient id="a" x1="82" y1="218" x2="179" y2="33" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9f7a12"/>
+      <stop offset=".52" stop-color="#ffe36c"/>
+      <stop offset="1" stop-color="#fffbe6"/>
+    </linearGradient>
+    <filter id="g" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M128 35 178 75l19 63-31 59-38 24-38-24-31-59 19-63Z" fill="url(#a)" stroke="#fff4ad" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M143 50 88 137h39l-17 70 61-96h-41Z" fill="#fffbe8" stroke="#8e6810" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M92 84c20 8 43 7 68-5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".48"/>
+  <g fill="none" stroke="#ffe36c" stroke-linecap="round" filter="url(#g)">
+    <path d="M52 67l11 13 16-23M203 68l-10 17M220 88l-18 1M45 188l19-7M60 207l6-18" fill="none" stroke-width="6"/>
+  </g>
+</svg>

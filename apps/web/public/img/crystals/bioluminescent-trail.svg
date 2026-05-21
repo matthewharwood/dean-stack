@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Bioluminescent Trail crystal">
+  <defs>
+    <radialGradient id="a" cx="58%" cy="45%" r="54%">
+      <stop offset="0" stop-color="#f4fdff"/>
+      <stop offset=".45" stop-color="#7fe3ff"/>
+      <stop offset="1" stop-color="#267a9a"/>
+    </radialGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M42 183c34-9 58-28 75-57 14-24 34-37 61-40" fill="none" stroke="#7fe3ff" stroke-width="12" opacity=".25" filter="url(#g)"/>
+    <path d="M36 193c37-13 62-33 78-61 14-25 34-40 67-47" fill="none" stroke="#d9fbff" stroke-width="5" opacity=".85"/>
+    <path d="M62 164c30-11 49-29 63-55" fill="none" stroke="#7fe3ff" stroke-width="3" opacity=".7"/>
+  </g>
+  <g filter="url(#g)">
+    <path d="M141 43 196 91l-22 93-70 28-38-61 25-79Z" fill="url(#a)" stroke="#d7fbff" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M141 43 132 128l64-37Z" fill="#c8f7ff" opacity=".65"/>
+    <path d="M132 128 174 184l22-93Z" fill="#4abdd6" opacity=".55"/>
+    <path d="M91 72 132 128l-28 84-38-61Z" fill="#62cfea" opacity=".6"/>
+    <path d="M106 97c24 11 45 6 64-16" fill="none" stroke="#fff" stroke-width="4" opacity=".75"/>
+    <path d="M73 191 91 177m-40 8 12-6m135-101 13-13m-25 132 9 15" fill="none" stroke="#eaffff" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <circle cx="51" cy="171" r="5" fill="#baf6ff"/>
+  <circle cx="83" cy="145" r="3" fill="#eaffff"/>
+  <circle cx="200" cy="67" r="4" fill="#7fe3ff"/>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Caustic Light crystal">
+  <defs>
+    <linearGradient id="a" x1="76" y1="214" x2="181" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b9872f"/>
+      <stop offset=".5" stop-color="#ffe9a8"/>
+      <stop offset="1" stop-color="#fffdf0"/>
+    </linearGradient>
+    <filter id="g" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g stroke="#ffe9a8" stroke-linecap="round" filter="url(#g)" opacity=".55">
+    <path d="M128 23v42" fill="none" stroke-width="8"/>
+    <path d="M54 60l31 31M202 60l-31 31M32 136h43M224 136h-43M69 211l31-31M187 211l-31-31" fill="none" stroke-width="6"/>
+  </g>
+  <path d="M127 49 177 94l-13 78-37 37-38-37-13-78Z" fill="url(#a)" stroke="#fff6cc" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M127 49v160M76 94l51 50 50-50M89 172l38-28 37 28" fill="none" stroke="#fffdf3" stroke-width="3" opacity=".58"/>
+  <path d="M96 91c16 9 39 9 63-7" fill="none" stroke="#fff" stroke-width="8" opacity=".55" stroke-linecap="round"/>
+  <path d="M51 117c23-17 49-25 77-23 33 2 59-6 80-24" fill="none" stroke="#fff2b5" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="M44 157c34-18 67-19 99-3 25 12 46 10 67-5" fill="none" stroke="#fff9d8" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+</svg>

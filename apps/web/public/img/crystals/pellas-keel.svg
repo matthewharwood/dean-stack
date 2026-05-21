@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Pella's Keel crystal">
+  <defs>
+    <linearGradient id="a" x1="72" y1="204" x2="178" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6f5535"/>
+      <stop offset=".55" stop-color="#c9a678"/>
+      <stop offset="1" stop-color="#fff1d7"/>
+    </linearGradient>
+    <filter id="g" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M128 39 181 72l20 56-26 56-47 35-47-35-26-56 20-56Z" fill="url(#a)" stroke="#fff1d7" stroke-width="4" stroke-linejoin="round" filter="url(#g)"/>
+  <path d="M68 116c32 12 88 12 120 0-6 42-25 71-60 87-35-16-54-45-60-87Z" fill="#17333b" opacity=".34" stroke="#fff1d7" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M128 61v142M87 126c27 9 55 9 82 0M98 169c20 8 40 8 60 0" fill="none" stroke="#fbe5bd" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+  <path d="M93 78c21 8 45 7 72-4" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".45"/>
+  <circle cx="86" cy="127" r="5" fill="#fff0cf"/><circle cx="170" cy="127" r="5" fill="#fff0cf"/>
+</svg>
