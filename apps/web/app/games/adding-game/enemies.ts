@@ -448,6 +448,36 @@ Now the thought is huge and dark and wearing a crown of broken little fins. It t
 
 Give it the final true number. The big thought becomes many small thoughts again, and the trench gets quiet enough to hear your own bubbles.`,
   }),
+  // ── R16 boss — Tower Keeper's Shadow ────────────────────────────────
+  // Single sustained boss across all of R16's 12 levels. The kid
+  // ascends a tower with the Tower Keeper at the bottom; each row
+  // chanted clears a tier of the shadow's armor. Prosocial framing:
+  // not a villain — a shadow being filled in with light as the kid
+  // sings. Defeating it = the shadow turns friendly and joins the
+  // chant on the rooftop.
+  //
+  // Image asset isn't shipped yet — we point at a placeholder path
+  // so the avatar renders a friendly fallback ring rather than a
+  // broken image. Replace with a real PNG when the art lands.
+  EnemyTemplateSchema.parse({
+    id: "tower-keepers-shadow",
+    name: "Tower Keeper's Shadow",
+    type: "shadow",
+    rarity: "mythic",
+    maxHp: 100,
+    imageUrl: `${BASE}enemies/tower-keepers-shadow.png`,
+    bio: `## Was
+
+The Tower Keeper used to sing the times tables to every kid who came up the stairs. The chants were warm enough to fill the whole tower. Light bounced off every step.
+
+## Is
+
+One day the chants stopped. The shadow stretched out and covered the whole tower. The Keeper is still down there. The shadow is just *waiting* for someone to sing the chants back.
+
+## To Settle It
+
+Climb every floor. Sing every row. The shadow gets a little smaller each time you nail a beat. When you make it all the way to the rooftop, the shadow turns back into a friend, and the Tower Keeper joins your chant.`,
+  }),
 ];
 
 export function findEnemyTemplate(id: string): EnemyTemplate | undefined {

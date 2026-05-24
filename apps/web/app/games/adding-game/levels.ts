@@ -7,7 +7,7 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 // for find-sum levels; for find-missing-result levels, damage = the kid's
 // chosen result card.
 //
-// TWELVE ROUNDS structure (the kid's progression):
+// SIXTEEN ROUNDS structure (the kid's progression):
 //   Round 1 — addition only, equality.   The "spirits" learning to count.
 //   Round 2 — subtraction only, equality. The same six echoes, but now
 //             the kid needs the inverse operation.
@@ -41,6 +41,54 @@ import type { Comparator, EquationShape, Operator } from "@dean-stack/schemas";
 //              true-false-multiply introduces multiplication at the end
 //              of the campaign as the brand-new concept that warrants
 //              its own mechanic.
+//   Round 13 — same five final swarm echoes one more time (posters cap
+//              at _L2 — same look as R12). find-missing-factor inverts
+//              the R12 mechanic: instead of judging True/False on a
+//              completed `a × b = c`, the kid SOLVES for the missing
+//              factor. Layout: [a locked] × [stepper] = [c locked]; the
+//              stepper card holds the kid's guess and they tap +/- on
+//              it until `a × stepper === c`. Factors capped at 1..10
+//              (the classic times-tables range); stepper clamps to
+//              [0, 10]. Damage = stepper.value (same reward shape as
+//              the R9–R11 stepper rounds — solving the equation IS the
+//              damage).
+//   Round 14 — same five final swarm echoes; posters still _L2.
+//              find-leading-factor flip-flops R13's variable position:
+//              the stepper is on the LEFT now, the static second
+//              factor is in the middle, the product is on the right.
+//              `? × b = c` instead of `a × ? = c`. Mathematically
+//              equivalent (commutativity) but reading direction
+//              differs, which is the pedagogical lesson — "count of
+//              groups" can sit on either side of the size. Same
+//              factor cap, same damage shape.
+//   Round 15 — same five final swarm echoes; posters still _L2.
+//              find-product moves the stepper to the RIGHT-HAND SIDE
+//              and shows BOTH factors: `a × b = ?`. The kid is
+//              computing the product instead of finding a factor.
+//              Stepper clamps to [0, 100] because the product can be
+//              that high; damage = stepper.value (the total tallies).
+//              HP per level scales up to absorb the bigger damage and
+//              keep the 2–4-turns-per-enemy pace.
+//   Round 16 — TIMES TABLE TOWER. Completely different cadence: 11
+//              "row" stages (L1..L11, one per multiplier 0..10) +
+//              1 capstone "rooftop" stage (L12) = 12 levels. New
+//              enemy: a single sustained boss (Tower Keeper's
+//              Shadow) across all 12 levels — armor falls one tier
+//              per cleared floor.
+//              Row stages use the chant-row equation shape: kid
+//              listens to a pre-recorded ElevenLabs chant ("Zero
+//              sevens are zero. One seven is seven. Two sevens are
+//              fourteen.…") and taps the matching step on the
+//              stairs on the beat. Damage = 1 per step nailed.
+//              The capstone uses the rooftop-grid shape: the entire
+//              11×11 times table fills the screen; the NPC calls
+//              out a product and the kid taps any cell containing
+//              that value (commutativity gives 2 valid cells for
+//              most products). Damage = the product.
+//              Row order is tuned for pedagogy, not numeric: the
+//              gimme rows (×0, ×1) sit first, then the muscle of
+//              the round (×2,3,4,6), then "free win" reward rows
+//              (×5, ×10), then the trickier finishers (×9, ×7, ×8).
 //
 // Round 5/6 fields:
 //   - equationShape: "find-missing-result"
@@ -826,20 +874,355 @@ export const LEVELS: readonly LevelConfig[] = [
     hp: 24,
     handValueRange: { min: 1, max: 3 },
   },
+  // ── ROUND 13 — find-missing-factor (solve for the multiplier) ───────
+  // Fourth (and final) encounter for the final swarm echoes — posters
+  // are already at the _L2 cap, so visually R13 reads like R12. The
+  // signal that this is harder is the MECHANIC: instead of judging a
+  // claimed product True/False, the kid SOLVES for the missing factor
+  // on a real `a × ? = c` equation.
+  //
+  // Layout: [a locked] × [stepper] = [c locked]. The stepper card sits
+  // in the middle slot; the kid taps top/bottom to bump its value.
+  // `c` is shown, so the kid knows the target. Factors capped at 1..10
+  // (classic times tables); stepper clamps to [0, 10] so the kid can
+  // sweep the full range without an artificial ceiling.
+  //
+  // Damage = stepper.value on a win — same reward shape as R9–R11
+  // stepper-sum (the kid's chosen value IS the hit). HP is calibrated
+  // against expected damage in the [1, 10] range for 2–4 turns/enemy.
+  //
+  // `handValueRange` doubles as the factor range for this shape (mirrors
+  // how true-false-multiply uses it). `target` carries the worst-case
+  // factor — it's the stepper's upper bound during the dealer's "near
+  // the answer" start-value pick, and it lines up with the route's
+  // useGameStepper clamp.
+  {
+    index: 64,
+    enemyId: "hadal-chitin-scout-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-missing-factor",
+    target: 10,
+    hp: 10,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 65,
+    enemyId: "hadal-warpcoral-prism-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-missing-factor",
+    target: 10,
+    hp: 14,
+    handValueRange: { min: 1, max: 6 },
+  },
+  {
+    index: 66,
+    enemyId: "hadal-plasma-reef-lancer-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-missing-factor",
+    target: 10,
+    hp: 18,
+    handValueRange: { min: 1, max: 8 },
+  },
+  {
+    index: 67,
+    enemyId: "hadal-orbital-siege-urchin-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-missing-factor",
+    target: 10,
+    hp: 22,
+    handValueRange: { min: 1, max: 9 },
+  },
+  {
+    index: 68,
+    enemyId: "hadal-abyssal-fleetmind-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-missing-factor",
+    target: 10,
+    hp: 28,
+    handValueRange: { min: 1, max: 10 },
+  },
+  // ── ROUND 14 — find-leading-factor (stepper on the LEFT) ────────────
+  // Same mechanic as R13, mirrored. Layout: [stepper] × [b locked] =
+  // [c locked]. The kid finds the count of groups when the static
+  // group size is in the MIDDLE instead of on the left. HP mirrors
+  // R13 since damage = stepper.value (factor in [1, 10]) is unchanged.
+  {
+    index: 69,
+    enemyId: "hadal-chitin-scout-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-leading-factor",
+    target: 10,
+    hp: 10,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 70,
+    enemyId: "hadal-warpcoral-prism-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-leading-factor",
+    target: 10,
+    hp: 14,
+    handValueRange: { min: 1, max: 6 },
+  },
+  {
+    index: 71,
+    enemyId: "hadal-plasma-reef-lancer-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-leading-factor",
+    target: 10,
+    hp: 18,
+    handValueRange: { min: 1, max: 8 },
+  },
+  {
+    index: 72,
+    enemyId: "hadal-orbital-siege-urchin-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-leading-factor",
+    target: 10,
+    hp: 22,
+    handValueRange: { min: 1, max: 9 },
+  },
+  {
+    index: 73,
+    enemyId: "hadal-abyssal-fleetmind-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-leading-factor",
+    target: 10,
+    hp: 28,
+    handValueRange: { min: 1, max: 10 },
+  },
+  // ── ROUND 15 — find-product (multi-choice) ─────────────────────────
+  // The kid taps one of 5 candidate product cards. Damage = 1 per
+  // correct, so HP per level = the count of equations the kid must
+  // solve to fell the enemy. The cheat path that the prior stepper
+  // version had (read a hint that names the gap, increment to the
+  // answer) is closed by construction: each pick is a full commit,
+  // wrong picks re-deal the same a/b with fresh distractors.
+  //
+  // `target` doubles as the per-level hint reference; the evaluator
+  // does NOT compare against it for this shape. handValueRange ramps
+  // the factor pool so early levels practice small tables (1..5)
+  // before stretching to the full 1..10 by L5.
+  {
+    index: 74,
+    enemyId: "hadal-chitin-scout-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-product",
+    target: 1,
+    hp: 5,
+    handValueRange: { min: 1, max: 5 },
+  },
+  {
+    index: 75,
+    enemyId: "hadal-warpcoral-prism-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-product",
+    target: 1,
+    hp: 7,
+    handValueRange: { min: 1, max: 6 },
+  },
+  {
+    index: 76,
+    enemyId: "hadal-plasma-reef-lancer-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-product",
+    target: 1,
+    hp: 9,
+    handValueRange: { min: 1, max: 8 },
+  },
+  {
+    index: 77,
+    enemyId: "hadal-orbital-siege-urchin-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-product",
+    target: 1,
+    hp: 12,
+    handValueRange: { min: 1, max: 9 },
+  },
+  {
+    index: 78,
+    enemyId: "hadal-abyssal-fleetmind-echo",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "find-product",
+    target: 1,
+    hp: 15,
+    handValueRange: { min: 1, max: 10 },
+  },
+  // ── ROUND 16 — TIMES TABLE TOWER ────────────────────────────────────
+  // 11 row stages (L1..L11, one chant per multiplier 0..10) + 1
+  // rooftop capstone. Single sustained boss (Tower Keeper's Shadow)
+  // across all 12 levels — armor falls one tier per cleared floor.
+  // `target` on row levels = the row's static multiplier (0..10), used
+  // by the dealer to pick the matching chant MP3. `handValueRange` is
+  // unused for these shapes; passed [1, 10] as a baseline.
+  //
+  // HP: damage = 1 per beat nailed (11 beats per row → 11 max). Per-
+  // row HP is 11 so a perfect run clears the floor in one chant; off-
+  // beat taps just don't damage, no fail state.
+  //
+  // Row ORDER mirrors Calvin's pedagogy plan:
+  //   L1 ×0, L2 ×1     — gimmes
+  //   L3 ×2, L4 ×3, L5 ×4, L6 ×6 — muscle
+  //   L7 ×5, L8 ×10   — free wins
+  //   L9 ×9, L10 ×7, L11 ×8     — finishers
+  //   L12 ROOFTOP capstone (rooftop-grid)
+  //
+  // Rooftop HP = 15 because each correct grid-tap deals damage equal
+  // to the product. Average product across the 15 prompts ≈ 25; total
+  // damage budget far exceeds 15 so the kid finishes in 3-5 prompts.
+  {
+    index: 79,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 0,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 80,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 1,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 81,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 2,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 82,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 3,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 83,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 4,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 84,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 6,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 85,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 5,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 86,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 10,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 87,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 9,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 88,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 7,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 89,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "chant-row",
+    target: 8,
+    hp: 11,
+    handValueRange: { min: 1, max: 10 },
+  },
+  {
+    index: 90,
+    enemyId: "tower-keepers-shadow",
+    operator: "multiply",
+    comparator: "eq",
+    equationShape: "rooftop-grid",
+    target: 15,
+    hp: 15,
+    handValueRange: { min: 1, max: 10 },
+  },
 ];
 
 export const FINAL_LEVEL_INDEX: number = LEVELS.length;
 
 // Round boundaries — the LAST level index of each round. Used by the
 // route's round indicator and the celebration trigger.
-export const ROUND_BOUNDARIES: readonly number[] = [6, 12, 18, 23, 28, 33, 38, 43, 48, 53, 58, 63];
+export const ROUND_BOUNDARIES: readonly number[] = [
+  6, 12, 18, 23, 28, 33, 38, 43, 48, 53, 58, 63, 68, 73, 78, 90,
+];
 
 export function findLevel(index: number): LevelConfig | undefined {
   return LEVELS.find((l) => l.index === index);
 }
 
+export type RoundIndex = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+
 // Which round (1-indexed) does a given level belong to?
-export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 {
+export function roundOf(levelIndex: number): RoundIndex {
   if (levelIndex <= 6) return 1;
   if (levelIndex <= 12) return 2;
   if (levelIndex <= 18) return 3;
@@ -851,13 +1234,19 @@ export function roundOf(levelIndex: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
   if (levelIndex <= 48) return 9;
   if (levelIndex <= 53) return 10;
   if (levelIndex <= 58) return 11;
-  return 12;
+  if (levelIndex <= 63) return 12;
+  if (levelIndex <= 68) return 13;
+  if (levelIndex <= 73) return 14;
+  if (levelIndex <= 78) return 15;
+  return 16;
 }
 
-export function levelsInRound(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12): number {
+export function levelsInRound(round: RoundIndex): number {
   if (round === 1) return 6;
   if (round === 2) return 6;
   if (round === 3) return 6;
+  // R16 stretches the cadence: 11 chant rows + 1 rooftop = 12 levels.
+  if (round === 16) return 12;
   return 5;
 }
 
@@ -874,5 +1263,9 @@ export function localLevelIndex(levelIndex: number): number {
   if (levelIndex <= 48) return levelIndex - 43;
   if (levelIndex <= 53) return levelIndex - 48;
   if (levelIndex <= 58) return levelIndex - 53;
-  return levelIndex - 58;
+  if (levelIndex <= 63) return levelIndex - 58;
+  if (levelIndex <= 68) return levelIndex - 63;
+  if (levelIndex <= 73) return levelIndex - 68;
+  if (levelIndex <= 78) return levelIndex - 73;
+  return levelIndex - 78;
 }

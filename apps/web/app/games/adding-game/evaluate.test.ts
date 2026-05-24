@@ -98,11 +98,9 @@ describe("evaluateRound — find-missing-result (R5)", () => {
   }
 
   test("empty operand AND empty result → computed=staticValue, expected=0, no win", () => {
-    // Static is locked into operandSlots[0] with value 1. operandSlots[1]
-    // is empty (counts as 0). operandSlots[2] is empty (counts as 0).
-    // computed = 1 + 0 = 1, result = 0 → no win.
     const state = makeR5State();
     const r = evaluateRound(state);
+    // staticValue=1 at slot 0; slots 1 & 2 empty (0). computed = 1 + 0 = 1.
     expect(r?.computedValue).toBe(1);
     expect(r?.expectedValue).toBe(0);
     expect(r?.won).toBe(false);
@@ -111,9 +109,8 @@ describe("evaluateRound — find-missing-result (R5)", () => {
 
   test("placing operand=3 and result=4 wins (1 + 3 = 4) with damage=4", () => {
     let state = makeR5State();
-    // Inject controlled cards into hand by mutation — we know HAND_SIZE = 5.
+    // Force two specific values into the kid's hand so we drag predictable cards.
     const handIds = state.player.hand.flatMap((s) => (s.cardId ? [s.cardId] : []));
-    expect(handIds.length).toBe(5);
     const operandCardId = handIds[0]!;
     const resultCardId = handIds[1]!;
     state = {
@@ -124,16 +121,14 @@ describe("evaluateRound — find-missing-result (R5)", () => {
         [resultCardId]: { id: resultCardId, kind: "number", value: 4 },
       },
     };
-    // Place operand (value 3) into the unlocked LHS slot (eq:1) and the
-    // result (value 4) into eq:result.
     state = applySwap(state, { kind: "hand", id: "hand:0" }, { kind: "equation", id: "eq:1" });
     state = applySwap(state, { kind: "hand", id: "hand:1" }, { kind: "equation", id: "eq:result" });
 
     const r = evaluateRound(state);
     expect(r?.won).toBe(true);
-    expect(r?.computedValue).toBe(4); // 1 + 3
-    expect(r?.expectedValue).toBe(4); // result slot value
-    expect(r?.scoreEarned).toBe(4); // damage = result
+    expect(r?.computedValue).toBe(4);
+    expect(r?.expectedValue).toBe(4);
+    expect(r?.scoreEarned).toBe(4);
   });
 
   test("inconsistent operand/result loses (1 + 3 = 4 ≠ 5)", () => {
@@ -154,14 +149,14 @@ describe("evaluateRound — find-missing-result (R5)", () => {
 
     const r = evaluateRound(state);
     expect(r?.won).toBe(false);
-    expect(r?.computedValue).toBe(4); // 1 + 3
-    expect(r?.expectedValue).toBe(5); // result slot
+    expect(r?.computedValue).toBe(4);
+    expect(r?.expectedValue).toBe(5);
+    expect(r?.scoreEarned).toBe(0);
   });
 
   test("locked slot refuses applySwap from the kid's hand", () => {
     const state = makeR5State();
-    // Try to swap a hand card into the LOCKED equation slot 0. applySwap
-    // must return state unchanged.
+    // Slot 0 is locked at deal time (the static).
     const after = applySwap(
       state,
       { kind: "hand", id: "hand:0" },
@@ -204,5 +199,229 @@ describe("evaluateRound — find-missing-result (R6, subtract)", () => {
     expect(r?.computedValue).toBe(4);
     expect(r?.expectedValue).toBe(4);
     expect(r?.scoreEarned).toBe(4);
+  });
+});
+
+// ── R13: find-missing-factor ──────────────────────────────────────────────
+// Level 64 is the entry R13 level: multiply / eq / handValueRange 1..5.
+// Equation layout: [a locked] × [stepper locked] = [c locked].
+//
+// Damage on win = stepper.value (NOT result.value) — this differs from
+// stepper-sum, where slotValue(2) is the kid's answer. Tests pin the
+// difference so a future refactor that "unifies" the two branches
+// notices the contract change.
+describe("evaluateRound — find-missing-factor (R13)", () => {
+  function makeR13State(): AddingGameState {
+    const dealt = dealRound({ levelIndex: 64, random: () => 0.5 });
+    return {
+      ...ADDING_GAME_DEFAULT,
+      status: "playing",
+      cards: dealt.cards,
+      player: { ...ADDING_GAME_DEFAULT.player, hand: dealt.hand },
+      round: dealt.round,
+    };
+  }
+
+  function setStepperTo(state: AddingGameState, value: number): AddingGameState {
+    const stepperSlot = state.round?.equation.operandSlots[1];
+    const id = stepperSlot?.cardId;
+    if (!id) throw new Error("R13: missing stepper card");
+    return {
+      ...state,
+      cards: {
+        ...state.cards,
+        [id]: { id, kind: "number", value },
+      },
+    };
+  }
+
+  test("stepper equal to the true answer wins, damage = stepper.value", () => {
+    let state = makeR13State();
+    const [aSlot, , cSlot] = state.round!.equation.operandSlots;
+    const aCard = state.cards[aSlot!.cardId!];
+    const cCard = state.cards[cSlot!.cardId!];
+    if (!aCard || aCard.kind !== "number" || !cCard || cCard.kind !== "number") {
+      throw new Error("R13: expected NumberCards at a and c");
+    }
+    const answer = cCard.value / aCard.value;
+    state = setStepperTo(state, answer);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(true);
+    expect(r?.computedValue).toBe(cCard.value);
+    expect(r?.expectedValue).toBe(cCard.value);
+    expect(r?.scoreEarned).toBe(answer);
+  });
+
+  test("stepper off by one — loss, scoreEarned 0, computedValue surfaces the wrong product", () => {
+    let state = makeR13State();
+    const [aSlot, , cSlot] = state.round!.equation.operandSlots;
+    const aCard = state.cards[aSlot!.cardId!];
+    const cCard = state.cards[cSlot!.cardId!];
+    if (!aCard || aCard.kind !== "number" || !cCard || cCard.kind !== "number") {
+      throw new Error("R13: expected NumberCards at a and c");
+    }
+    const answer = cCard.value / aCard.value;
+    state = setStepperTo(state, answer + 1);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(false);
+    expect(r?.computedValue).toBe(aCard.value * (answer + 1));
+    expect(r?.expectedValue).toBe(cCard.value);
+    expect(r?.scoreEarned).toBe(0);
+  });
+
+  test("stepper at 0 — loss, computed = 0", () => {
+    let state = makeR13State();
+    state = setStepperTo(state, 0);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(false);
+    expect(r?.computedValue).toBe(0);
+    expect(r?.scoreEarned).toBe(0);
+  });
+});
+
+// ── R14: find-leading-factor (stepper on the LEFT) ────────────────────────
+// Level 69 is the entry R14 level. Layout: [stepper] × [b locked] = [c locked].
+// Damage = stepper.value (slotValue(0)) on a win — mirrors R13 with the
+// stepper relocated.
+describe("evaluateRound — find-leading-factor (R14)", () => {
+  function makeR14State(): AddingGameState {
+    const dealt = dealRound({ levelIndex: 69, random: () => 0.5 });
+    return {
+      ...ADDING_GAME_DEFAULT,
+      status: "playing",
+      cards: dealt.cards,
+      player: { ...ADDING_GAME_DEFAULT.player, hand: dealt.hand },
+      round: dealt.round,
+    };
+  }
+
+  function setLeadingTo(state: AddingGameState, value: number): AddingGameState {
+    const stepperSlot = state.round?.equation.operandSlots[0];
+    const id = stepperSlot?.cardId;
+    if (!id) throw new Error("R14: missing stepper card");
+    return {
+      ...state,
+      cards: {
+        ...state.cards,
+        [id]: { id, kind: "number", value },
+      },
+    };
+  }
+
+  test("stepper equal to the true leading factor wins, damage = stepper.value", () => {
+    let state = makeR14State();
+    const [, bSlot, cSlot] = state.round!.equation.operandSlots;
+    const bCard = state.cards[bSlot!.cardId!];
+    const cCard = state.cards[cSlot!.cardId!];
+    if (!bCard || bCard.kind !== "number" || !cCard || cCard.kind !== "number") {
+      throw new Error("R14: expected NumberCards at b and c");
+    }
+    const answer = cCard.value / bCard.value;
+    state = setLeadingTo(state, answer);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(true);
+    expect(r?.computedValue).toBe(cCard.value);
+    expect(r?.scoreEarned).toBe(answer);
+  });
+
+  test("stepper off by one — loss, computedValue surfaces the wrong product", () => {
+    let state = makeR14State();
+    const [, bSlot, cSlot] = state.round!.equation.operandSlots;
+    const bCard = state.cards[bSlot!.cardId!];
+    const cCard = state.cards[cSlot!.cardId!];
+    if (!bCard || bCard.kind !== "number" || !cCard || cCard.kind !== "number") {
+      throw new Error("R14: expected NumberCards at b and c");
+    }
+    const answer = cCard.value / bCard.value;
+    state = setLeadingTo(state, answer + 1);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(false);
+    expect(r?.computedValue).toBe((answer + 1) * bCard.value);
+    expect(r?.scoreEarned).toBe(0);
+  });
+});
+
+// ── R15: find-product (multi-choice) ──────────────────────────────────────
+// Level 74 is the entry R15 level. Layout: [a locked] × [b locked] =
+// [answer slot]. The kid taps one of 5 candidate cards (1 correct + 4
+// distractors). Damage on win is FLAT 1 — HP per level = number of
+// equations to solve. No stepper, no incremental cheat path.
+describe("evaluateRound — find-product (R15, multi-choice)", () => {
+  function makeR15State(): AddingGameState {
+    const dealt = dealRound({ levelIndex: 74, random: () => 0.5 });
+    return {
+      ...ADDING_GAME_DEFAULT,
+      status: "playing",
+      cards: dealt.cards,
+      player: { ...ADDING_GAME_DEFAULT.player, hand: dealt.hand },
+      round: dealt.round,
+    };
+  }
+
+  function pickChoice(state: AddingGameState, predicate: (value: number) => boolean): string {
+    const choices = state.round?.equation.choices ?? [];
+    for (const c of choices) {
+      if (c.kind === "number" && predicate(c.value)) return c.id;
+    }
+    throw new Error("R15: no matching choice found");
+  }
+
+  function placeAnswer(state: AddingGameState, cardId: string): AddingGameState {
+    const slot = state.round?.equation.operandSlots[2];
+    if (!slot) throw new Error("R15: missing answer slot");
+    return {
+      ...state,
+      round: {
+        ...state.round!,
+        equation: {
+          ...state.round!.equation,
+          operandSlots: state.round!.equation.operandSlots.map((s) =>
+            s.id === slot.id ? { ...s, cardId } : s,
+          ),
+        },
+      },
+    };
+  }
+
+  test("placing the correct choice wins, damage = 1 (flat)", () => {
+    let state = makeR15State();
+    const [aSlot, bSlot] = state.round!.equation.operandSlots;
+    const aCard = state.cards[aSlot!.cardId!];
+    const bCard = state.cards[bSlot!.cardId!];
+    if (!aCard || aCard.kind !== "number" || !bCard || bCard.kind !== "number") {
+      throw new Error("R15: expected NumberCards at a and b");
+    }
+    const product = aCard.value * bCard.value;
+    const correctId = pickChoice(state, (v) => v === product);
+    state = placeAnswer(state, correctId);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(true);
+    expect(r?.computedValue).toBe(product);
+    expect(r?.expectedValue).toBe(product);
+    expect(r?.scoreEarned).toBe(1);
+  });
+
+  test("placing a wrong choice loses, scoreEarned 0", () => {
+    let state = makeR15State();
+    const [aSlot, bSlot] = state.round!.equation.operandSlots;
+    const aCard = state.cards[aSlot!.cardId!];
+    const bCard = state.cards[bSlot!.cardId!];
+    if (!aCard || aCard.kind !== "number" || !bCard || bCard.kind !== "number") {
+      throw new Error("R15: expected NumberCards at a and b");
+    }
+    const product = aCard.value * bCard.value;
+    const wrongId = pickChoice(state, (v) => v !== product);
+    state = placeAnswer(state, wrongId);
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(false);
+    expect(r?.scoreEarned).toBe(0);
+    expect(r?.computedValue).toBe(product);
+  });
+
+  test("empty answer slot — loss (c === 0 short-circuits win check)", () => {
+    const state = makeR15State();
+    const r = evaluateRound(state);
+    expect(r?.won).toBe(false);
+    expect(r?.scoreEarned).toBe(0);
   });
 });

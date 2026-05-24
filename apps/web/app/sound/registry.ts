@@ -478,6 +478,23 @@ const SFX_REGISTRY_LITERAL = {
     path: "sfx/pronounce/crystal-tide-pool.mp3",
     policy: "restart",
   },
+  // ─── R16 Times Table Tower chants (ElevenLabs voice "Alice - Clear,
+  // Engaging Educator", id Xb7hH8MSUJpSbSDYk0k2). One MP3 per times-
+  // table row (0..10), each ~10s @ 0.85x speed. Plus a single rooftop
+  // outro that plays on capstone completion. `restart` policy so a
+  // rapid replay tap cancels the in-flight playback cleanly.
+  "chant-row-0": { path: "sfx/chant/row-0.mp3", policy: "restart" },
+  "chant-row-1": { path: "sfx/chant/row-1.mp3", policy: "restart" },
+  "chant-row-2": { path: "sfx/chant/row-2.mp3", policy: "restart" },
+  "chant-row-3": { path: "sfx/chant/row-3.mp3", policy: "restart" },
+  "chant-row-4": { path: "sfx/chant/row-4.mp3", policy: "restart" },
+  "chant-row-5": { path: "sfx/chant/row-5.mp3", policy: "restart" },
+  "chant-row-6": { path: "sfx/chant/row-6.mp3", policy: "restart" },
+  "chant-row-7": { path: "sfx/chant/row-7.mp3", policy: "restart" },
+  "chant-row-8": { path: "sfx/chant/row-8.mp3", policy: "restart" },
+  "chant-row-9": { path: "sfx/chant/row-9.mp3", policy: "restart" },
+  "chant-row-10": { path: "sfx/chant/row-10.mp3", policy: "restart" },
+  "chant-rooftop": { path: "sfx/chant/rooftop.mp3", policy: "restart" },
 } as const;
 
 export type SfxEventId = keyof typeof SFX_REGISTRY_LITERAL;

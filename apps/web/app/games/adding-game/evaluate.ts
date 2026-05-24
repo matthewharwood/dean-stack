@@ -23,6 +23,15 @@ function compare(computed: number, comparator: Comparator, expected: number): bo
   }
 }
 
+// Which operand slot index holds the stepper for the find-*-factor
+// shapes (R13/R14). R15 (find-product) used to live here too but no
+// longer uses a stepper — it's multi-choice now. Hoisted helper so
+// the evaluator's expression-level call stays clean.
+function factorStepperSlotIndex(shape: "find-missing-factor" | "find-leading-factor"): 0 | 1 {
+  // R14 → leading slot; R13 → middle slot.
+  return shape === "find-leading-factor" ? 0 : 1;
+}
+
 // Pure evaluator. Empty operand slots count as 0 — confirmed in spec, lets the
 // player partially evaluate ("10 + 0 = 10" wins; target=0 with all empty also
 // wins). The operator is applied left-to-right across the operand list.
@@ -138,6 +147,60 @@ export function evaluateRound(state: AddingGameState): RoundOutcome | null {
       expectedValue: result,
       // Damage = the kid's chosen result. Encourages bigger operands.
       scoreEarned: won ? result : 0,
+    };
+  }
+
+  // ── find-missing-factor (R13) + find-leading-factor (R14) — stepper ──
+  // The kid solves for a missing FACTOR by stepping a card. Win when
+  // `slotValue(0) × slotValue(1) === slotValue(2)`; damage = the
+  // stepper card's value (slot 0 for R14, slot 1 for R13). Two-shape
+  // branch — R15 used to live here too, but moved out because its
+  // multi-choice mechanic has a flat damage shape, see below.
+  if (equation.shape === "find-missing-factor" || equation.shape === "find-leading-factor") {
+    const c = slotValue(2);
+    const won = computed === c;
+    const stepper = slotValue(factorStepperSlotIndex(equation.shape));
+    return {
+      won,
+      computedValue: computed,
+      expectedValue: c,
+      scoreEarned: won ? stepper : 0,
+    };
+  }
+
+  // ── chant-row (R16 L1..L11) + rooftop-grid (R16 L12) ────────────────
+  // These shapes have NO single moment of evaluation. Damage accrues
+  // tap-by-tap via the route's R16 handlers (a correct beat tap deals
+  // 1; a correct grid tap deals the product). The static `evaluateRound`
+  // entry is therefore a no-op — return a lost outcome so the standard
+  // win/advance flow doesn't trigger off a stray Evaluate click. The
+  // route's R16 handlers manage HP directly through a different state-
+  // transition path (handleChantTap / handleRooftopTap below).
+  if (equation.shape === "chant-row" || equation.shape === "rooftop-grid") {
+    return {
+      won: false,
+      computedValue: 0,
+      expectedValue: 0,
+      scoreEarned: 0,
+    };
+  }
+
+  // ── find-product (R15, multi-choice) ────────────────────────────────
+  // operandSlots = [a (locked), b (locked), answer (kid-tap-fillable)].
+  // Win when the kid's chosen card at slot 2 has value === a × b.
+  // Damage is FLAT 1 on a win — the route uses level HP as the count
+  // of equations the kid needs to solve to fell the enemy, which is
+  // the cleanest possible mapping from "one correct answer = one
+  // visible win" to combat math. No incremental cheat path: every
+  // pick is a full commit, wrong picks re-deal with new distractors.
+  if (equation.shape === "find-product") {
+    const c = slotValue(2);
+    const won = computed === c && c !== 0;
+    return {
+      won,
+      computedValue: computed,
+      expectedValue: c,
+      scoreEarned: won ? 1 : 0,
     };
   }
 

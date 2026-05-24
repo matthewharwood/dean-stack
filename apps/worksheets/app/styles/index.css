@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+/* Web fonts — kid-friendly, accessible.
+   Fredoka: rounded, friendly display headings + UI.
+   Atkinson Hyperlegible: designed for legibility for low-vision readers;
+     perfect for instruction copy a 6yo is sounding out.
+   Atkinson Hyperlegible Mono: same accessibility family in a mono variant —
+     used for numerals + operators so digits and operands sit on a uniform
+     grid (no zero/oh confusion, no clumped widths in a tight equation row).
+   All three ship with Latin subsets only — small payload, no FOIT on iPad. */
+@import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;700&family=Fredoka:wght@400;500;600;700&display=swap";
+
+@theme {
+  --color-brand-500: oklch(62% 0.20 260deg);
+  --color-brand-700: oklch(48% 0.16 260deg);
+  --color-brand-900: oklch(30% 0.10 260deg);
+  --color-paper: oklch(99% 0.01 90deg);
+
+  /* Slightly darker, warmer than --color-paper so the worksheet's drop-shadow
+     reads against the off-page area. Combined with the SVG noise in
+     `body` (screen only) it gives a paper-on-desk vibe without printing. */
+  --color-paper-shade: oklch(90% 0.012 85deg);
+  --color-ink: oklch(20% 0.01 260deg);
+  --color-rule: oklch(22% 0.02 260deg);
+  --color-accent: oklch(70% 0.16 30deg);
+  --font-display: "Fredoka", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", ui-sans-serif,
+    system-ui, sans-serif;
+
+  /* Operators + operands use Atkinson Hyperlegible Mono so every digit sits on
+     the same column width — no kerning surprises in a tight equation row, and
+     the family's character set is calibrated for digit/letter disambiguation
+     (zero ≠ oh, one ≠ I, six ≠ nine). */
+  --font-equation: "Atkinson Hyperlegible Mono", ui-monospace, "JetBrains Mono",
+    "Cascadia Mono", monospace;
+  --spacing: 0.25rem;
+  --radius-card: 1rem;
+  --breakpoint-3xl: 120rem;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Print rules ───────────────────────────────────────────────────────────
+   The whole point of this app. US Letter, 0.5" margins to fit inside HP's
+   non-printable edge. Hide every interactive control; everything else
+   becomes the page. */
+
+@page {
+  size: letter;
+  margin: 0.5in;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+  }
+
+  /* Anything tagged `no-print` is interactive UI (Print button, nav, etc.). */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Belt + suspenders: kill TanStack DevTools' overlay even if it portals out
+     of the React tree (some versions mount via document.body directly).
+     Safe no-op in production where DevTools tree-shakes out. */
+  [data-tanstack-devtools],
+  [data-tsd-source],
+  [class*="tsqd-"] {
+    display: none !important;
+  }
+
+  /* Each top-level page container forces a fresh page. */
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Problems shouldn't be sliced down the middle of a row. */
+  .problem-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ink-efficient backgrounds. The browser usually skips backgrounds in
+     print anyway, but the explicit reset keeps preview matches output. */
+  .print-bg-paper {
+    background: #fff !important;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+}
+
+/* ─── Off-page area (screen only) ──────────────────────────────────────────
+   A subtle paper-grain noise behind the worksheet so the drop-shadow on
+   `.worksheet-page` has something to read against. The SVG is inlined as a
+   data URI (`%23` for `#`) — no extra fetch, no asset to ship. The print
+   rule above already forces `#fff` so this never appears on paper.
+
+   feTurbulence baseFrequency 0.9 + numOctaves 2 = a tight fine-grain pattern;
+   feColorMatrix collapses to a soft warm-black speckle at ~14% alpha. The
+   pattern tile is 280×280 — big enough that the repetition isn't obvious. */
+body {
+  background-color: var(--color-paper-shade);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.10 0 0 0 0 0.07 0 0 0 0.14 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
+}
+
+/* ─── On-screen styles for the worksheet preview ──────────────────────────
+   Match the printed look so what-you-see really is what-you-get. */
+
+.worksheet-page {
+  background: var(--color-paper);
+  color: var(--color-ink);
+
+  /* US Letter at 96 dpi: 8.5in × 11in = 816px × 1056px.
+     The .5in margin is provided by the @page rule for print; on screen we
+     fake it with padding inside the page container. */
+  width: 8.5in;
+  min-height: 11in;
+  padding: 0.5in;
+  box-sizing: border-box;
+  margin: 1rem auto;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
+  font-family: var(--font-body);
+}
+
+@media print {
+  .worksheet-page {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
+/* The numeric equation lines want a friendly chunky look but still legible
+   for a kid still learning digit shapes. Fredoka 600 hits that target.
+   The dotted underline serves as the "write your answer here" blank. */
+.equation {
+  font-family: var(--font-equation);
+
+  /* Atkinson Hyperlegible Mono ships in 400 and 700 — use 700 for the
+     equation row so operands print boldly enough to read at arm's length. */
+  font-weight: 700;
+  font-size: 1.625rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.blank {
+  display: inline-block;
+  min-width: 2.2em;
+  border-bottom: 2px solid currentcolor;
+  text-align: center;
+  vertical-align: baseline;
+  padding-bottom: 0.05em;
+  margin: 0 0.1em;
+
+  /* Drop the write-in rule down to the body-text baseline where the line-item
+     numbering's period sits. The equation uses a large display weight (Fredoka
+     600 @ 1.625rem) whose baseline sits high in the line box; the numbering is
+     body text and sits lower, so the rule needs to translate down to meet it.
+     Visual offset only — no layout shift. */
+  transform: translateY(0.35em);
+}
+
+.blank-wide {
+  min-width: 3em;
+}
+
+/* Header field lines (Name, Date). Long thin rules that print well. */
+.field-rule {
+  display: inline-block;
+  border-bottom: 1.5px solid currentcolor;
+  min-width: 8em;
+  height: 1.2em;
+}

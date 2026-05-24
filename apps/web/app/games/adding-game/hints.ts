@@ -80,6 +80,15 @@ export function generateHints(state: AddingGameState): Hint[] {
   if (round.equation.shape === "true-false-multiply") {
     return generateTrueFalseMultiplyHints(state);
   }
+  if (round.equation.shape === "find-missing-factor") {
+    return generateFindMissingFactorHints(state);
+  }
+  if (round.equation.shape === "find-leading-factor") {
+    return generateFindLeadingFactorHints(state);
+  }
+  if (round.equation.shape === "find-product") {
+    return generateFindProductHints(state);
+  }
 
   const targetCard = round.equation.target;
   if (!targetCard || !isNumberCard(targetCard)) return [];
@@ -638,6 +647,157 @@ function generateStepperSumHints(state: AddingGameState): Hint[] {
     id: "sum-encouragement",
     emphasis: "Take your time.",
     body: `Tap the top to go up, the bottom to go down. The card waits for you.`,
+  });
+
+  return hints;
+}
+
+// ─── find-missing-factor (R13) hints ────────────────────────────────────
+// Layout the kid sees: `a × ? = c`, with the stepper card holding their
+// current guess. The kid solves for the missing factor by skip-counting
+// by `a` until they land on `c`.
+//
+// NON-LEAK POLICY (load-bearing): hints intentionally do NOT mention
+// the kid's current stepper value, their current product, or the gap
+// (target − current). Surfacing any of those turned the round into a
+// guess-and-correct machine — the kid bumped a wrong value, read the
+// hint, then incremented exactly to the answer. The current templates
+// teach PROCEDURE only ("skip-count by a", "draw tallies", "use your
+// fingers"); the locked target card is already visible on screen, so
+// referring to it as "the card on the right" doesn't add information.
+//
+// Hint ids start with "fmf-" so the route's recently-shown filter keeps
+// them in their own rotation.
+function generateFindMissingFactorHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+  const a = cardValueOf(state, eq.operandSlots[0]?.cardId);
+  // We intentionally do NOT read the stepper or the target value here
+  // — see NON-LEAK POLICY above. The locked-card values are visible to
+  // the kid on screen; the hint stays at the procedure level.
+
+  const hints: Hint[] = [];
+
+  hints.push({
+    id: "fmf-meaning",
+    emphasis: `How many ${a}s fit in the card on the right?`,
+    body: `The middle card is *how many groups* of ${a} you need to make the total on the right.`,
+  });
+
+  hints.push({
+    id: "fmf-skip-count",
+    emphasis: `Skip-count by ${a}.`,
+    body: `Use your fingers. Count: ${a}, then ${a} more, then ${a} more. *Stop when you reach the card on the right.* The number of fingers you put up is your answer.`,
+  });
+
+  hints.push({
+    id: "fmf-draw-tallies",
+    emphasis: `Draw groups of ${a} tallies.`,
+    body: `On paper, draw a group of *${a} tally marks*. Draw another group. Keep going until all the tallies together match the card on the right.`,
+  });
+
+  hints.push({
+    id: "fmf-encouragement",
+    emphasis: "Take it slow.",
+    body: `Each tap on the middle card adds one more group of ${a}. Count along as you tap.`,
+  });
+
+  return hints;
+}
+
+// ─── find-leading-factor (R14) hints ─────────────────────────────────────
+// Same teaching shape as R13 — solve for the count of groups by skip-
+// counting by the static group size — but the equation reads `? × b = c`
+// instead of `a × ? = c`. The stepper sits on the LEFT, the static group
+// size is in the MIDDLE. Hints keep the "skip-count by the group size"
+// procedure intact, just with the slot indices remapped (b at slot 1,
+// stepper at slot 0).
+//
+// All hint ids start with "flf-" so the route's recently-shown filter
+// keeps them in their own rotation, separate from R13's "fmf-" pool.
+function generateFindLeadingFactorHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+  // NON-LEAK POLICY (see generateFindMissingFactorHints): never read
+  // the stepper, the product, or compute the gap. Procedure only.
+  const b = cardValueOf(state, eq.operandSlots[1]?.cardId);
+
+  const hints: Hint[] = [];
+
+  hints.push({
+    id: "flf-meaning",
+    emphasis: `How many groups of ${b}?`,
+    body: `The card on the left is *how many groups* of ${b} make the total on the right.`,
+  });
+
+  hints.push({
+    id: "flf-skip-count",
+    emphasis: `Skip-count by ${b}.`,
+    body: `Use your fingers. Count: ${b}, then ${b} more, then ${b} more. *Stop when you reach the card on the right.* The number of fingers up is your answer.`,
+  });
+
+  hints.push({
+    id: "flf-draw-tallies",
+    emphasis: `Draw groups of ${b} tallies.`,
+    body: `On paper, draw a group of *${b} tally marks*. Draw another. Keep going until all the tallies together match the card on the right.`,
+  });
+
+  hints.push({
+    id: "flf-encouragement",
+    emphasis: "Take it slow.",
+    body: `Each tap on the left card adds one more group of ${b}. Count along as you tap.`,
+  });
+
+  return hints;
+}
+
+// ─── find-product (R15) hints ────────────────────────────────────────────
+// The kid has BOTH factors visible and is solving for the product. No
+// more "find the missing factor" — this is straight skip-counting to
+// the answer. Hints frame it that way: "count by `a` exactly `b` times".
+//
+// All hint ids start with "fpr-" so the rotation pool stays separate.
+function generateFindProductHints(state: AddingGameState): Hint[] {
+  const round = state.round;
+  if (!round?.outcome) return [];
+  const eq = round.equation;
+  // NON-LEAK POLICY (see generateFindMissingFactorHints). Procedure
+  // only; never name the kid's pick or compute the gap.
+  const a = cardValueOf(state, eq.operandSlots[0]?.cardId);
+  const b = cardValueOf(state, eq.operandSlots[1]?.cardId);
+
+  const hints: Hint[] = [];
+
+  hints.push({
+    id: "fpr-meaning",
+    emphasis: `${a} groups of ${b}.`,
+    body: `${a} × ${b} means *${a} groups of ${b}*. Count up all the tallies to find the total.`,
+  });
+
+  hints.push({
+    id: "fpr-skip-count",
+    emphasis: `Skip-count by ${b}.`,
+    body: `Use your fingers. Count: ${b}, then ${b} more, and again — *${a} times in total*. The last number you say is the answer.`,
+  });
+
+  hints.push({
+    id: "fpr-draw-tallies",
+    emphasis: `Draw ${a} groups of ${b}.`,
+    body: `On paper, draw *${a} groups* of *${b} tally marks each*. Count every tally to find the total.`,
+  });
+
+  hints.push({
+    id: "fpr-commutativity",
+    emphasis: "Try the other order.",
+    body: `${a} × ${b} is the same as *${b} × ${a}*. Pick whichever is easier to count.`,
+  });
+
+  hints.push({
+    id: "fpr-encouragement",
+    emphasis: "Take it slow.",
+    body: `Skip-count by ${b}, ${a} times. Count along on your fingers.`,
   });
 
   return hints;
