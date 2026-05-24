@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "fallow": {
+      "source": "fallow-rs/fallow-skills",
+      "sourceType": "github",
+      "skillPath": "fallow/skills/fallow/SKILL.md",
+      "computedHash": "434c15736c9125dd168c7413c4bdd899cd307dd8ad95eccc00d8ebd0ed6a2422"
+    },
     "pixijs": {
       "source": "pixijs/pixijs-skills",
       "sourceType": "github",

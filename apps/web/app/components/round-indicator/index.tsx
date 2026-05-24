@@ -4,11 +4,17 @@ import { defineComponent } from "~/lib/define-component";
 
 import { RoundIndicatorPropsSchema } from "./schema";
 
+// Tier-up animation: the parent passes `<RoundIndicator key={round} ... />`
+// (see adding-game.tsx) so the component remounts whenever `round` changes.
+// That means the badge-pulse effect can be a plain mount-only useEffect with
+// an empty dep array — no prop-watching, no derived-state pattern. The
+// initial mount also pulses (welcome to round 1!) which is intentional.
+
 // Round indicator. Lives in the Top region. Renders a segmented
 // progress strip — one vertical bar per level in the whole campaign
 // (totalLevels) — with the kid's completed bars filled in oceanic
 // blue and an animated wave traveling across the filled segments.
-// A centered "Round N / 12" badge overlays the strip.
+// A centered "Round N / 16" badge overlays the strip.
 //
 // Why a per-level strip (not per-round dots)? Higher resolution: the
 // kid sees not just "round 5" but "level 26 of 63" — every successful
@@ -34,16 +40,17 @@ function barId(round: number, idx: number): string {
 
 export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props) => {
   const rootRef = useRef<HTMLDivElement>(null);
-  const prevRoundRef = useRef(props.round);
-  const [tierUp, setTierUp] = useState(false);
+  // tierUp starts true so the badge pulses immediately on mount, and an
+  // effect flips it off after the keyframe duration. Parent passes
+  // `key={round}` so the component remounts each round, restarting the
+  // initial-true state without watching props inside.
+  const [tierUp, setTierUp] = useState(true);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only animation timer
   useEffect(() => {
-    if (prevRoundRef.current === props.round) return;
-    prevRoundRef.current = props.round;
-    setTierUp(true);
     const t = window.setTimeout(() => setTierUp(false), 720);
     return () => window.clearTimeout(t);
-  }, [props.round]);
+  }, []);
 
   const { round, levelIndex, totalLevels } = props;
   // Wave traverses the strip at ~one cycle per animation period. Per-
@@ -95,7 +102,7 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
         >
           <div className="text-xs italic tracking-wide text-muted-gray">Round</div>
           <div className="text-lg font-bold leading-tight text-slate-ink">
-            {round} <span className="text-muted-gray">/</span> 12
+            {round} <span className="text-muted-gray">/</span> 16
           </div>
         </div>
       </div>
