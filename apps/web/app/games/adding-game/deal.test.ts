@@ -85,6 +85,113 @@ function handValues(result: ReturnType<typeof dealRound>): number[] {
   });
 }
 
+// Stepper slot index per factor-multiplication shape (R13/R14). R15
+// (find-product) used to live here too but is multi-choice now, asserted
+// separately by assertFindProductShape below.
+type FactorStepperShape = "find-missing-factor" | "find-leading-factor";
+const FACTOR_STEPPER_SLOT_INDEX: Record<FactorStepperShape, 0 | 1> = {
+  "find-leading-factor": 0,
+  "find-missing-factor": 1,
+};
+
+// Assert the structural invariants for R13 / R14: three locked
+// NumberCard operand slots, empty hand, and a stepper that starts
+// within 1..3 of the (still-unsolved) true answer.
+function assertFactorStepperShape(
+  result: ReturnType<typeof dealRound>,
+  level: (typeof LEVELS)[number],
+  shape: FactorStepperShape,
+): void {
+  for (const slot of result.hand) {
+    expect(slot.cardId).toBeNull();
+  }
+  const [s0, s1, s2] = result.round.equation.operandSlots;
+  if (!s0 || !s1 || !s2) {
+    throw new Error(`${shape}: expected 3 operandSlots`);
+  }
+  expect(s0.locked).toBe(true);
+  expect(s1.locked).toBe(true);
+  expect(s2.locked).toBe(true);
+  const c0 = s0.cardId ? result.cards[s0.cardId] : undefined;
+  const c1 = s1.cardId ? result.cards[s1.cardId] : undefined;
+  const c2 = s2.cardId ? result.cards[s2.cardId] : undefined;
+  if (!c0 || !c1 || !c2 || c0.kind !== "number" || c1.kind !== "number" || c2.kind !== "number") {
+    throw new Error(`${shape}: expected 3 NumberCards in operandSlots`);
+  }
+  const cards = [c0, c1, c2];
+  const stepperIdx = FACTOR_STEPPER_SLOT_INDEX[shape];
+  const stepperValue = cards[stepperIdx]!.value;
+  const otherFactor = stepperIdx === 0 ? c1.value : c0.value;
+  const answer = otherFactor === 0 ? 0 : c2.value / otherFactor;
+  expect(otherFactor).toBeGreaterThan(0);
+  expect(c2.value % otherFactor).toBe(0);
+  expect(answer).toBeGreaterThanOrEqual(level.handValueRange.min);
+  expect(answer).toBeLessThanOrEqual(level.handValueRange.max);
+  // Locked non-stepper slots: factors stay 1..10; the locked product
+  // slot (idx 2) can be up to 100 (10 × 10).
+  for (let i = 0; i < 3; i++) {
+    if (i === stepperIdx) continue;
+    const v = cards[i]!.value;
+    const upper = i === 2 ? 100 : 10;
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(upper);
+  }
+  expect(stepperValue).toBeGreaterThanOrEqual(0);
+  expect(stepperValue).toBeLessThanOrEqual(10);
+  expect(stepperValue).not.toBe(answer);
+  expect(Math.abs(stepperValue - answer)).toBeLessThanOrEqual(3);
+  expect(Math.abs(stepperValue - answer)).toBeGreaterThanOrEqual(1);
+}
+
+// Assert the structural invariants for R15 multi-choice find-product:
+// two locked factor slots, an empty kid-fillable answer slot, exactly
+// 5 unique choice cards in equation.choices including the correct
+// product (a × b), and no distractor within ±2 of the answer (so
+// near-miss inference can't replace computation).
+function assertFindProductShape(
+  result: ReturnType<typeof dealRound>,
+  level: (typeof LEVELS)[number],
+): void {
+  for (const slot of result.hand) {
+    expect(slot.cardId).toBeNull();
+  }
+  const [aSlot, bSlot, ansSlot] = result.round.equation.operandSlots;
+  if (!aSlot || !bSlot || !ansSlot) {
+    throw new Error("find-product: expected 3 operandSlots");
+  }
+  expect(aSlot.locked).toBe(true);
+  expect(bSlot.locked).toBe(true);
+  expect(ansSlot.locked).toBe(false);
+  expect(ansSlot.cardId).toBeNull();
+  const aCard = aSlot.cardId ? result.cards[aSlot.cardId] : undefined;
+  const bCard = bSlot.cardId ? result.cards[bSlot.cardId] : undefined;
+  if (!aCard || !bCard || aCard.kind !== "number" || bCard.kind !== "number") {
+    throw new Error("find-product: expected NumberCards at a and b");
+  }
+  expect(aCard.value).toBeGreaterThanOrEqual(level.handValueRange.min);
+  expect(aCard.value).toBeLessThanOrEqual(level.handValueRange.max);
+  expect(bCard.value).toBeGreaterThanOrEqual(level.handValueRange.min);
+  expect(bCard.value).toBeLessThanOrEqual(level.handValueRange.max);
+  const answer = aCard.value * bCard.value;
+  const choices = result.round.equation.choices;
+  expect(choices).toHaveLength(5);
+  const values = choices.map((c) => (c.kind === "number" ? c.value : Number.NaN));
+  for (const v of values) {
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(100);
+    expect(Number.isNaN(v)).toBe(false);
+  }
+  // Exactly one correct choice present.
+  expect(values.filter((v) => v === answer)).toHaveLength(1);
+  // All choices distinct.
+  expect(new Set(values).size).toBe(5);
+  // No distractor within ±2 of the answer (other than the answer itself).
+  for (const v of values) {
+    if (v === answer) continue;
+    expect(Math.abs(v - answer)).toBeGreaterThanOrEqual(3);
+  }
+}
+
 describe("dealRound — level 1 (round 1 opener, add target 6)", () => {
   test("hand has exactly HAND_SIZE cards, all filled", () => {
     const result = dealRound({ levelIndex: 1, random: seededRandom(1) });
@@ -184,6 +291,23 @@ describe("dealRound — every level produces a solvable hand", () => {
           expect(sCard.value).toBeGreaterThanOrEqual(0);
           expect(sCard.value).toBeLessThanOrEqual(level.target + 3);
           expect(sCard.value).not.toBe(real); // dealer guarantees ≠
+        } else if (shape === "find-missing-factor" || shape === "find-leading-factor") {
+          assertFactorStepperShape(result, level, shape);
+        } else if (shape === "find-product") {
+          assertFindProductShape(result, level);
+        } else if (shape === "chant-row" || shape === "rooftop-grid") {
+          // R16 shapes have a placeholder equation (one empty operand
+          // slot) and an empty hand — the kid never drags or selects
+          // a card here. Damage accrues via R16-specific route
+          // handlers (handleChantStepMastered / handleRooftopCellTap),
+          // not via the dealer / evaluator. Just confirm the
+          // structural placeholder + the enemy is seeded.
+          for (const slot of result.hand) {
+            expect(slot.cardId).toBeNull();
+          }
+          expect(result.round.equation.operandSlots).toHaveLength(1);
+          expect(result.round.equation.operandSlots[0]?.cardId).toBeNull();
+          expect(result.round.enemy?.templateId).toBe(level.enemyId);
         } else {
           const ok = hasValidPair(
             handValues(result),

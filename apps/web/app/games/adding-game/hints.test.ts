@@ -186,6 +186,53 @@ describe("generateHints", () => {
     expect(ids).not.toContain("gt-need-bigger");
   });
 
+  test("every find-missing-factor level (R13) produces fmf-prefixed hints on a wrong answer", () => {
+    // R13 levels (64..68). Layout `a × ? = c`, kid steps the middle slot.
+    // Hints frame the gap as "skip-count by a until you hit c". Every id
+    // is "fmf-…" so the rotation filter keeps the pool separate from the
+    // tfm-/sum-/fmr- pools.
+    for (let level = 64; level <= 68; level++) {
+      // Use an arbitrary wrong-answer outcome — computed lower than
+      // expected, so the tap-up direction hint fires.
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 2, expected: 8 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(3);
+      for (const id of hints.map((h) => h.id)) {
+        expect(id.startsWith("fmf-")).toBe(true);
+      }
+    }
+  });
+
+  test("every find-leading-factor level (R14) produces flf-prefixed hints on a wrong answer", () => {
+    // R14 levels (69..73). Layout `? × b = c`; kid steps the LEFT slot.
+    // Same skip-count framing as R13, just with the stepper on the
+    // other side. Every id is "flf-…" so rotation stays isolated.
+    for (let level = 69; level <= 73; level++) {
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 2, expected: 8 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(3);
+      for (const id of hints.map((h) => h.id)) {
+        expect(id.startsWith("flf-")).toBe(true);
+      }
+    }
+  });
+
+  test("every find-product level (R15) produces fpr-prefixed hints on a wrong answer", () => {
+    // R15 levels (74..78). Layout `a × b = ?`; kid computes the product
+    // on the right. Hints frame "count by b, a times". Every id is
+    // "fpr-…" so rotation stays isolated.
+    for (let level = 74; level <= 78; level++) {
+      // Wrong-answer outcome with computed < expected so direction
+      // hints fire. expected up to 100 for R15.
+      const state = makeStateWithOutcome({ levelIndex: level, computed: 5, expected: 40 });
+      const hints = generateHints(state);
+      expect(hints.length).toBeGreaterThanOrEqual(3);
+      for (const id of hints.map((h) => h.id)) {
+        expect(id.startsWith("fpr-")).toBe(true);
+      }
+    }
+  });
+
   test("every hint body interpolates the target value when the template includes one", () => {
     // Smoke check — the body should never literally say "{target}" or "${".
     const state = makeStateWithOutcome({ levelIndex: 2, computed: 5, expected: 14 });

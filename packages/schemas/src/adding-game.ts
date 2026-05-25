@@ -119,6 +119,47 @@ export type Comparator = z.infer<typeof ComparatorSchema>;
 //                            card. Win when the verdict matches whether
 //                            `a × b == c`. Damage = the equation's target
 //                            (set by the level config). R12.
+//   "find-missing-factor"  : operandSlots = [a, stepper, c], ALL locked +
+//                            pre-filled. `a` and `c` are shown; the middle
+//                            slot is a stepper card the kid mutates with
+//                            +/- taps until `a × stepper === c`. Win when
+//                            equal. Damage = stepper.value (same reward
+//                            shape as stepper-sum). R13.
+//   "find-leading-factor"  : operandSlots = [stepper, b, c], ALL locked +
+//                            pre-filled. Mirrors find-missing-factor with
+//                            the stepper on the LEFT instead of the
+//                            middle, so the equation reads `? × b = c` —
+//                            the kid finds the count of groups when the
+//                            group SIZE is given second. Same factor cap
+//                            (1..10), same damage shape. R14.
+//   "find-product"         : operandSlots = [a (locked), b (locked),
+//                            answer (kid-tappable)]; `choices` holds 5
+//                            candidate cards (1 correct product + 4
+//                            confusion-table distractors) that the kid
+//                            taps to commit one into operandSlots[2].
+//                            Equation reads `a × b = ?`. The kid picks
+//                            the answer; on a wrong pick the round
+//                            re-deals the same a/b with new distractors
+//                            (no incremental cheat — every commit is a
+//                            full guess). Damage = 1 per correct
+//                            (level HP becomes "number of equations to
+//                            solve"). R15.
+//   "chant-row"            : operandSlots empty (set to [] semantically,
+//                            but kept at min(1) by populating a single
+//                            placeholder slot for back-compat). The
+//                            level's `target` is the row's static
+//                            factor (0..10); the kid listens to a pre-
+//                            recorded chant MP3 and taps the matching
+//                            step on the stairs as each product is
+//                            called out. Damage = 1 per step nailed on
+//                            the beat. R16 L1..L11.
+//   "rooftop-grid"         : operandSlots empty placeholder, no factors
+//                            shown. The kid sees the entire 11×11 times-
+//                            table grid; a chanted prompt calls out a
+//                            product and the kid taps any cell holding
+//                            that value (commutativity gives 2 valid
+//                            cells for most products). Damage = the
+//                            product. R16 L12 capstone.
 // `.default("find-sum")` keeps tier-1 IDB rows re-parseable without a
 // migration.
 export const EquationShapeSchema = z.enum([
@@ -126,6 +167,11 @@ export const EquationShapeSchema = z.enum([
   "find-missing-result",
   "stepper-sum",
   "true-false-multiply",
+  "find-missing-factor",
+  "find-leading-factor",
+  "find-product",
+  "chant-row",
+  "rooftop-grid",
 ]);
 export type EquationShape = z.infer<typeof EquationShapeSchema>;
 
@@ -145,6 +191,16 @@ export const EquationSchema = z.object({
   // card. Null for every other shape. `.default(null)` keeps pre-R9 IDB
   // rows re-parseable without a migration.
   verdictSlot: EquationSlotSchema.nullable().default(null),
+  // R15 (find-product, multi-choice) only — the 5 candidate answer
+  // cards the kid taps to commit one into operandSlots[2]. Empty for
+  // every other shape. `.default([])` keeps pre-R15 IDB rows re-
+  // parseable without a migration.
+  //
+  // The cards themselves also live in the top-level cards catalog so
+  // renderers / evaluators resolve them through the same `cards[id]`
+  // path as every other card. `choices` is the ORDERED list of card
+  // ids the dealer wants displayed left-to-right beneath the equation.
+  choices: z.array(CardSchema).default([]),
 });
 export type Equation = z.infer<typeof EquationSchema>;
 

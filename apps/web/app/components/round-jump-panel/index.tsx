@@ -66,7 +66,9 @@ export function RoundJumpPanel() {
 // Short caption beneath each round number — mirrors the round structure
 // the kid sees in-game so the dev tool reads the same way as the
 // indicator. Update when round structure changes.
-function roundLabel(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12): string {
+function roundLabel(
+  round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16,
+): string {
   if (round === 1) return "Add";
   if (round === 2) return "Sub";
   if (round === 3) return "Cmp";
@@ -78,5 +80,9 @@ function roundLabel(round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12): st
   if (round === 9) return "+▲";
   if (round === 10) return "−▲";
   if (round === 11) return "±▲";
-  return "T/F×";
+  if (round === 12) return "T/F×";
+  if (round === 13) return "×?=";
+  if (round === 14) return "?×=";
+  if (round === 15) return "×=?";
+  return "Tower";
 }

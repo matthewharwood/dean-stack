@@ -32,7 +32,7 @@ import { applyXpGain } from "./xp";
 // │ The comment above ROUND_START_LEVEL is the single source of truth — keep   │
 // │ it accurate when you add the round.                                         │
 // └──────────────────────────────────────────────────────────────────────────────┘
-export type Round = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+export type Round = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
 
 export const ROUND_START_LEVEL: Record<Round, number> = {
   1: 1,
@@ -47,6 +47,10 @@ export const ROUND_START_LEVEL: Record<Round, number> = {
   10: 49,
   11: 54,
   12: 59,
+  13: 64,
+  14: 69,
+  15: 74,
+  16: 79,
 };
 
 // Total XP a perfect playthrough of rounds 1..(round-1) would have

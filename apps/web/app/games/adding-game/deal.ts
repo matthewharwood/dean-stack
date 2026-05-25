@@ -1,8 +1,10 @@
 import {
+  type AddingGameState,
   type CardCatalog,
   type Equation,
   HAND_SIZE,
   type HandSlot,
+  isNumberCard,
   type NumberCard,
   type Round,
   type RoundEnemy,
@@ -77,6 +79,36 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
     return dealTrueFalseMultiplyRound(level, levelIndex, tStamp, pickInt, random);
   }
 
+  // R13 short-circuit: find-missing-factor has no hand (kid only steps
+  // the middle card) and a pre-filled locked equation. Return early.
+  if (shape === "find-missing-factor") {
+    return dealFindMissingFactorRound(level, levelIndex, tStamp, pickInt, random);
+  }
+
+  // R14 short-circuit: find-leading-factor mirrors R13 with the stepper
+  // at slot 0 (left factor) instead of slot 1.
+  if (shape === "find-leading-factor") {
+    return dealFindLeadingFactorRound(level, levelIndex, tStamp, pickInt, random);
+  }
+
+  // R15 short-circuit: find-product (multi-choice). Shows both factors
+  // locked, kid taps one of 5 candidate cards to commit the product.
+  // No stepper — see dealFindProductRound for distractor strategy.
+  if (shape === "find-product") {
+    return dealFindProductRound(level, levelIndex, tStamp, pickInt, random);
+  }
+
+  // R16 short-circuits: chant-row (L1..L11) and rooftop-grid (L12).
+  // Both shapes are minimal data-wise — no factor cards, no choice
+  // grids dealt here. The route picks the right MP3 by reading
+  // `level.target` (the multiplier 0..10 for chant-row, or the
+  // capstone prompt count for rooftop-grid) and drives playback +
+  // tap accounting through new R16-specific reducers, not through
+  // the cards catalog.
+  if (shape === "chant-row" || shape === "rooftop-grid") {
+    return dealChantRound(level, levelIndex, shape);
+  }
+
   // Common: the 5-card player hand. Both number-card shapes plant a
   // guaranteed pair — for find-sum it's (a, b) such that the equation
   // holds; for find-missing-result it's (a, b = static OP a) so the kid
@@ -141,6 +173,7 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
       comparator: level.comparator,
       target: null,
       verdictSlot: null,
+      choices: [],
     };
   } else {
     // find-sum (R1–R4): RHS is the displayed target card.
@@ -157,6 +190,7 @@ export function dealRound({ levelIndex, random = Math.random }: DealOptions): De
       comparator: level.comparator,
       target: targetCard,
       verdictSlot: null,
+      choices: [],
     };
   }
 
@@ -433,6 +467,7 @@ function dealTrueFalseMultiplyRound(
     ],
     target: null,
     verdictSlot: { id: "eq:verdict", cardId: null, locked: false },
+    choices: [],
   };
 
   const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
@@ -527,6 +562,7 @@ function dealStepperSumRound(
     ],
     target: null,
     verdictSlot: null,
+    choices: [],
   };
 
   const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
@@ -629,4 +665,457 @@ function failStepper(level: LevelConfig): Error {
       `(${level.operator}, target=${level.target}, ` +
       `range=[${level.handValueRange.min},${level.handValueRange.max}])`,
   );
+}
+
+// R13 dealer — find-missing-factor.
+//
+// Layout produced:
+//   hand: 5 empty slots — the kid never drags in this mode.
+//   equation: operandSlots = [a, stepper, c], ALL locked + pre-filled.
+//     `a` is the shown factor, drawn from level.handValueRange. The
+//     missing factor (true answer for `?`) is also drawn from
+//     handValueRange so a × answer fits the kid's mental scope. `c`
+//     is set to a × answer so the equation has exactly one solution
+//     in [0, FACTOR_MAX]. The `stepper` card starts at a random
+//     offset ±1..3 from `answer`, clamped to [0, FACTOR_MAX], never
+//     equal to the answer (so the kid always has to move it).
+//   verdictSlot: null.
+//
+// Operator: always "multiply". `comparator` is meaningless here and is
+// "eq" in the level data; the evaluator ignores it for this shape.
+//
+// Damage on win = stepper.value (the kid's chosen factor). Mirrors the
+// R9–R11 stepper-sum reward shape: solving the equation IS the damage.
+// Bigger missing factors hit harder, which keeps the kid honest about
+// landing precisely instead of bailing out on smaller answers.
+
+// Hard upper bound for the stepper / factors in find-missing-factor.
+// Mirrors the route's useGameStepper clamp; keep these in sync.
+const FIND_MISSING_FACTOR_MAX = 10;
+
+function dealFindMissingFactorRound(
+  level: LevelConfig,
+  levelIndex: number,
+  tStamp: number,
+  pickInt: (min: number, max: number) => number,
+  random: () => number,
+): DealtRound {
+  const { min, max } = level.handValueRange;
+  const a = pickInt(min, max);
+  const answer = pickInt(min, max);
+  const c = a * answer;
+  const startValue = pickFactorStepperStart(answer, FIND_MISSING_FACTOR_MAX, random, pickInt);
+
+  const cards: CardCatalog = {};
+  const aId = `card:r${levelIndex}:t${tStamp}:a`;
+  const stepperId = `card:r${levelIndex}:t${tStamp}:stepper`;
+  const cId = `card:r${levelIndex}:t${tStamp}:c`;
+  cards[aId] = { id: aId, kind: "number", value: a };
+  cards[stepperId] = { id: stepperId, kind: "number", value: startValue };
+  cards[cId] = { id: cId, kind: "number", value: c };
+
+  // Empty hand — kid has no cards to drag.
+  const hand: HandSlot[] = Array.from({ length: HAND_SIZE }, (_, i) => ({
+    id: `hand:${i}`,
+    cardId: null,
+  }));
+
+  const equation: Equation = {
+    shape: "find-missing-factor",
+    operator: "multiply",
+    comparator: "eq",
+    operandSlots: [
+      { id: "eq:a", cardId: aId, locked: true },
+      { id: "eq:stepper", cardId: stepperId, locked: true },
+      { id: "eq:c", cardId: cId, locked: true },
+    ],
+    target: null,
+    verdictSlot: null,
+    choices: [],
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
+}
+
+// Pick a start value for the find-missing-factor stepper card. Same
+// "near but not equal to the answer" intent as `pickStepperStart`, but
+// the stepper here clamps HARD at `max` (no +3 over-tap window — the
+// stepper's value IS a factor, so going above the factor cap is
+// nonsense). Distance from `answer` is 1..3 when room allows.
+function pickFactorStepperStart(
+  answer: number,
+  max: number,
+  random: () => number,
+  pickInt: (min: number, max: number) => number,
+): number {
+  const lowMin = Math.max(0, answer - 3);
+  const lowMax = answer - 1;
+  const highMin = answer + 1;
+  const highMax = Math.min(max, answer + 3);
+  const canGoLow = lowMax >= lowMin && lowMax >= 0;
+  const canGoHigh = highMax >= highMin;
+  const goHigh = canGoHigh && (!canGoLow || random() < 0.5);
+  if (goHigh) return pickInt(highMin, highMax);
+  if (canGoLow) return pickInt(lowMin, lowMax);
+  // Both sides empty only on degenerate input (max < 1 OR answer == 0
+  // AND max == 0). LEVELS data forbids this; fall back to 0 defensively.
+  return 0;
+}
+
+// R14 dealer — find-leading-factor.
+//
+// Layout produced:
+//   hand: 5 empty slots — same as R13, no drag.
+//   equation: operandSlots = [stepper, b, c], ALL locked.
+//     `b` = the static second factor, drawn from level.handValueRange.
+//     `answer` = the true leading factor, also drawn from
+//                level.handValueRange. The kid is finding this.
+//     `c` = answer × b (the locked product on the right).
+//     `stepper` starts ±1..3 from `answer`, clamped to [0, 10].
+//   verdictSlot: null.
+//
+// Reward / clamp identical to R13: damage = stepper.value, hard max 10.
+// The ONLY difference is which slot the stepper occupies, which drives
+// a different EquationView branch (kid reads `? × b = c` instead of
+// `a × ? = c`).
+function dealFindLeadingFactorRound(
+  level: LevelConfig,
+  levelIndex: number,
+  tStamp: number,
+  pickInt: (min: number, max: number) => number,
+  random: () => number,
+): DealtRound {
+  const { min, max } = level.handValueRange;
+  const b = pickInt(min, max);
+  const answer = pickInt(min, max);
+  const c = answer * b;
+  const startValue = pickFactorStepperStart(answer, FIND_MISSING_FACTOR_MAX, random, pickInt);
+
+  const cards: CardCatalog = {};
+  const stepperId = `card:r${levelIndex}:t${tStamp}:stepper`;
+  const bId = `card:r${levelIndex}:t${tStamp}:b`;
+  const cId = `card:r${levelIndex}:t${tStamp}:c`;
+  cards[stepperId] = { id: stepperId, kind: "number", value: startValue };
+  cards[bId] = { id: bId, kind: "number", value: b };
+  cards[cId] = { id: cId, kind: "number", value: c };
+
+  const hand: HandSlot[] = Array.from({ length: HAND_SIZE }, (_, i) => ({
+    id: `hand:${i}`,
+    cardId: null,
+  }));
+
+  const equation: Equation = {
+    shape: "find-leading-factor",
+    operator: "multiply",
+    comparator: "eq",
+    operandSlots: [
+      { id: "eq:stepper", cardId: stepperId, locked: true },
+      { id: "eq:b", cardId: bId, locked: true },
+      { id: "eq:c", cardId: cId, locked: true },
+    ],
+    target: null,
+    verdictSlot: null,
+    choices: [],
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
+}
+
+// R15 dealer — find-product (multi-choice).
+//
+// Layout produced:
+//   hand: 5 empty slots — kid never drags from the global hand here.
+//   equation:
+//     operandSlots[0] = a (locked NumberCard)
+//     operandSlots[1] = b (locked NumberCard)
+//     operandSlots[2] = answer slot — cardId null, locked false; the
+//                       kid commits one of the `choices` cards into
+//                       this slot by tapping it.
+//     choices = 5 NumberCards: 1 correct product + 4 confusion-table
+//               distractors (see pickDistractors). Ordered randomly
+//               left-to-right so the correct slot index varies.
+//   verdictSlot: null.
+//
+// Reward: damage = 1 per correct (level HP becomes "number of
+// equations to solve" — see levels.ts). This breaks the prior cheat
+// path where the stepper-version's gap-revealing hints let the kid
+// incrementally walk to the answer: each pick here is a full commit,
+// and a wrong pick re-deals the same a/b with FRESH distractors.
+function dealFindProductRound(
+  level: LevelConfig,
+  levelIndex: number,
+  tStamp: number,
+  pickInt: (min: number, max: number) => number,
+  random: () => number,
+): DealtRound {
+  const { min, max } = level.handValueRange;
+  const a = pickInt(min, max);
+  const b = pickInt(min, max);
+  const answer = a * b;
+
+  const cards: CardCatalog = {};
+  const aId = `card:r${levelIndex}:t${tStamp}:a`;
+  const bId = `card:r${levelIndex}:t${tStamp}:b`;
+  cards[aId] = { id: aId, kind: "number", value: a };
+  cards[bId] = { id: bId, kind: "number", value: b };
+
+  // 1 correct + 4 distractors. tStamp keeps choice ids unique across
+  // re-deals so React keys never collide.
+  const distractors = pickProductDistractors(a, b, random);
+  const correctChoice = answer;
+  const choiceValues = shuffle([correctChoice, ...distractors], random);
+  const choices = choiceValues.map((value, i) => {
+    const id = `card:r${levelIndex}:t${tStamp}:choice:${i}`;
+    const card: NumberCard = { id, kind: "number", value };
+    cards[id] = card;
+    return card;
+  });
+
+  const hand: HandSlot[] = Array.from({ length: HAND_SIZE }, (_, i) => ({
+    id: `hand:${i}`,
+    cardId: null,
+  }));
+
+  const equation: Equation = {
+    shape: "find-product",
+    operator: "multiply",
+    comparator: "eq",
+    operandSlots: [
+      { id: "eq:a", cardId: aId, locked: true },
+      { id: "eq:b", cardId: bId, locked: true },
+      // The kid's answer slot. cardId fills when the kid taps a choice;
+      // `locked: false` so the route can write into it via applySwap.
+      { id: "eq:answer", cardId: null, locked: false },
+    ],
+    target: null,
+    verdictSlot: null,
+    choices,
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
+}
+
+// Pick exactly 4 distractor products for the R15 multi-choice round.
+//
+// Confusion-table mix (per design discussion):
+//   - up to 2 from the same-factor row (other multiples of `a`,
+//     excluding `a*b` itself and excluding ±1/±2 of the answer)
+//   - 1 from a neighbor row (other multiples of `b` ± 1, same exclusions)
+//   - 1 wildcard plausible number in [1, 100] (same exclusions)
+//
+// All distractors are:
+//   - integers in [1, 100]
+//   - never equal to the correct answer
+//   - never within ±1 or ±2 of the correct answer (defeats "almost"
+//     inference where the kid sees a near-miss and infers the truth)
+//   - distinct from one another (no duplicate cards)
+//
+// Falls back to wildcards if a category is exhausted, so the contract
+// always returns exactly 4 distractors.
+function pickProductDistractors(a: number, b: number, random: () => number): number[] {
+  const answer = a * b;
+  const forbidden = new Set<number>([answer, answer - 1, answer + 1, answer - 2, answer + 2]);
+  const inRange = (n: number): boolean => n >= 1 && n <= 100;
+  const candidates = (xs: number[]): number[] => xs.filter((n) => inRange(n) && !forbidden.has(n));
+
+  // Same-factor row: a × 1..10 excluding a × b
+  const sameRow = candidates(Array.from({ length: 10 }, (_, i) => a * (i + 1)));
+  // Neighbor row: (b-1) and (b+1) multiplied by 1..10
+  const neighborRow = candidates([
+    ...Array.from({ length: 10 }, (_, i) => (b - 1) * (i + 1)),
+    ...Array.from({ length: 10 }, (_, i) => (b + 1) * (i + 1)),
+  ]);
+  // Wildcards: every plausible value in [1, 100]
+  const wildcards = candidates(Array.from({ length: 100 }, (_, i) => i + 1));
+
+  const picked: number[] = [];
+  const used = new Set<number>();
+  const pickOne = (pool: number[]): boolean => {
+    const fresh = pool.filter((n) => !used.has(n));
+    if (fresh.length === 0) return false;
+    const chosen = fresh[Math.floor(random() * fresh.length)];
+    if (chosen === undefined) return false;
+    picked.push(chosen);
+    used.add(chosen);
+    return true;
+  };
+
+  // Up to 2 from same-row, 1 from neighbor, 1 wildcard — pad with
+  // wildcards if any earlier slot fails (small `a`/`b` can exhaust
+  // sameRow quickly).
+  pickOne(sameRow);
+  pickOne(sameRow);
+  pickOne(neighborRow);
+  pickOne(wildcards);
+  while (picked.length < 4 && pickOne(wildcards)) {
+    // loop fills any missing slots with additional wildcards
+  }
+  return picked;
+}
+
+// R15 find-product helper. Called by the route's find-product tap
+// handler on a WRONG pick. Builds a fresh distractor set for the same
+// (a, b) the round was dealt with, clears the kid's wrong pick out of
+// the answer slot, and leaves the wrongAttempts counter as-is. Result:
+// the kid sees the choice row reshuffle without the equation itself
+// changing — sweep-the-cards cheats become impossible because the
+// candidate set turns over on every miss.
+//
+// Non-find-product states pass through unchanged so the helper stays
+// safe to call from any caller path. If the equation already has no
+// candidate cards (defensive — only happens on a malformed save), we
+// also pass through.
+export function redealFindProductDistractors(state: AddingGameState): AddingGameState {
+  if (!state.round) return state;
+  const eq = state.round.equation;
+  if (eq.shape !== "find-product") return state;
+  const aSlot = eq.operandSlots[0];
+  const bSlot = eq.operandSlots[1];
+  const answerSlot = eq.operandSlots[2];
+  if (!aSlot?.cardId || !bSlot?.cardId || !answerSlot) return state;
+  const aCard = state.cards[aSlot.cardId];
+  const bCard = state.cards[bSlot.cardId];
+  if (!aCard || !bCard || !isNumberCard(aCard) || !isNumberCard(bCard)) return state;
+  const a = aCard.value;
+  const b = bCard.value;
+  const answer = a * b;
+
+  // Strip the old choice cards from the catalog so they don't leak,
+  // and clear the kid's wrong pick from the answer slot in the same
+  // pass.
+  const oldChoiceIds = new Set(eq.choices.map((c) => c.id));
+  const survivingCards: CardCatalog = {};
+  for (const [id, card] of Object.entries(state.cards)) {
+    if (oldChoiceIds.has(id)) continue;
+    if (id === answerSlot.cardId) continue;
+    survivingCards[id] = card;
+  }
+
+  // Build fresh distractors + correct, in a new shuffled order. The
+  // state.round non-null was just established by the early-return at
+  // the top of the function; hoist into a local so the closure below
+  // can read .index without re-asserting.
+  const roundIndex = state.round.index;
+  const tStamp = Date.now();
+  const distractors = pickProductDistractors(a, b, Math.random);
+  const choiceValues = shuffle([answer, ...distractors], Math.random);
+  const newChoices = choiceValues.map((value, i) => {
+    const id = `card:r${roundIndex}:t${tStamp}:choice:${i}`;
+    const card: NumberCard = { id, kind: "number", value };
+    survivingCards[id] = card;
+    return card;
+  });
+
+  return {
+    ...state,
+    cards: survivingCards,
+    round: {
+      ...state.round,
+      equation: {
+        ...eq,
+        operandSlots: eq.operandSlots.map((s) =>
+          s.id === answerSlot.id ? { ...s, cardId: null } : s,
+        ),
+        choices: newChoices,
+      },
+    },
+  };
+}
+
+// R16 dealer — chant-row (L1..L11) and rooftop-grid (L12).
+//
+// Minimal: no cards in the catalog, no hand cards (empty hand). The
+// equation is a stub with one empty placeholder operand slot to
+// satisfy EquationSchema's `.min(1)` constraint; the route reads
+// `level.target` directly to pick the right chant MP3 (chant-row) or
+// to drive the rooftop prompt sequence (rooftop-grid).
+//
+// All R16 row stages share the SAME Tower Keeper boss across the whole
+// round; HP per LEVEL still resets on entry (one floor at a time), so
+// the kid sees an HP bar that depletes within each row's chant and
+// then re-fills to the next floor's max on advance.
+function dealChantRound(
+  level: LevelConfig,
+  levelIndex: number,
+  shape: "chant-row" | "rooftop-grid",
+): DealtRound {
+  const cards: CardCatalog = {};
+  const hand: HandSlot[] = Array.from({ length: HAND_SIZE }, (_, i) => ({
+    id: `hand:${i}`,
+    cardId: null,
+  }));
+
+  const equation: Equation = {
+    shape,
+    operator: "multiply",
+    comparator: "eq",
+    operandSlots: [
+      // Single placeholder slot. The route's EquationView for these
+      // shapes ignores operandSlots entirely; the slot exists only to
+      // satisfy the schema's `.min(1)` constraint without forcing us
+      // to widen it.
+      { id: "eq:placeholder", cardId: null, locked: false },
+    ],
+    target: null,
+    verdictSlot: null,
+    choices: [],
+  };
+
+  const template = ENEMY_REGISTRY.find((e) => e.id === level.enemyId);
+  if (!template) {
+    throw new Error(`dealRound: level ${levelIndex} references missing enemy ${level.enemyId}`);
+  }
+  const enemy: RoundEnemy = { templateId: template.id, hp: level.hp };
+
+  const round: Round = {
+    index: levelIndex,
+    phase: "matching",
+    equation,
+    outcome: null,
+    enemy,
+    wrongAttempts: 0,
+  };
+  return { round, cards, hand };
 }

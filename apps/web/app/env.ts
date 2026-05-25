@@ -12,6 +12,13 @@ export const env = createEnv({
     VITE_GAME_TITLE: z.string().min(1),
     VITE_API_BASE: z.url().optional(),
 
+    // URL to the companion Halid Worksheets app (printable take-home worksheets).
+    // Defaults to /worksheets/ (assumes co-deployment under one domain — typical
+    // GH Pages with both apps as subpaths). Override with an absolute URL (e.g.
+    // http://localhost:3010/ in dev when running each app on its own Vite port)
+    // by setting VITE_WORKSHEETS_URL in .env.
+    VITE_WORKSHEETS_URL: z.string().min(1).default("/worksheets/"),
+
     VITE_SITE_URL: z
       .url()
       .refine((u) => u.endsWith("/"), { message: "VITE_SITE_URL must end with '/'" }),

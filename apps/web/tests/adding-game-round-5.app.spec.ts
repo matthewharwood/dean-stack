@@ -60,13 +60,13 @@ test("Round 5 entry renders find-missing-result equation with locked static", as
   await expect(operandSlot).not.toHaveAttribute("data-slot-locked", "true");
   await expect(resultSlot).not.toHaveAttribute("data-slot-locked", "true");
 
-  // Round indicator confirms we're in round 5 of 12. The badge reads
-  // "Round 5 / 12"; the bar strip's data-level-index attribute is
+  // Round indicator confirms we're in round 5 of 15. The badge reads
+  // "Round 5 / 15"; the bar strip's data-level-index attribute is
   // independent of the badge text and asserted via the dedicated
   // data attribute.
   const indicator = page.getByTestId("round-indicator");
   await expect(indicator).toHaveAttribute("data-round", "5");
-  await expect(indicator).toHaveAttribute("data-total-levels", "63");
+  await expect(indicator).toHaveAttribute("data-total-levels", "90");
   await expect(indicator).toContainText("Round");
-  await expect(indicator).toContainText("12");
+  await expect(indicator).toContainText("16");
 });

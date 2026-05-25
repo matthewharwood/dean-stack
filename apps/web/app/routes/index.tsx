@@ -18,6 +18,17 @@ function Home() {
       >
         Play Adding Game
       </Link>
+      {/* Plain <a> (not <Link>): the worksheets app is a separate Vite build /
+          deploy target, not a route in this router. The href is env-driven so
+          dev (likely http://localhost:3010/) and prod (likely /worksheets/) can
+          differ without code edits. */}
+      <a
+        href={env.VITE_WORKSHEETS_URL}
+        className="rounded-full border-2 border-radiant-violet px-4 py-2 text-radiant-violet shadow-subtle"
+        data-test="link-worksheets"
+      >
+        Print Worksheets (Take-home)
+      </a>
     </main>
   );
 }
