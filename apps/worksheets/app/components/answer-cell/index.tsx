@@ -5,19 +5,24 @@ import {
   recognize,
   type Stroke,
 } from "@dean-stack/handwriting-recognizer";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { Eraser, Pencil } from "lucide-react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import * as z from "zod";
 
 import { defineComponent } from "~/lib/define-component";
-import { appendUserTemplateAtom, templatesAtom, updateAnswerAtom } from "~/state/ink-atoms";
+import {
+  answersAtomForWorksheet,
+  appendUserTemplateAtom,
+  templatesAtom,
+  updateAnswerAtom,
+} from "~/state/ink-atoms";
 
 import { InkCanvas } from "../ink-canvas";
 
 export const AnswerCellPropsSchema = z.object({
-  // Worksheet id (`${stageId}-${variant}`) — used to write into the
-  // per-worksheet answers atom.
+  // Worksheet id (`${stageId}-${variant}`) — used to read AND write
+  // the per-worksheet answers atom.
   worksheetId: z.string().regex(/^s(?:[1-9]|1[0-5])-[ABC]$/),
   // Problem id within the worksheet (e.g. "p1", or `p3_a` for the first
   // blank of a multi-blank problem). Used as the entries key + as the
@@ -26,17 +31,6 @@ export const AnswerCellPropsSchema = z.object({
   // CSS pixel size of the writing area.
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
-  // Strokes to replay on mount (from IDB).
-  initialStrokes: z.array(z.unknown()).optional(),
-  // Pre-existing recognition result (from IDB) — display before any
-  // new ink is captured.
-  initialResult: z
-    .object({
-      digit: z.string().regex(/^\d$/).nullable(),
-      score: z.number().min(0).max(1),
-      confident: z.boolean(),
-    })
-    .optional(),
   // Allow mouse input in dev/Storybook; pen-only on iPad.
   inputModes: z.array(z.enum(["pen", "mouse", "touch"])).optional(),
 });
@@ -72,46 +66,46 @@ const DIGIT_CHOICES: readonly DigitLabel[] = ["0", "1", "2", "3", "4", "5", "6",
 // updateAnswerAtom() → atomWithIDB → IDB. A reload mid-worksheet picks
 // up exactly where the kid left off.
 export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactNode => {
-  const {
-    worksheetId,
-    problemId,
-    width = 56,
-    height = 72,
-    initialStrokes,
-    initialResult,
-    inputModes = ["pen", "mouse"],
-  } = props;
+  const { worksheetId, problemId, width = 72, height = 88, inputModes = ["pen", "mouse"] } = props;
 
   const templateSet = useAtomValue(templatesAtom());
   const setAnswer = useSetAtom(updateAnswerAtom(worksheetId));
   const appendTemplate = useSetAtom(appendUserTemplateAtom());
+  // useStore lets us READ the answers atom ONCE on mount (for state
+  // hydration from IDB) without subscribing the component to every
+  // atom change. Subscribing would re-render this cell whenever any
+  // OTHER cell on the worksheet writes — fine functionally but wasted
+  // work across 12-15 cells per page.
+  const store = useStore();
 
-  // Hydrate phase from IDB on first mount. A stroke set with no digit
-  // is "ink"; a digit-with-strokes is "settled"; otherwise "empty".
+  // Hydrate phase + strokes from the persisted atom on first mount.
+  // The atom was hydrated from IDB at app startup (see hydration.ts +
+  // installInkAtoms in __root.tsx), so reading here picks up exactly
+  // what the kid wrote on a previous session. Previously the cell read
+  // initial state from PROPS that the parent never passed → the cell
+  // always started "empty" regardless of what was in IDB. That was the
+  // root cause of the "refreshing loses my numbers" bug.
+  const persistedEntry = store.get(answersAtomForWorksheet(worksheetId)).entries[problemId];
+  const initialStrokesRef = useRef<readonly Stroke[]>(
+    (persistedEntry?.strokes ?? []) as readonly Stroke[],
+  );
   const [phase, setPhase] = useState<CellPhase>(() => {
-    if (initialResult?.digit) {
+    if (persistedEntry?.digit) {
       return {
         kind: "settled",
-        digit: initialResult.digit as DigitLabel,
-        score: initialResult.score,
+        digit: persistedEntry.digit as DigitLabel,
+        score: persistedEntry.score,
         source: "auto",
       };
     }
-    if ((initialStrokes ?? []).length > 0) return { kind: "ink" };
+    if (persistedEntry?.strokes.length) return { kind: "ink" };
     return { kind: "empty" };
   });
-  const lastStrokesRef = useRef<readonly Stroke[]>([]);
+  const lastStrokesRef = useRef<readonly Stroke[]>(
+    (persistedEntry?.strokes ?? []) as readonly Stroke[],
+  );
 
   const cellSelector = `[data-cell-id="${worksheetId}:${problemId}"]`;
-  const fadeCanvas = useCallback(
-    (faded: boolean): void => {
-      const canvas = document.querySelector<HTMLCanvasElement>(
-        `${cellSelector} [data-test="ink-canvas"]`,
-      );
-      if (canvas) canvas.style.opacity = faded ? "0" : "1";
-    },
-    [cellSelector],
-  );
 
   const writeAnswer = useCallback(
     (digit: DigitLabel | null, score: number, strokes: readonly Stroke[]): void => {
@@ -134,7 +128,6 @@ export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactN
       lastStrokesRef.current = strokes;
       if (strokes.length === 0) {
         setPhase({ kind: "empty" });
-        fadeCanvas(false);
         writeAnswer(null, 0, []);
         return;
       }
@@ -146,15 +139,14 @@ export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactN
       // override picker.
       const fallback: DigitLabel | null = r.label ?? r.runnerUp?.label ?? null;
       if (fallback === null) {
-        // Nothing the algorithm can confidently call. Fade the ink and
-        // open the picker so the kid can label their own stroke.
-        fadeCanvas(true);
+        // Nothing the algorithm can confidently call — open the picker
+        // so the kid can label their own stroke. The canvas fades via
+        // the `faded` prop driven by phase.kind below.
         setPhase({ kind: "overriding", previousDigit: null });
         writeAnswer(null, r.score, strokes);
         return;
       }
       setPhase({ kind: "morphing", digit: fallback, score: r.score });
-      fadeCanvas(true);
       // After the morph beat, settle into the final state. The 300ms
       // delay slightly outlasts the canvas-fade transition (280ms) so
       // the digit is fully visible exactly when the ink is gone.
@@ -163,15 +155,14 @@ export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactN
       }, 300);
       writeAnswer(fallback, r.score, strokes);
     },
-    [fadeCanvas, templateSet, writeAnswer],
+    [templateSet, writeAnswer],
   );
 
   const handleClear = useCallback((): void => {
     setPhase({ kind: "empty" });
     lastStrokesRef.current = [];
-    fadeCanvas(false);
     writeAnswer(null, 0, []);
-  }, [fadeCanvas, writeAnswer]);
+  }, [writeAnswer]);
 
   const clearCanvas = useCallback((): void => {
     const canvas = document.querySelector(`${cellSelector} [data-test="ink-canvas"]`);
@@ -217,6 +208,11 @@ export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactN
   const showDigit = digit !== null && (phase.kind === "morphing" || phase.kind === "settled");
   const morphing = phase.kind === "morphing";
   const overriding = phase.kind === "overriding";
+  // Hide the ink canvas whenever the cell is showing a digit OR the
+  // override picker. Once recognition lands, the clean digit overlay
+  // IS the answer; persisting strokes underneath would just confuse.
+  const canvasFaded =
+    phase.kind === "morphing" || phase.kind === "settled" || phase.kind === "overriding";
 
   return (
     <span
@@ -234,9 +230,10 @@ export const AnswerCell = defineComponent(AnswerCellPropsSchema, (props): ReactN
           width={width}
           height={height}
           inputModes={inputModes}
-          initialStrokes={(initialStrokes ?? []) as Stroke[]}
-          endStrokeAfterMs={600}
+          initialStrokes={initialStrokesRef.current as Stroke[]}
+          endStrokeAfterMs={1500}
           inkColor="#1f1f3f"
+          faded={canvasFaded}
           onStrokesComplete={handleStrokes}
           onClear={handleClear}
         />

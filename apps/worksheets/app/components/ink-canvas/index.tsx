@@ -30,6 +30,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
     initialStrokes,
     onStrokesComplete,
     onClear,
+    faded = false,
   } = props;
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -105,7 +106,6 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
   // bug that wiped user strokes mid-session when the parent re-rendered
   // with a new array literal. To replay strokes after mount, key-remount
   // the canvas via `key={...}` from the parent.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only seed; see comment above
   // react-doctor-disable-next-line react-doctor/exhaustive-deps
   useEffect(() => {
     strokesRef.current = seedStrokesRef.current.map((s) => ({
@@ -234,14 +234,17 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
     <canvas
       ref={canvasRef}
       data-test="ink-canvas"
+      data-faded={faded ? "1" : undefined}
       style={{
         touchAction: "none",
         // Display block prevents the canvas's inline default from
         // adding a phantom 5px gap at the bottom.
         display: "block",
-        // CSS transition for the parent-driven opacity (set via the
-        // `data-faded="1"` attribute on the wrapping cell). Quick + soft
-        // — the actual fade is timed to coincide with the digit fade-in.
+        // Declarative opacity driven by the `faded` prop. AnswerCell
+        // flips this on once recognition lands so the clean digit
+        // overlay reads as the answer; CSS transition smooths the
+        // fade so it lines up with the digit's fade-in.
+        opacity: faded ? 0 : 1,
         transition: "opacity 280ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     />
