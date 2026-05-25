@@ -18,10 +18,15 @@ export const WorksheetIntro = defineComponent(
   WorksheetIntroPropsSchema,
   ({ introCopy, instruction, fieldLog, dayNumber }): ReactNode => {
     const hasFieldLog = fieldLog !== undefined && dayNumber !== undefined;
+    // Visual emphasis on the Field Log + instruction is now carried by
+    // indent + italic + a subtle inset shadow on the left (1px-ish
+    // glyph column). The previous border-l-4 reads as a stock "AI-
+    // generated card" tell; an inset shadow is the typographic-press
+    // equivalent — same affordance, less of a UI-component vibe.
     return (
       <section className="mb-5 grid gap-3" data-test="worksheet-intro">
         {hasFieldLog ? (
-          <div className="border-l-4 border-current pl-3 py-1">
+          <div className="pl-3 py-1 shadow-[inset_1px_0_0_currentColor]">
             <p className="font-display text-[11px] uppercase tracking-[0.25em] opacity-60 mb-1">
               Field Log · Day {dayNumber} of 15
             </p>
@@ -30,7 +35,7 @@ export const WorksheetIntro = defineComponent(
         ) : (
           <p className="font-body text-[15px] leading-snug">{introCopy}</p>
         )}
-        <p className="font-display font-semibold text-[15px] leading-snug border-l-4 border-current pl-3 py-1">
+        <p className="font-display font-semibold text-[15px] leading-snug pl-3 py-1 shadow-[inset_1px_0_0_currentColor]">
           {instruction}
         </p>
       </section>

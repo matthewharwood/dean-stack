@@ -74,6 +74,17 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
     }
   }, [inkColor]);
 
+  // Latest-repaint stable handle for the long-lived pointer + clear
+  // effects below. The effects mount native addEventListener handlers
+  // ONCE per canvas — keeping `repaint` in their dep array would
+  // tear down + rebuild the event subscription on every parent
+  // re-render (each render returns a new `repaint` identity from
+  // useCallback when `inkColor` changes, etc.). React-doctor's
+  // recommended fix is `useEffectEvent`, which is still experimental
+  // in React 19; this ref pattern is the stable equivalent.
+  const repaintRef = useRef(repaint);
+  repaintRef.current = repaint;
+
   // DPR setup. Re-runs only when canvas size changes — keeps the ref-
   // stamped backing-store size synchronized. Does NOT re-seed strokes;
   // that's the separate mount-only effect below.
@@ -95,11 +106,12 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
   // with a new array literal. To replay strokes after mount, key-remount
   // the canvas via `key={...}` from the parent.
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only seed; see comment above
+  // react-doctor-disable-next-line react-doctor/exhaustive-deps
   useEffect(() => {
     strokesRef.current = seedStrokesRef.current.map((s) => ({
       points: s.points.map((p) => ({ ...p })),
     }));
-    repaint();
+    repaintRef.current();
   }, []);
 
   // Pointer event wiring. Uses native addEventListener (not React's
@@ -152,7 +164,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
         t: ev.timeStamp,
         pressure: ev.pressure || undefined,
       });
-      repaint();
+      repaintRef.current();
       ev.preventDefault();
     }
 
@@ -167,7 +179,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
       } catch {
         // already released
       }
-      repaint();
+      repaintRef.current();
       // Start the end-of-gesture timer; cancelled by the next pointerdown.
       if (endTimerRef.current !== null) clearTimeout(endTimerRef.current);
       endTimerRef.current = setTimeout(flushEndStroke, endStrokeAfterMs);
@@ -188,7 +200,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
         endTimerRef.current = null;
       }
     };
-  }, [endStrokeAfterMs, inputModes, repaint]);
+  }, [endStrokeAfterMs, inputModes]);
 
   // Imperative clear handler — exposed on the canvas dataset attribute so
   // the AnswerCell parent can wire a button without prop-drilling refs.
@@ -203,7 +215,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
         clearTimeout(endTimerRef.current);
         endTimerRef.current = null;
       }
-      repaint();
+      repaintRef.current();
       const cb = onClearRef.current;
       if (cb) cb();
     }
@@ -211,7 +223,7 @@ export const InkCanvas = defineComponent(InkCanvasPropsSchema, (props): ReactNod
     // on the canvas to clear it. Used by AnswerCell's clear button.
     canvas.addEventListener("ink-canvas:clear", handleClear);
     return () => canvas.removeEventListener("ink-canvas:clear", handleClear);
-  }, [repaint]);
+  }, []);
 
   // Expose the canvas element to the parent via the data attribute the
   // clear contract already uses (data-test="ink-canvas"). AnswerCell

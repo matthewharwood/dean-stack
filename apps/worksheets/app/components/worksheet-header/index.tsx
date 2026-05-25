@@ -48,7 +48,7 @@ export const WorksheetHeader = defineComponent(
         <p className="font-display text-sm uppercase tracking-widest opacity-70 mb-2">
           Stage {stageOrdinal} · Worksheet {variant} · Halid Worksheets
         </p>
-        <h1 className="font-display font-bold text-4xl mb-1">{title}</h1>
+        <h1 className="font-display font-semibold text-4xl mb-1">{title}</h1>
         <p className="font-body text-base opacity-80 mb-4">{subtitle}</p>
         <div className="flex flex-wrap gap-x-8 gap-y-2 font-body text-sm">
           <Field label="Name" {...(defaultName === undefined ? {} : { value: defaultName })} />

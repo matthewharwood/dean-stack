@@ -46,6 +46,13 @@ export const GradeView = defineComponent(
     const minutes = computeIpadMinutes(graded);
 
     return (
+      // KEEP — semantic <dialog> would be the right answer but it has
+      // its own positioning + backdrop + imperative open/close API
+      // (dialog.showModal()) that doesn't compose with the existing
+      // CSS-positioned overlay pattern. Refactor to <dialog> is its
+      // own pass; role="dialog" + aria-modal is correct in the
+      // meantime per WAI-ARIA modal guidance.
+      // react-doctor-disable-next-line react-doctor/prefer-tag-over-role
       <div
         className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 font-display"
         data-test="grade-view"

@@ -33,20 +33,28 @@ export const ProblemRow = defineComponent(
           equation; the answer key still grades by the underlying position
           number via aria-label. */}
       <ProblemMarker position={position} />
-      {/* role="math" is the canonical ARIA role for math equations and
-          accepts aria-label without the lint warnings that role="img" on a
-          generic tag triggers. Every inner span is aria-hidden so the SR
-          uses this single label rather than reading individual numerals. */}
+      {/* KEEP — role="math" is the canonical ARIA role for math
+          equations and accepts aria-label without the lint warnings
+          that role="img" on a generic tag triggers. The actual <math>
+          element is for MathML markup (different content model); our
+          content here is a typographic equation with a description
+          string, which fits role="math" exactly. Every inner span is
+          aria-hidden so the SR uses this single label rather than
+          reading individual numerals. */}
+      {/* react-doctor-disable-next-line react-doctor/prefer-tag-over-role */}
       <div
         className="equation flex items-center gap-2 flex-wrap"
         role="math"
         aria-label={describeProblem(problem)}
       >
-        {renderEquation(problem, {
-          inkMode,
-          ...(worksheetId === undefined ? {} : { worksheetId }),
-          problemId: problem.id,
-        })}
+        <Equation
+          problem={problem}
+          opts={{
+            inkMode,
+            ...(worksheetId === undefined ? {} : { worksheetId }),
+            problemId: problem.id,
+          }}
+        />
       </div>
     </div>
   ),
@@ -118,7 +126,10 @@ function assertNever(x: never): never {
   throw new Error(`unreachable: unexpected discriminant ${String(x)}`);
 }
 
-function renderEquation(problem: Problem, opts: BlankRenderOpts): ReactNode {
+// Equation glyph component. Was a `renderEquation()` helper that
+// returned JSX; converted to a component so reconciliation can key on
+// it and react-doctor stops flagging "inline render function".
+function Equation({ problem, opts }: { problem: Problem; opts: BlankRenderOpts }): ReactNode {
   switch (problem.kind) {
     case "fill-pair": {
       const op = OPERATOR_SYMBOL[problem.operator];

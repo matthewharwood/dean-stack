@@ -71,7 +71,7 @@ export function RowStage({
           className="flex items-center gap-2 rounded-lg border-2 border-slate-ink bg-sky-200 px-4 py-2 font-openrunde text-sm font-bold text-slate-ink shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           data-test="chant-play"
         >
-          <Play className="h-4 w-4" aria-hidden />
+          <Play className="size-4" aria-hidden />
           {audio.hasEnded ? "Replay the chant" : "Sing it to me"}
         </button>
         {audio.isPlaying ? (
@@ -81,7 +81,7 @@ export function RowStage({
             className="flex items-center gap-2 rounded-lg border-2 border-medium-gray bg-canvas-white px-3 py-2 font-openrunde text-xs text-muted-gray shadow-sm hover:bg-whisper-purple"
             data-test="chant-stop"
           >
-            <RotateCcw className="h-3 w-3" aria-hidden />
+            <RotateCcw className="size-3" aria-hidden />
             Stop
           </button>
         ) : null}

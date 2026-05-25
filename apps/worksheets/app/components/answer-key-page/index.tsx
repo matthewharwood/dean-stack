@@ -16,7 +16,7 @@ export const AnswerKeyPage = defineComponent(
         <p className="font-display text-sm uppercase tracking-widest opacity-70">
           Answer Key · For grown-ups
         </p>
-        <h1 className="font-display font-bold text-3xl mt-1">
+        <h1 className="font-display font-semibold text-3xl mt-1">
           {answerKey.stageTitle} · Variant {answerKey.variant}
         </h1>
         <p className="font-body text-sm opacity-70">

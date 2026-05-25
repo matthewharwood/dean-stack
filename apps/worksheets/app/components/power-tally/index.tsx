@@ -24,7 +24,7 @@ export const PowerTally = defineComponent(
   ({ currentOrdinal, currentVariant, totalStages }): ReactNode => (
     <div className="flex flex-col gap-1" data-test="power-tally">
       <p className="font-display text-[9px] uppercase tracking-[0.22em] opacity-60">
-        Mission Progress — Stage × Variant
+        Mission Progress: Stage × Variant
       </p>
       <div className="flex items-start gap-2">
         {/* Tiny A/B/C row labels on the left edge, so the shape vocabulary
@@ -111,13 +111,16 @@ function VariantShape({ variant, state }: ShapeProps): ReactNode {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {renderShape(variant)}
+      <ShapeGlyph variant={variant} />
       {state === "past" ? <path d="M2.5 11.5 L11.5 2.5" strokeWidth="1.25" /> : null}
     </svg>
   );
 }
 
-function renderShape(variant: "A" | "B" | "C"): ReactNode {
+// SVG primitive for the variant glyph. Component (not a helper that
+// returns JSX) so React reconciliation can key on it and react-doctor
+// stops flagging "inline render function".
+function ShapeGlyph({ variant }: { variant: "A" | "B" | "C" }): ReactNode {
   switch (variant) {
     case "A":
       return <circle cx="7" cy="7" r="5.5" />;

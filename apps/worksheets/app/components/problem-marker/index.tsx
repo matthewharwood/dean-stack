@@ -17,8 +17,15 @@ export const ProblemMarkerPropsSchema = z.object({
 export const ProblemMarker = defineComponent(
   ProblemMarkerPropsSchema,
   ({ position }): ReactNode => {
+    // KEEP — role="img" on the wrapping span lets screen readers
+    // read the aria-label as a single image announcement instead of
+    // stepping into the inner Lucide SVG and reading every stroke.
+    // The semantic <img> element is for raster images (src=...);
+    // inline-SVG icons need role="img" on the wrapper per WAI-ARIA
+    // SVG accessibility guidance.
     const { Icon, label } = iconFor(position);
     return (
+      // react-doctor-disable-next-line react-doctor/prefer-tag-over-role
       <span
         className="inline-flex items-center justify-center shrink-0"
         style={{ width: "1.75rem", height: "1.75rem" }}

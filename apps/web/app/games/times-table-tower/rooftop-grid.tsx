@@ -28,7 +28,7 @@ export function RooftopGrid({
         <div className="text-xs italic uppercase tracking-wider text-muted-gray">The rooftop</div>
         {promptProduct == null ? (
           <div className="font-openrunde text-2xl font-semibold text-muted-gray">
-            Waiting for a prompt...
+            Waiting for a prompt…
           </div>
         ) : (
           <div className="font-openrunde text-3xl font-bold text-slate-ink">

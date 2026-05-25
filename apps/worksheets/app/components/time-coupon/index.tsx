@@ -177,6 +177,13 @@ function CircleGroup({ group }: { group: { size: number; bracket: string | null 
   );
 }
 
+// KEEP — BonusBox, ScissorLine, and VerticalPerforation are 1-use
+// visual helpers exclusive to the TimeCoupon's tear-off layout.
+// Extracting each into its own ~30-line file would scatter the
+// coupon's visual vocabulary across 4 modules with no reuse benefit;
+// keeping them co-located makes the coupon's layout legible at a
+// glance. Same justification applies below.
+// react-doctor-disable-next-line react-doctor/no-multi-comp
 function BonusBox({ problemCount }: { problemCount: number }): ReactNode {
   return (
     <div className="flex flex-col items-center gap-0.5 border-l border-dashed border-current pl-3 ml-1">
@@ -202,6 +209,7 @@ function BonusBox({ problemCount }: { problemCount: number }): ReactNode {
   );
 }
 
+// react-doctor-disable-next-line react-doctor/no-multi-comp
 function ScissorLine(): ReactNode {
   return (
     <div className="flex items-center gap-2 my-2" aria-hidden="true">
@@ -214,6 +222,7 @@ function ScissorLine(): ReactNode {
   );
 }
 
+// react-doctor-disable-next-line react-doctor/no-multi-comp
 function VerticalPerforation(): ReactNode {
   return (
     <div

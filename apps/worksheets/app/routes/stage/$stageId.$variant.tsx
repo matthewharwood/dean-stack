@@ -42,6 +42,9 @@ export const Route = createFileRoute("/stage/$stageId/$variant")({
   component: WorksheetRoute,
 });
 
+// KEEP — TanStack Router file-based routing wants `Route` exported
+// from the route file; the route component is co-located by design.
+// react-doctor-disable-next-line react-doctor/only-export-components
 function WorksheetRoute() {
   const { stageId, variant } = Route.useParams();
   // generateWorksheet is pure + deterministic; safe to call in render. The

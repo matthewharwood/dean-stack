@@ -40,7 +40,7 @@ export const SubmitButton = defineComponent(
     //  - Every cell is either confident OR has been attempted (manual)
     const ready = attempted === total;
 
-    const handleClick = useCallback((): void => {
+    const gradeWorksheet = useCallback((): void => {
       if (ready) onSubmit();
     }, [ready, onSubmit]);
 
@@ -51,7 +51,7 @@ export const SubmitButton = defineComponent(
         </span>
         <button
           type="button"
-          onClick={handleClick}
+          onClick={gradeWorksheet}
           disabled={!ready}
           aria-disabled={!ready}
           className={[

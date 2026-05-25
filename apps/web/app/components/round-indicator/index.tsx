@@ -46,7 +46,6 @@ export const RoundIndicator = defineComponent(RoundIndicatorPropsSchema, (props)
   // initial-true state without watching props inside.
   const [tierUp, setTierUp] = useState(true);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only animation timer
   useEffect(() => {
     const t = window.setTimeout(() => setTierUp(false), 720);
     return () => window.clearTimeout(t);

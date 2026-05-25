@@ -25,22 +25,27 @@ export const ChantStepRow = defineComponent(ChantStepRowPropsSchema, (props) => 
       data-test="chant-step-row"
       data-lit-step={props.litStep ?? "none"}
     >
-      {STEPS.map((index) => {
-        const lit = props.litStep === index;
-        const wasMastered = mastered.has(index);
+      {STEPS.map((step) => {
+        const lit = props.litStep === step;
+        const wasMastered = mastered.has(step);
+        // `step` is the chant step VALUE (10..0), unique and stable across
+        // the lifetime of the component — safe to use as the React key.
+        // The variable used to be named `index` which (mis)matched the
+        // no-array-index-as-key rule pattern; renaming makes the intent
+        // legible without changing behavior.
         return (
-          <li key={index} className="contents">
+          <li key={`step-${step}`} className="contents">
             <button
               type="button"
               disabled={disabled}
-              onClick={() => props.onStepTap(index)}
+              onClick={() => props.onStepTap(step)}
               className={`flex h-9 w-full items-center justify-between rounded-md border-2 px-3 font-openrunde text-sm font-bold transition-colors ${chipClass(lit, wasMastered, disabled)}`}
               data-test="chant-step"
-              data-step-index={index}
+              data-step-index={step}
               data-step-lit={lit ? "true" : "false"}
               data-step-mastered={wasMastered ? "true" : "false"}
             >
-              <span className="tabular-nums">{index}</span>
+              <span className="tabular-nums">{step}</span>
               <span aria-hidden className="text-base">
                 {glyphFor(lit, wasMastered)}
               </span>

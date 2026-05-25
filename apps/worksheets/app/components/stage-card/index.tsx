@@ -26,7 +26,7 @@ export const StageCard = defineComponent(
         <p className="font-display text-xs uppercase tracking-widest opacity-70">
           Stage {stage.ordinal}
         </p>
-        <h2 className="font-display font-bold text-xl mt-1">{stage.title}</h2>
+        <h2 className="font-display font-semibold text-xl mt-1">{stage.title}</h2>
         <p className="font-body text-sm opacity-80 mt-1">{stage.subtitle}</p>
       </header>
       <ul className="flex gap-2 mt-auto">

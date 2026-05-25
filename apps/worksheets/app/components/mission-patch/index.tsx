@@ -21,6 +21,11 @@ export const MissionPatch = defineComponent(
   ({ stageOrdinal }): ReactNode => {
     const { Icon, label } = iconFor(stageOrdinal);
     return (
+      // KEEP — role="img" wrapper with a meaningful aria-label is how
+      // a composite icon-plus-caption gets announced as a single
+      // badge. Semantic <img> is for raster sources; this is
+      // inline-SVG composition.
+      // react-doctor-disable-next-line react-doctor/prefer-tag-over-role
       <div
         className="inline-flex items-center gap-2"
         data-test={`mission-patch-${stageOrdinal}`}

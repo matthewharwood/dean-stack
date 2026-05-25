@@ -12,6 +12,12 @@ import { installInkAtoms } from "~/state/ink-atoms";
 // genuinely need to debug routing here, temporarily restore from apps/web's
 // __root.tsx (which keeps the full devtools wiring as the active dev surface).
 
+// KEEP — Route + RouteComponent co-exist in the same file by TanStack
+// Router's design (file-based routing wants `Route` exported from the
+// route file). Splitting would require either re-exporting from a
+// pure-component file or losing the discoverability that the route
+// file IS the route.
+// react-doctor-disable-next-line react-doctor/only-export-components
 export const Route = createRootRoute({
   head: () => ({
     // Defaults for every route. Children override per-tag (title, description,

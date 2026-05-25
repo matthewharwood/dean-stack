@@ -44,6 +44,15 @@ function cardPayload(
   return { value: card.value };
 }
 
+// KEEP — EquationView is a discriminated-union dispatch over the 7
+// equation shapes (stepper-sum, chant-row, rooftop-grid, find-missing-
+// factor, find-leading-factor, find-product, true-false-multiply,
+// find-missing-result, find-sum). Splitting each branch into its own
+// component would create 8 single-call-site components that all need
+// the same dragLocked/onSwap/onStep/etc. props threaded through —
+// extra ceremony without separation. Already extracted from a 2400-
+// line route file; further fragmentation hurts more than helps.
+// react-doctor-disable-next-line react-doctor/no-giant-component
 export function EquationView({
   equation,
   cards,

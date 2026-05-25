@@ -19,10 +19,10 @@ function Home() {
           <p className="font-display uppercase tracking-widest text-sm opacity-80">
             Take-home math
           </p>
-          <h1 className="font-display font-bold text-4xl mt-1">{env.VITE_GAME_TITLE}</h1>
+          <h1 className="font-display font-semibold text-4xl mt-1">{env.VITE_GAME_TITLE}</h1>
           <p className="font-body text-base mt-3 max-w-2xl opacity-90">
             Printable companion worksheets for the Halidzone math game. Each of the 15 stages has
-            three reproducible variants — same difficulty, different problems — so the kid can
+            three reproducible variants: same difficulty, different problems, so the kid can
             practice with pen and paper after a screen session.
           </p>
           <ul className="font-body text-sm mt-4 grid grid-cols-1 sm:grid-cols-2 max-w-2xl gap-1 opacity-90">
