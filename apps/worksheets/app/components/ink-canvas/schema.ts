@@ -37,4 +37,8 @@ export const InkCanvasPropsSchema = z.object({
   // Fired when the kid taps "clear" — handled by the parent (AnswerCell)
   // since the canvas itself doesn't render UI chrome.
   onClear: z.custom<() => void>().optional(),
+  // When true, the canvas fades to opacity 0 (CSS transition). Used by
+  // AnswerCell to hide the strokes once recognition has produced a
+  // clean digit overlay. Declarative — no imperative DOM querying.
+  faded: z.boolean().optional(),
 });

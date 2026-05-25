@@ -1,5 +1,37 @@
 import type { Problem, Worksheet } from "./schema";
 
+// The cell ids a problem expects in iPad mode. Must mirror the slot
+// keys problem-row's <Blank> emits:
+//   - fill-blank          → single cell, slotKey "default" → no suffix
+//   - fill-pair           → two cells, "_a" + "_b"
+//   - fill-consistent-pair → two cells (locked side skipped) + result "_c"
+//   - true-false          → no inkable cells (kid circles TRUE/FALSE)
+//
+// Submit's "ready" gate AND grading both enumerate over this so multi-
+// blank problems count their cells correctly. Single-source-of-truth
+// for the slot vocabulary across the recognizer + grader + Submit.
+export function cellIdsForProblem(problem: Problem): readonly string[] {
+  switch (problem.kind) {
+    case "fill-blank":
+      return [problem.id];
+    case "fill-pair":
+      return [`${problem.id}_a`, `${problem.id}_b`];
+    case "fill-consistent-pair": {
+      const ids: string[] = [`${problem.id}_c`];
+      if (problem.locked.position === "a") {
+        ids.unshift(`${problem.id}_b`);
+      } else {
+        ids.unshift(`${problem.id}_a`);
+      }
+      return ids;
+    }
+    case "true-false":
+      return [];
+    default:
+      return assertNever(problem);
+  }
+}
+
 export type GradedCell =
   | {
       problemId: string;

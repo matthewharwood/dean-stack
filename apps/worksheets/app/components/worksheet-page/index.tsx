@@ -33,8 +33,23 @@ export const WorksheetPage = defineComponent(
 
     const [showGrade, setShowGrade] = useState(false);
 
+    // iPad-mode-only CSS: kill text selection, callout, and the
+    // double-tap zoom/select that iOS Safari triggers on pen-lift.
+    // Without these, the kid lifting the Pencil between strokes lands
+    // on adjacent equation text and the OS selects it — breaking the
+    // multi-stroke flow. touch-manipulation keeps scrolling/zooming
+    // available (the worksheet can be long) but disables the 300ms
+    // tap delay and select-on-tap behavior.
+    const ipadModeClasses = isIpad
+      ? " select-none touch-manipulation [-webkit-touch-callout:none] [-webkit-user-select:none]"
+      : "";
+
     return (
-      <article className="worksheet-page print-page print-bg-paper" data-test="worksheet-page">
+      <article
+        className={`worksheet-page print-page print-bg-paper${ipadModeClasses}`}
+        data-test="worksheet-page"
+        data-ink-mode={inkSettings.mode}
+      >
         <WorksheetHeader
           title={stage.title}
           subtitle={stage.subtitle}
